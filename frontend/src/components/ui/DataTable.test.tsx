@@ -112,6 +112,25 @@ describe('DataTable', () => {
     expect(screen.getByRole('button', { name: /Próxima/ })).toBeDisabled();
   });
 
+  it('página vazia com total > 0 mantém a paginação (ex.: excluiu o último item da página)', async () => {
+    const user = userEvent.setup();
+    const onPageChange = vi.fn();
+    renderTable({ rows: [], meta: { ...meta, current_page: 3, total: 4 }, onPageChange });
+    expect(screen.getByRole('status')).toHaveTextContent('Nenhum registro encontrado');
+    const nav = screen.getByRole('navigation', { name: 'Paginação' });
+    expect(within(nav).getByRole('button', { name: /Próxima/ })).toBeDisabled();
+    await user.click(within(nav).getByRole('button', { name: /Anterior/ }));
+    expect(onPageChange).toHaveBeenLastCalledWith(2);
+  });
+
+  it('sem registros (total 0) ou com erro não mostra paginação', () => {
+    const { unmount } = renderTable({ rows: [], meta: { ...meta, current_page: 1, total: 0 } });
+    expect(screen.queryByRole('navigation')).not.toBeInTheDocument();
+    unmount();
+    renderTable({ error: 'Falha', meta });
+    expect(screen.queryByRole('navigation')).not.toBeInTheDocument();
+  });
+
   it('loading: skeleton, aria-busy e sem paginação', () => {
     renderTable({ loading: true, meta, skeletonRows: 3 });
     expect(screen.getByRole('table')).toHaveAttribute('aria-busy', 'true');
@@ -148,6 +167,26 @@ describe('DataTable', () => {
     await user.keyboard('{Enter}');
     expect(onRowClick).toHaveBeenLastCalledWith(rows[0]);
     expect(onRowClick).toHaveBeenCalledTimes(2);
+  });
+
+  it('clicar num controle dentro da célula não aciona onRowClick', async () => {
+    const user = userEvent.setup();
+    const onRowClick = vi.fn();
+    const onEdit = vi.fn();
+    const withAction: DataTableColumn<Row>[] = [
+      ...columns.slice(0, 2),
+      {
+        key: 'actions',
+        header: 'Ações',
+        cell: (r) => (
+          <IconButton label={`Excluir ${r.code}`} icon={<Pencil />} onClick={() => onEdit(r)} />
+        ),
+      },
+    ];
+    renderTable({ columns: withAction, onRowClick });
+    await user.click(screen.getByRole('button', { name: 'Excluir EX-02' }));
+    expect(onEdit).toHaveBeenCalledWith(rows[1]);
+    expect(onRowClick).not.toHaveBeenCalled();
   });
 
   it('botões de ordenação, paginação e ação de linha têm área mínima de 48px', () => {

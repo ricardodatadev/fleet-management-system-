@@ -39,6 +39,10 @@ export interface DataTableProps<T> {
   skeletonRows?: number;
 }
 
+/** Controles dentro da célula têm ação própria e não devem abrir a linha. */
+const INTERACTIVE =
+  'button, a, input, select, textarea, label, [role=checkbox], [role=switch], [role=menuitem]';
+
 function ariaSort(sort: SortState | null | undefined, key: string) {
   if (sort?.field !== key) return 'none';
   return sort.direction === 'asc' ? 'ascending' : 'descending';
@@ -62,6 +66,9 @@ export function DataTable<T>({
   skeletonRows = 5,
 }: DataTableProps<T>) {
   const showRows = !loading && !error && rows.length > 0;
+  // Com total > 0 a paginação aparece mesmo com a página vazia (ex.: excluiu o último item da
+  // última página), senão o usuário fica sem como voltar.
+  const showPagination = !loading && !error && meta !== undefined && meta.total > 0;
 
   return (
     <div className="flex flex-col gap-4">
@@ -124,7 +131,14 @@ export function DataTable<T>({
                     'border-t border-border hover:bg-surface-muted',
                     onRowClick && 'cursor-pointer',
                   )}
-                  onClick={onRowClick ? () => onRowClick(row) : undefined}
+                  onClick={
+                    onRowClick
+                      ? (event) => {
+                          const target = event.target as HTMLElement;
+                          if (!target.closest(INTERACTIVE)) onRowClick(row);
+                        }
+                      : undefined
+                  }
                 >
                   {columns.map((column, index) => (
                     <td key={column.key} className={cn('min-h-12 px-4 py-2', column.className)}>
@@ -169,7 +183,7 @@ export function DataTable<T>({
           <EmptyState role="status" title={emptyTitle} description={emptyDescription} />
         )}
       </div>
-      {meta && showRows && (
+      {showPagination && meta && (
         <nav aria-label="Paginação" className="flex flex-wrap items-center justify-between gap-2">
           <p className="text-ink-muted" aria-live="polite">
             Página {meta.current_page} de {meta.last_page} · {meta.total} registros

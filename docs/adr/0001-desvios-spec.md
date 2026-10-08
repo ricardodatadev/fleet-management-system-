@@ -39,7 +39,7 @@ Pesquisa de 2026-10-08. Versões do backend confirmadas no packagist/`composer s
 | Componente | Registro atual | Confirmação |
 |---|---|---|
 | Laravel (D1) | **Laravel 13.35.0** (`laravel/framework`; skeleton `laravel/laravel` v13.11.0), confirmado no packagist em 2026-10-08. Exige PHP ^8.3. | **confirmado (F1-03)** |
-| PHP (D1) | **8.4.26** (`php:8.4.26-fpm-alpine`). 8.4 e não 8.3 porque o Pest exige ^8.4; o Laravel 13 aceita 8.3–8.5. | confirmado (F1-03) |
+| PHP (D1) | **8.4.26** (`php:8.4.26-fpm-alpine`). 8.4 escolhido por ser a série estável atual suportada pelo Laravel 13 (aceita 8.3–8.5), com suporte mais longo que a 8.3; permite migrar ao Pest 5 (exige PHP ^8.4) no futuro. O Pest 4.7 instalado aceita PHP 8.3. | confirmado (F1-03) |
 | Composer | 2.10.3 (imagem `composer:2.10.3`, copiado para a imagem do app) | confirmado |
 | Sanctum | 4.3.3 (suporta Laravel 13) | confirmado |
 | Horizon | 5.50.0 (suporta Laravel 13) | confirmado |
@@ -49,6 +49,7 @@ Pesquisa de 2026-10-08. Versões do backend confirmadas no packagist/`composer s
 | Pint | 1.32.1 (dev, do skeleton) | confirmado |
 | phpredis | 6.2.0 (pecl) | confirmado |
 | nginx | `nginx:1.30.5-alpine` (stable) | confirmado |
+| Python (F1-04) | `python:3.12.15-slim`; FastAPI 0.143.0, Uvicorn 0.54.0 (dependências transitivas pinadas em `requirements.txt`); pytest 9.1.1, httpx 0.28.1 em `requirements-dev.txt` | confirmado (PyPI) |
 | PostgreSQL 16 + pgvector | `pgvector/pgvector:0.8.1-pg16` (F1-02) | fixado |
 | Redis 7 | `redis:7.4.6-alpine` (F1-02) | fixado |
 | Python 3.12, React 18 | conforme spec | tags exatas a fixar em F1-04/F1-21 |
@@ -60,7 +61,7 @@ Pesquisa de 2026-10-08. Versões do backend confirmadas no packagist/`composer s
 
 ## Notas de implementação (F1-03)
 
-- Imagem do app: PHP-FPM como `www-data` (não-root), porta 9000, `pm.ping`/`pm.status` ativos; Horizon no serviço `worker` usa a mesma imagem. Dependências de dev (Pest, Pint, Larastan) ficam na imagem para o gate local (`make ci`); uma imagem de produção sem dev deps é evolução.
+- Imagem do app: PHP-FPM como `www-data` (não-root), porta 9000, `pm.ping`/`pm.status` ativos; Horizon no serviço `worker` usa a mesma imagem. Dependências de dev (Pest, Pint, Larastan) ficam na imagem para o gate local (`make ci`); a imagem `app` atual inclui composer + dev deps (adequada a dev/CI). **Pendência antes de qualquer deploy:** imagem de produção enxuta (target `prod`, `composer install --no-dev`, sem composer).
 - O container não tem arquivo `.env`: a configuração vem das variáveis do compose. `make init` grava `APP_KEY` no `.env` do host.
 - Redis: a senha vai para `/tmp/redis.conf` (umask 077) gerado a partir da env, fora da linha de comando do processo.
 - `Access-Control-Allow-Origin: *` vem do middleware CORS padrão do Laravel; a política de CORS será definida na F1-06 (mesma origem via nginx).

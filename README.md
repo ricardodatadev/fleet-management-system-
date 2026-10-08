@@ -2,7 +2,7 @@
 
 Monorepo da Fase 1 (fundação + cadastros). Fonte de verdade da fase: especificação `fase-1-especificacao` v1.1.
 
-> **Estado atual (F1-03):** compose com nginx, app (Laravel 13 / PHP 8.4), worker (Horizon), db e redis. Serviços python/node e frontend chegam nas próximas tarefas; alvos `make` ainda não implementados falham com mensagem clara.
+> **Estado atual (F1-04):** compose com nginx, app (Laravel 13 / PHP 8.4), worker (Horizon), db, redis e python-ai (interno). Serviço node e frontend chegam nas próximas tarefas; alvos `make` ainda não implementados falham com mensagem clara.
 
 ## Arquitetura
 

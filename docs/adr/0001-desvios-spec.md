@@ -49,6 +49,8 @@ Pesquisa de 2026-10-08. Versões do backend confirmadas no packagist/`composer s
 | Pint | 1.32.1 (dev, do skeleton) | confirmado |
 | phpredis | 6.2.0 (pecl) | confirmado |
 | nginx | `nginx:1.30.5-alpine` (stable) | confirmado |
+| Node (D11) | **24 LTS** (decisão do Claudão; a 26 entra em LTS em 2026-10-20; revisar em fase futura). Imagem `node:24.21.0-alpine`. | confirmado (F1-05) |
+| Node deps (F1-05) | Fastify 5.12.5, Socket.io 4.8.4, ioredis 6.0.0; dev: TypeScript 7.0.2, Vitest 5.0.3, socket.io-client 4.8.4, @types/node 24.19.1 (versões exatas + `package-lock.json`) | confirmado (npm) |
 | Python (F1-04) | `python:3.12.15-slim`; FastAPI 0.143.0, Uvicorn 0.54.0 (dependências transitivas pinadas em `requirements.txt`); pytest 9.1.1, httpx 0.28.1 em `requirements-dev.txt` | confirmado (PyPI) |
 | PostgreSQL 16 + pgvector | `pgvector/pgvector:0.8.1-pg16` (F1-02) | fixado |
 | Redis 7 | `redis:7.4.6-alpine` (F1-02) | fixado |

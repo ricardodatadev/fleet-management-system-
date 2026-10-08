@@ -43,6 +43,7 @@ services:
     volumes:
       - db_data:/var/lib/postgresql/data
       - ./docker/postgres/init-pgvector.sql:/docker-entrypoint-initdb.d/01-init-pgvector.sql:ro
+      - ./docker/postgres/create-test-db.sh:/docker-entrypoint-initdb.d/02-create-test-db.sh:ro
     networks:
       - sigof
     healthcheck:

@@ -66,7 +66,7 @@ return Application::configure(basePath: dirname(__DIR__))
                 return null;
             }
             $code = $e->getStatusCode();
-            $message = \Lang::has("api.$code") ? __("api.$code") : __('api.generic');
+            $message = Lang::has("api.$code") ? __("api.$code") : __('api.generic');
             $response = ApiResponse::error($message, $code);
             foreach ($e->getHeaders() as $name => $value) {
                 $response->headers->set($name, (string) $value);

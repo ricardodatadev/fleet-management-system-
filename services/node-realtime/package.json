@@ -1,0 +1,26 @@
+{
+  "name": "sigof-node-realtime",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "engines": {
+    "node": ">=24 <25"
+  },
+  "scripts": {
+    "build": "tsc -p tsconfig.json",
+    "start": "node dist/server.js",
+    "test": "vitest run",
+    "typecheck": "tsc -p tsconfig.json --noEmit"
+  },
+  "dependencies": {
+    "fastify": "5.12.5",
+    "ioredis": "6.0.0",
+    "socket.io": "4.8.4"
+  },
+  "devDependencies": {
+    "@types/node": "24.19.1",
+    "socket.io-client": "4.8.4",
+    "typescript": "7.0.2",
+    "vitest": "5.0.3"
+  }
+}

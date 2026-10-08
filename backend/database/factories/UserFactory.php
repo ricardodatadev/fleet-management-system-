@@ -2,6 +2,8 @@
 
 namespace Database\Factories;
 
+use App\Enums\Role;
+use App\Models\Branch;
 use App\Models\User;
 use Illuminate\Database\Eloquent\Factories\Factory;
 use Illuminate\Support\Facades\Hash;
@@ -12,34 +14,37 @@ use Illuminate\Support\Str;
  */
 class UserFactory extends Factory
 {
-    /**
-     * The current password being used by the factory.
-     */
+    /** Senha padrão das fábricas (atende à política: 10+ caracteres, maiúscula, minúscula e número). */
+    public const PASSWORD = 'Senha12345';
+
     protected static ?string $password;
 
-    /**
-     * Define the model's default state.
-     *
-     * @return array<string, mixed>
-     */
     public function definition(): array
     {
         return [
             'name' => fake()->name(),
             'email' => fake()->unique()->safeEmail(),
-            'email_verified_at' => now(),
-            'password' => static::$password ??= Hash::make('password'),
+            'password' => static::$password ??= Hash::make(self::PASSWORD),
+            'role' => Role::Operator,
+            'branch_id' => Branch::factory(),
+            'is_active' => true,
             'remember_token' => Str::random(10),
         ];
     }
 
-    /**
-     * Indicate that the model's email address should be unverified.
-     */
-    public function unverified(): static
+    public function role(Role $role): static
     {
-        return $this->state(fn (array $attributes) => [
-            'email_verified_at' => null,
-        ]);
+        return $this->state(fn () => ['role' => $role]);
+    }
+
+    /** Admin sem filial (enxerga todas). */
+    public function admin(): static
+    {
+        return $this->state(fn () => ['role' => Role::Admin, 'branch_id' => null]);
+    }
+
+    public function inactive(): static
+    {
+        return $this->state(fn () => ['is_active' => false]);
     }
 }

@@ -32,6 +32,23 @@ services:
   node:
     ports:
       - "127.0.0.1:${NODE_PORT:-3000}:${NODE_PORT:-3000}"
+  # Vite com HMR (http://localhost:${FRONTEND_PORT:-5173}); /api é proxied para o nginx.
+  frontend:
+    image: node:24.21.0-alpine
+    working_dir: /app
+    user: "${HOST_UID:-1000}:${HOST_GID:-1000}"
+    command: sh -c "npm ci && npm run dev"
+    environment:
+      HOME: /tmp
+      VITE_API_PROXY_TARGET: http://nginx
+    volumes:
+      - ./frontend:/app
+    ports:
+      - "127.0.0.1:${FRONTEND_PORT:-5173}:5173"
+    networks:
+      - sigof
+    depends_on:
+      - nginx
 
 volumes:
   # Atenção: após mudar composer.json/composer.lock, rebuild + `docker compose down` e

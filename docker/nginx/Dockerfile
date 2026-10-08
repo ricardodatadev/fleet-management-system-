@@ -1,6 +1,12 @@
 # syntax=docker/dockerfile:1
-# Contexto: raiz do repo. O build do frontend (multi-stage) é plugado na F1-21;
-# até lá a SPA é um placeholder estático.
+# Contexto: raiz do repo. Stage 1 compila a SPA (frontend/); stage 2 serve o dist/ no nginx.
+FROM node:24.21.0-alpine AS frontend-build
+WORKDIR /app
+COPY frontend/package.json frontend/package-lock.json ./
+RUN npm ci
+COPY frontend/ ./
+RUN npm run build
+
 FROM nginx:1.30.5-alpine AS web
 
 RUN rm /etc/nginx/conf.d/default.conf
@@ -8,6 +14,5 @@ COPY docker/nginx/default.conf /etc/nginx/conf.d/default.conf
 COPY docker/nginx/swagger.location.conf /etc/nginx/swagger.location.conf
 COPY docker/nginx/40-swagger.sh /docker-entrypoint.d/40-swagger.sh
 RUN mkdir -p /etc/nginx/enabled
-# Placeholder até existir frontend/dist (F1-21)
-RUN printf '<!doctype html><html lang="pt-BR"><meta charset="utf-8"><title>SIGOF-M</title><body>SIGOF-M — frontend em construção</body></html>\n' > /usr/share/nginx/html/index.html
+COPY --from=frontend-build /app/dist /usr/share/nginx/html
 EXPOSE 80

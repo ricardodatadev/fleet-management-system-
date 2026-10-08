@@ -1,0 +1,44 @@
+@import 'tailwindcss';
+
+/*
+ * Tokens de design (spec G.1). Escala 8pt: o espaçamento base do Tailwind (0.25rem = 4px)
+ * é mantido, de modo que `min-h-12`/`min-w-12` = 48px = --tap-min.
+ * Cores com contraste AA (texto >= 4.5:1) sobre o fundo claro.
+ */
+@theme {
+  --font-sans:
+    system-ui, -apple-system, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, 'Noto Sans', sans-serif;
+
+  --color-surface: #ffffff;
+  --color-surface-muted: #f4f6f8;
+  --color-border: #c4ccd4;
+  --color-ink: #111827; /* 16.8:1 sobre surface */
+  --color-ink-muted: #4b5563; /* 7.6:1 sobre surface */
+  --color-brand-600: #1d4ed8; /* 6.7:1 sobre surface */
+  --color-brand-700: #1e40af;
+  --color-danger-600: #b91c1c; /* 6.5:1 sobre surface */
+  --color-success-600: #15803d; /* 5.0:1 sobre surface */
+  --color-warning-700: #a16207;
+  --color-focus: #1d4ed8;
+}
+
+:root {
+  --tap-min: 48px;
+  --space-unit: 8px;
+  color-scheme: light;
+}
+
+@layer base {
+  html {
+    font-size: 16px;
+  }
+
+  body {
+    @apply min-h-screen bg-surface font-sans text-ink antialiased;
+  }
+
+  :focus-visible {
+    outline: 3px solid var(--color-focus);
+    outline-offset: 2px;
+  }
+}

@@ -31,7 +31,7 @@ bash scripts/smoke.sh     # verificação ponta a ponta (F1-20)
 
 Acesse `http://localhost:${WEB_HTTP_PORT}/` (padrão 80). Documentação da API: `/api/documentation` apenas com `L5_SWAGGER_ENABLED=true`.
 
-Alvos do Makefile: `up, down, init, migrate, seed, test, lint, ci` (stubs até F1-02/F1-03/F1-17/F1-19).
+Alvos do Makefile: `up, down, init, migrate, seed, test, lint, ci` (`up`/`down` reais desde F1-02; demais são stubs até F1-03/F1-17/F1-19).
 
 ## Portas
 
@@ -49,7 +49,7 @@ Repositório, `main`, `develop` e merges são do Escrivão. Branches `feat/f1-XX
 
 ## Desvios em relação à especificação original
 
-Resumo; detalhes em [`docs/adr/0001-desvios-spec.md`](docs/adr/0001-desvios-spec.md): Laravel última estável (D1), Sanctum Bearer e não OAuth2 (D2), monólito modular + 2 serviços (D3), só nginx publicado (D4), sem senhas hardcoded (D5), sem `version:` no compose (D6), envelope próprio em vez de JSON:API (D9), somente Redis (D10), Node LTS vigente (D11), sem Horizon exposto (D12).
+Resumo; detalhes em [`docs/adr/0001-desvios-spec.md`](docs/adr/0001-desvios-spec.md): Laravel última estável (D1), Sanctum Bearer e não OAuth2 (D2), monólito modular + 2 serviços, sem K8s (D3), só nginx publicado (D4), sem senhas hardcoded (D5), sem `version:` no compose (D6), código dos serviços em `services/` (D7), nomes de serviço sem `container_name` (D8), envelope próprio em vez de JSON:API (D9), somente Redis (D10), Node 24 LTS (D11), sem Horizon exposto (D12), papéis Almoxarife/Financeiro adiados (D13), RN-002 placeholder (D14), Bearer em localStorage com CSP estrita (D15), git sob o Escrivão (D16).
 
 ## Troubleshooting
 

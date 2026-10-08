@@ -39,12 +39,12 @@ class AuditService
             'uuid' => (string) Str::uuid(),
             'event_at' => AuditHasher::eventAt(CarbonImmutable::now('UTC')),
             'source' => AuditContext::source(),
-            'actor_id' => $actor?->getAuthIdentifier(),
+            'actor_id' => $this->bigint('actor_id', $actor?->getAuthIdentifier()),
             'actor_name' => $actor === null ? null : $this->limit((string) data_get($actor, 'name'), 120),
             'actor_role' => $actor === null ? null : $this->role($actor),
             'action' => $action->value,
             'auditable_type' => $type,
-            'auditable_id' => $auditable?->getKey(),
+            'auditable_id' => $this->bigint('auditable_id', $auditable?->getKey()),
             'old_values' => $old,
             'new_values' => $new,
             'metadata' => $metadata === [] ? null : $metadata,
@@ -83,6 +83,23 @@ class AuditService
 
             return AuditLog::query()->findOrFail($id);
         });
+    }
+
+    /**
+     * As colunas são bigint e o verify relê como int: normaliza aqui para o hash do insert usar o mesmo
+     * tipo (senão '5' e 5 geram JSON canônico diferente e o verify acusa adulteração inexistente).
+     */
+    private function bigint(string $field, mixed $value): ?int
+    {
+        if ($value === null || is_int($value)) {
+            return $value;
+        }
+        // filter_var rejeita overflow (e zeros à esquerda, por isso removidos antes)
+        if (is_string($value) && preg_match('/^(-?)0*(\d+)$/', $value, $m) === 1 && ($int = filter_var($m[1].$m[2], FILTER_VALIDATE_INT)) !== false) {
+            return $int;
+        }
+
+        throw new InvalidArgumentException("{$field} deve ser inteiro (bigint): ".get_debug_type($value));
     }
 
     private function role(object $actor): ?string

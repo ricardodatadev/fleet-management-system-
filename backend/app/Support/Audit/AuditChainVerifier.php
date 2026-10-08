@@ -7,7 +7,7 @@ use Illuminate\Support\Facades\DB;
 class AuditChainVerifier
 {
     /**
-     * Percorre a cadeia por id. Retorna o primeiro registro divergente (se houver).
+     * Percorre a cadeia por id (keyset via chunkById — sem OFFSET, linear no tamanho da tabela). Retorna o primeiro registro divergente (se houver).
      *
      * @return array{ok: bool, checked: int, first_bad_id: ?int, reason: ?string}
      */
@@ -18,7 +18,7 @@ class AuditChainVerifier
         $badId = null;
         $reason = null;
 
-        DB::connection($connection)->table('audit_logs')->orderBy('id')->chunk(500, function ($rows) use (&$expectedPrev, &$checked, &$badId, &$reason) {
+        DB::connection($connection)->table('audit_logs')->chunkById(500, function ($rows) use (&$expectedPrev, &$checked, &$badId, &$reason) {
             foreach ($rows as $row) {
                 $checked++;
                 if ($row->prev_hash !== $expectedPrev) {
@@ -36,7 +36,7 @@ class AuditChainVerifier
             }
 
             return true;
-        });
+        }, 'id');
 
         return ['ok' => $badId === null, 'checked' => $checked, 'first_bad_id' => $badId, 'reason' => $reason];
     }

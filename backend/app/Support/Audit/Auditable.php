@@ -10,6 +10,8 @@ use App\Observers\AuditObserver;
  * Propriedades opcionais no model:
  *  - public array $auditExclude (default: password, remember_token, updated_at; password/remember_token são sempre excluídos)
  *  - public array $auditEvents  (default: created, updated, deleted, restored)
+ *    Atenção: se $auditExclude for definido sem 'updated_at', restore() gera também um 'updated'
+ *    (diff de updated_at) além do 'restored'.
  *
  * Convenção: execute a mutação dentro de DB::transaction() para que o log seja atômico com a mudança.
  */

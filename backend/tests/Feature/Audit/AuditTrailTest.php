@@ -170,3 +170,17 @@ it('o model AuditLog não permite update/delete/save de existente nem em massa',
     expect(fn () => AuditLog::query()->update(['action' => 'x']))->toThrow(AuditImmutableException::class);
     expect(fn () => AuditLog::query()->delete())->toThrow(AuditImmutableException::class);
 });
+
+it('normaliza actor_id/auditable_id string para int (sem falso alarme no audit:verify) e rejeita não inteiros', function () {
+    $probe = AuditProbe::create(['name' => 'A']);
+    $probe->setAttribute('id', (string) $probe->id);
+    auth()->setUser(new GenericUser(['id' => '42', 'name' => 'Ana', 'role' => 'admin']));
+
+    $log = app(AuditService::class)->record(AuditAction::Updated, $probe, ['name' => 'A'], ['name' => 'B']);
+    expect($log->actor_id)->toBe(42)->and($log->auditable_id)->toBe((int) $probe->id);
+    $this->artisan('audit:verify')->assertExitCode(0);
+
+    auth()->setUser(new GenericUser(['id' => 'abc', 'name' => 'X']));
+    expect(fn () => app(AuditService::class)->record(AuditAction::Updated, $probe))->toThrow(InvalidArgumentException::class);
+    auth()->forgetGuards();
+});

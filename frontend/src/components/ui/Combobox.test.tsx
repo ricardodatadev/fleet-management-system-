@@ -88,6 +88,74 @@ describe('Combobox', () => {
     expect(input).toHaveAttribute('aria-expanded', 'false');
   });
 
+  it('reabrir após selecionar busca com query vazia', async () => {
+    const user = userEvent.setup();
+    const loadOptions = vi.fn(search);
+    render(
+      <>
+        <Harness loadOptions={loadOptions} />
+        <button type="button">fora</button>
+      </>,
+    );
+    const input = screen.getByRole('combobox');
+    await user.type(input, 'Carr');
+    await waitFor(() => expect(screen.getAllByRole('option')).toHaveLength(1));
+    await user.keyboard('{Enter}');
+    expect(input).toHaveValue('Carregadeiras');
+
+    await user.click(screen.getByRole('button', { name: 'fora' }));
+    loadOptions.mockClear();
+    await user.click(input);
+    expect(await screen.findAllByRole('option')).toHaveLength(3);
+    expect(loadOptions).toHaveBeenCalledTimes(1);
+    expect(loadOptions).toHaveBeenCalledWith('', expect.any(AbortSignal));
+  });
+
+  it.each([
+    ['blur', async (user: ReturnType<typeof userEvent.setup>) => user.tab()],
+    ['Escape', async (user: ReturnType<typeof userEvent.setup>) => user.keyboard('{Escape}')],
+  ])('após %s a próxima abertura busca com query vazia', async (_label, dismiss) => {
+    const user = userEvent.setup();
+    const loadOptions = vi.fn(search);
+    render(<Harness loadOptions={loadOptions} />);
+    const input = screen.getByRole('combobox');
+    await user.type(input, 'cen');
+    await screen.findByText('Nenhum resultado.');
+    await dismiss(user);
+    expect(input).toHaveAttribute('aria-expanded', 'false');
+    loadOptions.mockClear();
+    await user.click(input);
+    expect(await screen.findAllByRole('option')).toHaveLength(3);
+    expect(loadOptions).toHaveBeenLastCalledWith('', expect.any(AbortSignal));
+  });
+
+  it('Enter durante a busca não seleciona opção obsoleta; aviso fica no popup', async () => {
+    const user = userEvent.setup();
+    const onChange = vi.fn();
+    let resolveNext: ((options: ComboboxOption[]) => void) | undefined;
+    const loadOptions = vi.fn((query: string) =>
+      query === '' ? search('') : new Promise<ComboboxOption[]>((r) => (resolveNext = r)),
+    );
+    render(<Harness loadOptions={loadOptions} onChange={onChange} />);
+    const input = screen.getByRole('combobox');
+    await user.click(input);
+    await screen.findAllByRole('option');
+
+    await user.type(input, 'Esc');
+    expect(screen.getByRole('status')).toHaveTextContent('Carregando…');
+    expect(screen.getByRole('listbox', { hidden: true })).toHaveAttribute('aria-busy', 'true');
+    expect(input).not.toHaveAttribute('aria-activedescendant');
+    await user.keyboard('{Enter}');
+    expect(onChange).not.toHaveBeenCalled();
+
+    await waitFor(() => expect(resolveNext).toBeDefined());
+    resolveNext?.([families[1] as ComboboxOption]);
+    await waitFor(() => expect(screen.getAllByRole('option')).toHaveLength(1));
+    expect(screen.queryByText('Carregando…')).not.toBeInTheDocument();
+    await user.keyboard('{Enter}');
+    expect(onChange).toHaveBeenCalledWith(families[1]);
+  });
+
   it('limpar seleção zera o valor', async () => {
     const user = userEvent.setup();
     render(<Harness initial={families[0]} />);

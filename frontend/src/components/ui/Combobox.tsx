@@ -27,8 +27,6 @@ export interface ComboboxProps {
   className?: string;
 }
 
-type Status = 'idle' | 'loading' | 'error';
-
 /** Combobox (WAI-ARIA 1.2, lista com autocomplete) com busca remota. */
 export function Combobox({
   loadOptions,
@@ -47,10 +45,12 @@ export function Combobox({
   const listId = `${inputId}-list`;
   const [open, setOpen] = useState(false);
   const [text, setText] = useState(value?.label ?? '');
-  const [options, setOptions] = useState<ComboboxOption[]>([]);
-  const [status, setStatus] = useState<Status>('idle');
-  const [active, setActive] = useState(-1);
   const [query, setQuery] = useState('');
+  const [options, setOptions] = useState<ComboboxOption[]>([]);
+  const [active, setActive] = useState(-1);
+  const [failed, setFailed] = useState(false);
+  // Query cujo resultado está em `options`; `null` = nada carregado nesta abertura.
+  const [loadedQuery, setLoadedQuery] = useState<string | null>(null);
   const loadRef = useRef(loadOptions);
   useEffect(() => {
     loadRef.current = loadOptions;
@@ -64,25 +64,30 @@ export function Combobox({
     setText(valueLabel);
   }
 
+  // Busca em debounce/andamento: as opções na tela são de outra query (obsoletas).
+  const pending = loadedQuery !== query;
+
   useEffect(() => {
     if (!open) return;
     const controller = new AbortController();
-    // Primeira abertura (query vazia) busca já; digitação aguarda o debounce.
+    // Abertura (query vazia) busca já; digitação aguarda o debounce.
     const timer = setTimeout(
       () => {
-        setStatus('loading');
         loadRef
           .current(query, controller.signal)
           .then((result) => {
             if (controller.signal.aborted) return;
             setOptions(result);
             setActive(result.length > 0 ? 0 : -1);
-            setStatus('idle');
+            setFailed(false);
+            setLoadedQuery(query);
           })
           .catch(() => {
             if (controller.signal.aborted) return;
             setOptions([]);
-            setStatus('error');
+            setActive(-1);
+            setFailed(true);
+            setLoadedQuery(query);
           });
       },
       query === '' ? 0 : debounceMs,
@@ -93,10 +98,20 @@ export function Combobox({
     };
   }, [open, query, debounceMs]);
 
+  /** Fecha o popup e descarta a busca, para a próxima abertura começar com query vazia. */
+  function close(nextText: string) {
+    setOpen(false);
+    setText(nextText);
+    setQuery('');
+    setOptions([]);
+    setActive(-1);
+    setFailed(false);
+    setLoadedQuery(null);
+  }
+
   function select(option: ComboboxOption) {
     onChange(option);
-    setText(option.label);
-    setOpen(false);
+    close(option.label);
   }
 
   function onKeyDown(event: KeyboardEvent<HTMLInputElement>) {
@@ -107,18 +122,23 @@ export function Combobox({
     } else if (event.key === 'ArrowUp') {
       event.preventDefault();
       setActive((i) => Math.max(i - 1, 0));
-    } else if (event.key === 'Enter' && open && active >= 0) {
+    } else if (event.key === 'Enter' && open) {
+      // Nunca seleciona opção obsoleta enquanto a nova busca não chega.
       event.preventDefault();
-      const option = options[active];
+      const option = pending ? undefined : options[active];
       if (option) select(option);
     } else if (event.key === 'Escape' && open) {
       event.preventDefault();
-      setOpen(false);
-      setText(valueLabel);
+      close(valueLabel);
     }
   }
 
-  const activeId = open && active >= 0 ? `${inputId}-opt-${active}` : undefined;
+  const activeId = open && !pending && active >= 0 ? `${inputId}-opt-${active}` : undefined;
+
+  let message: { text: string; role: 'status' | 'alert' } | null = null;
+  if (pending) message = { text: 'Carregando…', role: 'status' };
+  else if (failed) message = { text: 'Não foi possível buscar. Tente novamente.', role: 'alert' };
+  else if (options.length === 0) message = { text: 'Nenhum resultado.', role: 'status' };
 
   return (
     <div className={cn('relative', className)}>
@@ -143,10 +163,9 @@ export function Combobox({
             setOpen(true);
           }}
           onFocus={() => setOpen(true)}
-          onBlur={() => {
-            setOpen(false);
-            setText(valueLabel);
-          }}
+          // Reabre ao clicar quando já focado (ex.: após Escape).
+          onClick={() => setOpen(true)}
+          onBlur={() => close(valueLabel)}
           onKeyDown={onKeyDown}
           {...aria}
         />
@@ -156,54 +175,48 @@ export function Combobox({
             icon={<X className="size-5" />}
             onClick={() => {
               onChange(null);
-              setText('');
-              setQuery('');
+              close('');
             }}
           />
         )}
       </div>
-      <ul
-        id={listId}
-        role="listbox"
-        aria-label={aria['aria-label'] ?? 'Opções'}
+      <div
         hidden={!open}
         className="absolute z-30 mt-1 max-h-64 w-full overflow-y-auto rounded-lg border border-border bg-surface shadow-lg"
       >
-        {options.map((option, index) => (
-          // Seleção por teclado é feita no input (aria-activedescendant); o clique é conveniência de mouse/touch.
-          // eslint-disable-next-line jsx-a11y/click-events-have-key-events
-          <li
-            key={option.value}
-            id={`${inputId}-opt-${index}`}
-            role="option"
-            aria-selected={value?.value === option.value}
-            className={cn(
-              'flex min-h-12 cursor-pointer items-center px-3',
-              index === active && 'bg-surface-muted',
-            )}
-            onMouseDown={(event) => event.preventDefault()}
-            onClick={() => select(option)}
-          >
-            {option.label}
-          </li>
-        ))}
-      </ul>
-      {open && status !== 'idle' && (
-        <p
-          role={status === 'error' ? 'alert' : 'status'}
-          className="absolute z-30 mt-1 w-full rounded-lg border border-border bg-surface p-3 text-ink-muted shadow-lg"
+        {message && (
+          <p role={message.role} className="border-b border-border p-3 text-ink-muted">
+            {message.text}
+          </p>
+        )}
+        <ul
+          id={listId}
+          role="listbox"
+          aria-label={aria['aria-label'] ?? 'Opções'}
+          aria-busy={pending || undefined}
+          hidden={options.length === 0}
+          className={cn(pending && 'opacity-60')}
         >
-          {status === 'loading' ? 'Carregando…' : 'Não foi possível buscar. Tente novamente.'}
-        </p>
-      )}
-      {open && status === 'idle' && options.length === 0 && (
-        <p
-          role="status"
-          className="absolute z-30 mt-1 w-full rounded-lg border border-border bg-surface p-3 text-ink-muted shadow-lg"
-        >
-          Nenhum resultado.
-        </p>
-      )}
+          {options.map((option, index) => (
+            // Seleção por teclado é feita no input (aria-activedescendant); o clique é conveniência de mouse/touch.
+            // eslint-disable-next-line jsx-a11y/click-events-have-key-events
+            <li
+              key={option.value}
+              id={`${inputId}-opt-${index}`}
+              role="option"
+              aria-selected={value?.value === option.value}
+              className={cn(
+                'flex min-h-12 cursor-pointer items-center px-3',
+                !pending && index === active && 'bg-surface-muted',
+              )}
+              onMouseDown={(event) => event.preventDefault()}
+              onClick={() => select(option)}
+            >
+              {option.label}
+            </li>
+          ))}
+        </ul>
+      </div>
     </div>
   );
 }

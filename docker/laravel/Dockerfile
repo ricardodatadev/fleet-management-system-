@@ -1,6 +1,6 @@
 # syntax=docker/dockerfile:1
 # Contexto de build: raiz do repo (ver docker-compose.yml). .dockerignore filtra o contexto.
-# PHP 8.4 porque Pest 5 exige ^8.4 (Laravel 13 aceita 8.3–8.5).
+# PHP 8.4: série estável atual suportada pelo Laravel 13 (8.3–8.5), com suporte mais longo que 8.3; permite migrar ao Pest 5 no futuro.
 
 FROM php:8.4.26-fpm-alpine AS base
 

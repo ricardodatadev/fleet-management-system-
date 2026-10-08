@@ -6,6 +6,17 @@ import { server } from './server';
 
 expect.extend(toHaveNoViolations);
 
+// APIs de layout/ponteiro ausentes no jsdom e usadas pelos primitivos Radix (Popper, Select, Tooltip).
+class ResizeObserverStub {
+  observe() {}
+  unobserve() {}
+  disconnect() {}
+}
+globalThis.ResizeObserver ??= ResizeObserverStub;
+Element.prototype.scrollIntoView ??= function scrollIntoView() {};
+Element.prototype.hasPointerCapture ??= () => false;
+Element.prototype.releasePointerCapture ??= () => {};
+
 beforeAll(() => server.listen({ onUnhandledRequest: 'error' }));
 afterEach(() => {
   cleanup();

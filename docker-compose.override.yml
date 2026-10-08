@@ -1,0 +1,9 @@
+# Dev somente: portas em 127.0.0.1. Carregado automaticamente pelo `docker compose`.
+# Para a configuração base/produção: docker compose -f docker-compose.yml ...
+services:
+  db:
+    ports:
+      - "127.0.0.1:${DB_PORT:-5432}:5432"
+  redis:
+    ports:
+      - "127.0.0.1:6379:6379"

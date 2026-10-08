@@ -2,10 +2,10 @@
 .PHONY: up down init migrate seed test lint ci
 
 up:
-	@echo "ERRO: 'make up' ainda nao implementado (disponivel a partir de F1-02/F1-03 (docker compose))." >&2; exit 1
+	docker compose up -d --wait
 
 down:
-	@echo "ERRO: 'make down' ainda nao implementado (disponivel a partir de F1-02 (docker compose))." >&2; exit 1
+	docker compose down
 
 init:
 	@echo "ERRO: 'make init' ainda nao implementado (disponivel a partir de F1-03 (key:generate + migrate))." >&2; exit 1

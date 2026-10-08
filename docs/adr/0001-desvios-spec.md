@@ -21,7 +21,7 @@ A SRS v2.0.0 e a Especificação Técnica 01 v1.0.0 contêm itens que a Fase 1 i
 | D8 | Nomes `sigof-*` + `container_name` | Serviços `nginx, app, worker, db, redis, python, node` (+ `frontend` só no override). Sem `container_name`. |
 | D9 | "JSON:API" | Envelope próprio (`status, message, errors, data, meta`), não a spec JSON:API. |
 | D10 | Redis / RabbitMQ | Somente Redis (filas, cache, sessão, pub/sub). RabbitMQ removido. |
-| D11 | Node 20 | Node LTS ativa vigente para `node` e build do frontend. Python 3.12, PostgreSQL 16, Redis 7, React 18 mantidos. |
+| D11 | Node 20 | **Node 24 LTS** (decisão do Claudão em 2026-10-08) para `node` e build do frontend. A 26 só vira LTS em 2026-10-20; revisar em fase futura. Python 3.12, PostgreSQL 16, Redis 7, React 18 mantidos. |
 | D12 | Horizon | `/horizon` não exposto pelo nginx na Fase 1; verificação via `horizon:status`. |
 | D13 | Papéis Almoxarife/Financeiro (matriz §5 SRS) | Fora de RN-007; ficam para fase própria. Enum de perfis extensível. |
 | D14 | RN-002 (matriz por Categoria de Serviço) | `workorder.block_close_without_labor` é placeholder (bool global/filial); a RN-002 real será modelada na fase de OS, substituindo a chave. RN-001 "Modo de Disparo" está adequada. |
@@ -41,10 +41,12 @@ Pesquisa feita em 2026-10-08 (busca web; **não** verificada em packagist/nodejs
 | Laravel (D1) | Série **13.x** é a última estável (13.8.0 de 2026-05-26 segundo agregadores); suporta PHP 8.3–8.5, mínimo 8.3. Suporte ativo até 2027-09-30, segurança até 2028-03-17. | **a confirmar em F1-03** (`composer create-project` / packagist; versão exata + PHP) |
 | PHP | mínimo 8.3 (exigido pelo Laravel 13); versão da imagem a definir | a confirmar em F1-03 |
 | Sanctum / Horizon / Pest / Pint / Larastan / l5-swagger | compatibilidade com Laravel 13 não verificada | a confirmar em F1-03/F1-07/F1-19 |
-| Node (D11) | Em 2026-10-08 a **24 (Krypton) é a LTS ativa**; a **26 entra em LTS em 2026-10-20** (EOL abr/2029); a 24 sai de Active LTS em 2026-10-20 (segue em Maintenance). | **a confirmar em F1-05** (decidir 24 vs 26 conforme data) |
-| Python 3.12, PostgreSQL 16, Redis 7, React 18 | conforme spec | tags exatas a fixar em F1-02/F1-04/F1-21 |
+| Node (D11) | **Decidido: 24 LTS** (a 26 entra em LTS em 2026-10-20; a 24 passa a Maintenance na mesma data). Revisar em fase futura. | tag exata a fixar em F1-05 |
+| PostgreSQL 16 + pgvector | `pgvector/pgvector:0.8.1-pg16` (F1-02) | fixado |
+| Redis 7 | `redis:7.4.6-alpine` (F1-02) | fixado |
+| Python 3.12, React 18 | conforme spec | tags exatas a fixar em F1-04/F1-21 |
 
 ## Pendências de decisão registradas
 
-- Q7: remoto git não confirmado; workflow GitHub Actions fica inativo, o gate é o `make ci` local.
+- Q7: o usuário vai criar o repositório no GitHub (remoto em configuração). O workflow GitHub Actions fica inativo e será ativado quando o remoto existir; até lá o gate é o `make ci` local.
 - Usuário de aplicação do banco sem `UPDATE/DELETE` em `audit_logs` (F.1): se inviável na Fase 1, documentar aqui na F1-08.

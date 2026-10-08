@@ -34,14 +34,21 @@ CSP estrita (`default-src 'self'`) em `/`; `/api/documentation*` e `/vendor/l5-s
 
 ## Versões
 
-Pesquisa feita em 2026-10-08 (busca web; **não** verificada em packagist/nodejs.org — confirmar nas tarefas indicadas).
+Pesquisa de 2026-10-08. Versões do backend confirmadas no packagist/`composer show` na F1-03; Node conforme decisão do Claudão (D11).
 
 | Componente | Registro atual | Confirmação |
 |---|---|---|
-| Laravel (D1) | Série **13.x** é a última estável (13.8.0 de 2026-05-26 segundo agregadores); suporta PHP 8.3–8.5, mínimo 8.3. Suporte ativo até 2027-09-30, segurança até 2028-03-17. | **a confirmar em F1-03** (`composer create-project` / packagist; versão exata + PHP) |
-| PHP | mínimo 8.3 (exigido pelo Laravel 13); versão da imagem a definir | a confirmar em F1-03 |
-| Sanctum / Horizon / Pest / Pint / Larastan / l5-swagger | compatibilidade com Laravel 13 não verificada | a confirmar em F1-03/F1-07/F1-19 |
-| Node (D11) | **Decidido: 24 LTS** (a 26 entra em LTS em 2026-10-20; a 24 passa a Maintenance na mesma data). Revisar em fase futura. | tag exata a fixar em F1-05 |
+| Laravel (D1) | **Laravel 13.35.0** (`laravel/framework`; skeleton `laravel/laravel` v13.11.0), confirmado no packagist em 2026-10-08. Exige PHP ^8.3. | **confirmado (F1-03)** |
+| PHP (D1) | **8.4.26** (`php:8.4.26-fpm-alpine`). 8.4 e não 8.3 porque o Pest exige ^8.4; o Laravel 13 aceita 8.3–8.5. | confirmado (F1-03) |
+| Composer | 2.10.3 (imagem `composer:2.10.3`, copiado para a imagem do app) | confirmado |
+| Sanctum | 4.3.3 (suporta Laravel 13) | confirmado |
+| Horizon | 5.50.0 (suporta Laravel 13) | confirmado |
+| Pest | **4.7.8** + `pest-plugin-laravel` 4.1.0 (PHPUnit 12.5.33), padrão do skeleton Laravel 13. Existe Pest 5.3.1 (PHP ^8.4, PHPUnit 13), **não adotado**: o skeleton fixa `^4.7`; avaliar upgrade quando o ecossistema estabilizar. | confirmado; compatível |
+| Larastan | 3.13.0 (suporta Laravel 13) | confirmado (nível 5 configurado na F1-19) |
+| l5-swagger | 11.1.0 (suporta Laravel 13). Instalado mas com auto-discovery **desativado** (`extra.laravel.dont-discover`) até a F1-07 configurar OpenAPI 3.0 e `L5_SWAGGER_ENABLED`. | confirmado; configurar em F1-07 |
+| Pint | 1.32.1 (dev, do skeleton) | confirmado |
+| phpredis | 6.2.0 (pecl) | confirmado |
+| nginx | `nginx:1.30.5-alpine` (stable) | confirmado |
 | PostgreSQL 16 + pgvector | `pgvector/pgvector:0.8.1-pg16` (F1-02) | fixado |
 | Redis 7 | `redis:7.4.6-alpine` (F1-02) | fixado |
 | Python 3.12, React 18 | conforme spec | tags exatas a fixar em F1-04/F1-21 |
@@ -50,3 +57,10 @@ Pesquisa feita em 2026-10-08 (busca web; **não** verificada em packagist/nodejs
 
 - Q7: o usuário vai criar o repositório no GitHub (remoto em configuração). O workflow GitHub Actions fica inativo e será ativado quando o remoto existir; até lá o gate é o `make ci` local.
 - Usuário de aplicação do banco sem `UPDATE/DELETE` em `audit_logs` (F.1): se inviável na Fase 1, documentar aqui na F1-08.
+
+## Notas de implementação (F1-03)
+
+- Imagem do app: PHP-FPM como `www-data` (não-root), porta 9000, `pm.ping`/`pm.status` ativos; Horizon no serviço `worker` usa a mesma imagem. Dependências de dev (Pest, Pint, Larastan) ficam na imagem para o gate local (`make ci`); uma imagem de produção sem dev deps é evolução.
+- O container não tem arquivo `.env`: a configuração vem das variáveis do compose. `make init` grava `APP_KEY` no `.env` do host.
+- Redis: a senha vai para `/tmp/redis.conf` (umask 077) gerado a partir da env, fora da linha de comando do processo.
+- `Access-Control-Allow-Origin: *` vem do middleware CORS padrão do Laravel; a política de CORS será definida na F1-06 (mesma origem via nginx).

@@ -2,7 +2,7 @@
 
 Monorepo da Fase 1 (fundação + cadastros). Fonte de verdade da fase: especificação `fase-1-especificacao` v1.1.
 
-> **Estado atual:** apenas o scaffold (F1-01). Compose, Laravel, serviços e frontend chegam nas tarefas F1-02 em diante; `make` falha com mensagem clara enquanto o alvo não existe.
+> **Estado atual (F1-03):** compose com nginx, app (Laravel 13 / PHP 8.4), worker (Horizon), db e redis. Serviços python/node e frontend chegam nas próximas tarefas; alvos `make` ainda não implementados falham com mensagem clara.
 
 ## Arquitetura
 
@@ -24,14 +24,14 @@ Monólito modular Laravel + 2 serviços, tudo em Docker Compose (projeto `sigof`
 ```bash
 cp .env.example .env      # preencha TODOS os valores "change-me"
 make up                   # sobe os containers
-make init                 # key:generate + migrate
+make init                 # gera APP_KEY no .env (se vazia) + migrate
 make seed                 # admin + parâmetros (+ demo em local/testing)
 bash scripts/smoke.sh     # verificação ponta a ponta (F1-20)
 ```
 
-Acesse `http://localhost:${WEB_HTTP_PORT}/` (padrão 80). Documentação da API: `/api/documentation` apenas com `L5_SWAGGER_ENABLED=true`.
+Acesse `http://localhost:${WEB_HTTP_PORT}/` (padrão 80; use ex. 8080 se a porta 80 estiver ocupada ou sem privilégio). Health do nginx: `/healthz`. Documentação da API: `/api/documentation` apenas com `L5_SWAGGER_ENABLED=true`.
 
-Alvos do Makefile: `up, down, init, migrate, seed, test, lint, ci` (`up`/`down` reais desde F1-02; demais são stubs até F1-03/F1-17/F1-19).
+Alvos do Makefile: `up, down, init, migrate, seed, test, lint, ci` (`up`/`down`/`init`/`migrate` reais; `seed`, `test`, `lint`, `ci` são stubs até F1-17/F1-19).
 
 ## Portas
 

@@ -2,16 +2,21 @@
 .PHONY: up down init migrate seed test lint ci
 
 up:
-	docker compose up -d --wait
+	docker compose up -d --build --wait
 
 down:
 	docker compose down
 
 init:
-	@echo "ERRO: 'make init' ainda nao implementado (disponivel a partir de F1-03 (key:generate + migrate))." >&2; exit 1
+	@# key:generate: grava APP_KEY no .env do host (o container não tem .env) e recria app/worker; depois migra.
+	@grep -q '^APP_KEY=base64:' .env || { \
+		key=$$(docker compose run --rm --no-deps -T app php artisan key:generate --show) && \
+		sed -i "s|^APP_KEY=.*|APP_KEY=$$key|" .env && echo "APP_KEY gerada em .env"; }
+	docker compose up -d --wait
+	$(MAKE) migrate
 
 migrate:
-	@echo "ERRO: 'make migrate' ainda nao implementado (disponivel a partir de F1-03/F1-09 (Laravel))." >&2; exit 1
+	docker compose exec app php artisan migrate --force
 
 seed:
 	@echo "ERRO: 'make seed' ainda nao implementado (disponivel a partir de F1-17 (seeders))." >&2; exit 1

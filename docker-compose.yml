@@ -1,5 +1,34 @@
 name: sigof
 
+x-laravel-env: &laravel-env
+  APP_NAME: SIGOF-M
+  APP_ENV: ${APP_ENV:-local}
+  APP_KEY: ${APP_KEY:-}
+  APP_DEBUG: ${APP_DEBUG:-false}
+  APP_URL: ${APP_URL:-http://localhost}
+  APP_TIMEZONE: UTC
+  APP_LOCALE: pt_BR
+  APP_FALLBACK_LOCALE: pt_BR
+  APP_FAKER_LOCALE: pt_BR
+  LOG_CHANNEL: stderr
+  DB_CONNECTION: pgsql
+  DB_HOST: ${DB_HOST:-db}
+  DB_PORT: 5432
+  DB_DATABASE: ${POSTGRES_DB:?defina POSTGRES_DB no .env}
+  DB_USERNAME: ${POSTGRES_USER:?defina POSTGRES_USER no .env}
+  DB_PASSWORD: ${POSTGRES_PASSWORD:?defina POSTGRES_PASSWORD no .env}
+  REDIS_CLIENT: phpredis
+  REDIS_HOST: ${REDIS_HOST:-redis}
+  REDIS_PORT: 6379
+  REDIS_PASSWORD: ${REDIS_PASSWORD:?defina REDIS_PASSWORD no .env}
+  CACHE_STORE: redis
+  SESSION_DRIVER: redis
+  QUEUE_CONNECTION: redis
+  SANCTUM_EXPIRATION: ${SANCTUM_EXPIRATION:-720}
+  L5_SWAGGER_ENABLED: ${L5_SWAGGER_ENABLED:-false}
+  PYTHON_SERVICE_URL: ${PYTHON_SERVICE_URL:-http://python:8000}
+  LARAVEL_INTERNAL_URL: ${LARAVEL_INTERNAL_URL:-http://nginx}
+
 services:
   db:
     image: pgvector/pgvector:0.8.1-pg16
@@ -25,7 +54,11 @@ services:
   redis:
     image: redis:7.4.6-alpine
     restart: unless-stopped
-    command: ["sh", "-c", "exec redis-server --requirepass \"$$REDIS_PASSWORD\" --appendonly yes"]
+    # A senha vai para um arquivo de config (não aparece na linha de comando do processo).
+    command:
+      - sh
+      - -c
+      - umask 077 && printf 'requirepass "%s"\n' "$$REDIS_PASSWORD" > /tmp/redis.conf && exec redis-server /tmp/redis.conf --appendonly yes
     environment:
       REDIS_PASSWORD: ${REDIS_PASSWORD:?defina REDIS_PASSWORD no .env}
       REDISCLI_AUTH: ${REDIS_PASSWORD}
@@ -35,6 +68,71 @@ services:
       - sigof
     healthcheck:
       test: ["CMD-SHELL", "redis-cli ping | grep -q PONG"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 10s
+
+  app:
+    build:
+      context: .
+      dockerfile: docker/laravel/Dockerfile
+      target: app
+    image: sigof/app:local
+    restart: unless-stopped
+    environment: *laravel-env
+    networks:
+      - sigof
+    depends_on:
+      db:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD-SHELL", "SCRIPT_NAME=/ping SCRIPT_FILENAME=/ping REQUEST_METHOD=GET cgi-fcgi -bind -connect 127.0.0.1:9000 | grep -q pong"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 15s
+
+  worker:
+    image: sigof/app:local
+    restart: unless-stopped
+    command: ["php", "artisan", "horizon"]
+    environment: *laravel-env
+    networks:
+      - sigof
+    depends_on:
+      app:
+        condition: service_healthy
+      db:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    stop_signal: SIGTERM
+    stop_grace_period: 30s
+    healthcheck:
+      test: ["CMD-SHELL", "php artisan horizon:status | grep -qi running"]
+      interval: 15s
+      timeout: 10s
+      retries: 5
+      start_period: 30s
+
+  nginx:
+    build:
+      context: .
+      dockerfile: docker/nginx/Dockerfile
+    image: sigof/nginx:local
+    restart: unless-stopped
+    ports:
+      - "${WEB_HTTP_PORT:-80}:80"
+    networks:
+      - sigof
+    depends_on:
+      app:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD-SHELL", "wget -qO- http://127.0.0.1/healthz | grep -q ok"]
       interval: 10s
       timeout: 5s
       retries: 5

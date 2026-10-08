@@ -33,6 +33,8 @@ WORKDIR /var/www/html
 COPY --from=composer-tools /usr/bin/composer /usr/bin/composer
 COPY --from=vendor /var/www/html/vendor ./vendor
 COPY --chown=www-data:www-data backend/ .
+# OpenAPI versionada (docs/ fica ao lado de html/, como no repositório: base_path('../docs'))
+COPY --chown=www-data:www-data docs/api/ /var/www/docs/api/
 COPY docker/laravel/entrypoint.sh /usr/local/bin/entrypoint.sh
 RUN chmod +x /usr/local/bin/entrypoint.sh \
     && mkdir -p storage/framework/cache storage/framework/sessions storage/framework/views storage/logs bootstrap/cache \

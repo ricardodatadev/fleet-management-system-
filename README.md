@@ -31,11 +31,15 @@ bash scripts/smoke.sh     # verificação ponta a ponta (F1-20)
 
 Acesse `http://localhost:${WEB_HTTP_PORT}/` (padrão 80; use ex. 8080 se a porta 80 estiver ocupada ou sem privilégio). Health do nginx: `/healthz`. Documentação da API: `/api/documentation` apenas com `L5_SWAGGER_ENABLED=true`.
 
-Alvos do Makefile: `up, down, init, migrate, seed, test, lint, ci` (`up`/`down`/`init`/`migrate`/`test` reais; `test-db`; `seed`, `lint`, `ci` são stubs até F1-17/F1-19).
+Alvos do Makefile: `up, down, init, migrate, seed, test, lint, ci` (`up`/`down`/`init`/`migrate`/`test` reais; `test-db`/`openapi`/`openapi-lint`; `seed`, `lint`, `ci` são stubs até F1-17/F1-19).
 
 ## Desenvolvimento
 
 O `docker-compose.override.yml` (dev) monta `./backend` nos containers `app`/`worker` (recarga sem rebuild) e roda com o seu uid: `export HOST_UID=$(id -u) HOST_GID=$(id -g)` (default 1000). Se mudar `composer.json/lock`: `docker compose build app && docker compose down && docker volume rm sigof_app_vendor`. Testes: `make test` (Pest no container `app`) rodam em **PostgreSQL**, no banco `sigof_test` (nunca no de dev): `Tests\TestCase` aborta se o driver não for `pgsql` ou o banco não terminar em `_test`. O banco de testes é criado pelo init do postgres em volumes novos; em volumes antigos `make test-db` (idempotente, também executado por `make test`) cria o banco e a extensão `vector`. CORS extra só via `CORS_ALLOWED_ORIGINS`.
+
+## OpenAPI
+
+Contrato da API: `docs/api/openapi.json` (OpenAPI 3.0, versionado), gerado dos atributos PHP (swagger-php): `make openapi` (= `composer openapi` no container). Lint: `make openapi-lint` (Redocly em container node efêmero; 0 erros, avisos justificados no ADR). Os testes Pest falham se uma rota `api/v1` não estiver documentada ou se o JSON versionado estiver desatualizado. Swagger UI: `L5_SWAGGER_ENABLED=true` no `.env` e recriar `nginx`/`app` → `/api/documentation` (com `false` a rota não existe e responde 404). A CSP do Swagger UI é própria desse location; `/` mantém `default-src 'self'`.
 
 ## Portas
 

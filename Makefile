@@ -1,5 +1,5 @@
 # SIGOF-M — alvos reais chegam nas tarefas indicadas; ate la falham com mensagem clara.
-.PHONY: up down init migrate seed test test-db lint ci
+.PHONY: up down init migrate seed test test-db openapi openapi-lint lint ci
 
 up:
 	docker compose up -d --build --wait
@@ -27,6 +27,14 @@ test-db:
 
 test: test-db
 	docker compose exec -T app vendor/bin/pest
+
+# Gera docs/api/openapi.json (composer openapi no container app; docs/ é montado no override).
+openapi:
+	docker compose exec -T app composer openapi
+
+# Lint da OpenAPI com Redocly em container node efêmero (nada de node no host).
+openapi-lint:
+	docker run --rm -v "$(CURDIR)":/spec -w /spec node:24.21.0-alpine npx --yes @redocly/cli@2.60.0 lint docs/api/openapi.json
 
 lint:
 	@echo "ERRO: 'make lint' ainda nao implementado (disponivel a partir de F1-19 (Pint/Larastan))." >&2; exit 1

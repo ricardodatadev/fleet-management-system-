@@ -74,13 +74,14 @@
         ],
         "pre-package-uninstall": [
             "Illuminate\\Foundation\\ComposerScripts::prePackageUninstall"
+        ],
+        "openapi": [
+            "@php artisan openapi:generate"
         ]
     },
     "extra": {
         "laravel": {
-            "dont-discover": [
-                "darkaonline/l5-swagger"
-            ]
+            "dont-discover": []
         }
     },
     "config": {

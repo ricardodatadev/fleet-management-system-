@@ -38,6 +38,7 @@ RUN chmod +x /usr/local/bin/entrypoint.sh \
     && mkdir -p storage/framework/cache storage/framework/sessions storage/framework/views storage/logs bootstrap/cache \
     && composer dump-autoload --optimize --no-interaction \
     && chown -R www-data:www-data storage bootstrap/cache vendor \
+    && find vendor -type d -name .temp -exec chmod a+rwx {} + \
     && php artisan package:discover --ansi
 USER www-data
 EXPOSE 9000

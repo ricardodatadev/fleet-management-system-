@@ -31,7 +31,11 @@ bash scripts/smoke.sh     # verificação ponta a ponta (F1-20)
 
 Acesse `http://localhost:${WEB_HTTP_PORT}/` (padrão 80; use ex. 8080 se a porta 80 estiver ocupada ou sem privilégio). Health do nginx: `/healthz`. Documentação da API: `/api/documentation` apenas com `L5_SWAGGER_ENABLED=true`.
 
-Alvos do Makefile: `up, down, init, migrate, seed, test, lint, ci` (`up`/`down`/`init`/`migrate` reais; `seed`, `test`, `lint`, `ci` são stubs até F1-17/F1-19).
+Alvos do Makefile: `up, down, init, migrate, seed, test, lint, ci` (`up`/`down`/`init`/`migrate`/`test` reais; `seed`, `lint`, `ci` são stubs até F1-17/F1-19).
+
+## Desenvolvimento
+
+O `docker-compose.override.yml` (dev) monta `./backend` nos containers `app`/`worker` (recarga sem rebuild) e roda com o seu uid: `export HOST_UID=$(id -u) HOST_GID=$(id -g)` (default 1000). Se mudar `composer.json/lock`: `docker compose build app && docker compose down && docker volume rm sigof_app_vendor`. Testes: `make test` (Pest no container `app`, banco sqlite em memória — não toca no PostgreSQL de dev). CORS extra só via `CORS_ALLOWED_ORIGINS`.
 
 ## Portas
 

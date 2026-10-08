@@ -67,3 +67,12 @@ Pesquisa de 2026-10-08. Versões do backend confirmadas no packagist/`composer s
 - O container não tem arquivo `.env`: a configuração vem das variáveis do compose. `make init` grava `APP_KEY` no `.env` do host.
 - Redis: a senha vai para `/tmp/redis.conf` (umask 077) gerado a partir da env, fora da linha de comando do processo.
 - `Access-Control-Allow-Origin: *` vem do middleware CORS padrão do Laravel; a política de CORS será definida na F1-06 (mesma origem via nginx).
+
+## Notas de implementação (F1-06)
+
+- **Envelope:** `ApiResponse` é a única fonte; chaves `status, message, errors, data` (+ `meta` só em listas). Tratamento de exceções em `bootstrap/app.php` para 401/403/404/405/409/422/429/500; 500 nunca vaza trace/SQL/paths (com `APP_DEBUG=true` acrescenta um bloco `debug`, só em dev). `X-Request-Id` aceita somente UUID (compatível com `audit_logs.request_id uuid`); valores inválidos são substituídos.
+- **`GET /api/v1/meta/enums`:** criado como esqueleto **público e vazio** (`data.enums = {}`) porque a autenticação só existe na F1-09/10. `TODO(F1-10)`: proteger com `auth:sanctum`; o teste de varredura de rotas da F1-10 (allowlist só `health` e `auth/login`) falha se ela continuar sem permissão.
+- **Health fora do throttle:** o limiter `api` (120/min) usa o cache (Redis); com o Redis fora o `/health` precisa responder 503, não 500.
+- **CORS:** `config/cors.php` sem `*`, só `api/*`, sem credentials, origens por `CORS_ALLOWED_ORIGINS` (default vazio = mesma origem via nginx).
+- **Testes isolados:** o container traz `DB_CONNECTION=pgsql`/`CACHE_STORE=redis` e o `$_SERVER` vence o `$_ENV` do PHPUnit; por isso `phpunit.xml` força os valores de teste (sqlite em memória, cache array) também em `<server>`. Sem isso a suíte rodaria contra o PostgreSQL de dev. O health "up" usa o Redis real do compose.
+- **Dev (override):** bind mount de `./backend` em `app`/`worker` com o `vendor` da imagem em volume nomeado `app_vendor`, rodando com `HOST_UID/HOST_GID` (default 1000) e `opcache.validate_timestamps=1` via `docker/laravel/php-dev.ini`. Após mudar `composer.json/lock`: rebuild + `docker volume rm sigof_app_vendor`. Base/prod inalterada.

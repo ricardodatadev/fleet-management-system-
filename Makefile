@@ -22,7 +22,7 @@ seed:
 	@echo "ERRO: 'make seed' ainda nao implementado (disponivel a partir de F1-17 (seeders))." >&2; exit 1
 
 test:
-	@echo "ERRO: 'make test' ainda nao implementado (disponivel a partir de F1-19 (suites backend/python/node))." >&2; exit 1
+	docker compose exec -T app vendor/bin/pest
 
 lint:
 	@echo "ERRO: 'make lint' ainda nao implementado (disponivel a partir de F1-19 (Pint/Larastan))." >&2; exit 1

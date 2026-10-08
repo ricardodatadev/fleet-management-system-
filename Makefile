@@ -1,5 +1,5 @@
 # SIGOF-M — alvos reais chegam nas tarefas indicadas; ate la falham com mensagem clara.
-.PHONY: up down init migrate seed test lint ci
+.PHONY: up down init migrate seed test test-db lint ci
 
 up:
 	docker compose up -d --build --wait
@@ -21,8 +21,12 @@ migrate:
 seed:
 	@echo "ERRO: 'make seed' ainda nao implementado (disponivel a partir de F1-17 (seeders))." >&2; exit 1
 
-test:
-	@echo "ERRO: 'make test' ainda nao implementado (disponivel a partir de F1-19 (suites backend/python/node))." >&2; exit 1
+# Cria o banco sigof_test (idempotente) — necessário em volumes criados antes da F1-06.
+test-db:
+	docker compose exec -T db sh /docker-entrypoint-initdb.d/02-create-test-db.sh
+
+test: test-db
+	docker compose exec -T app vendor/bin/pest
 
 lint:
 	@echo "ERRO: 'make lint' ainda nao implementado (disponivel a partir de F1-19 (Pint/Larastan))." >&2; exit 1

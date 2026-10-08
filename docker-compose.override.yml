@@ -1,6 +1,20 @@
 # Dev somente: portas em 127.0.0.1. Carregado automaticamente pelo `docker compose`.
 # Para a configuração base/produção: docker compose -f docker-compose.yml ...
+x-laravel-dev: &laravel-dev
+  # Código via bind mount; vendor vem da imagem (volume nomeado, preserva o vendor da imagem).
+  # Roda com o uid do host para escrever em storage/ e bootstrap/cache do bind mount
+  # (exporte HOST_UID=$(id -u) HOST_GID=$(id -g) ou use o default 1000).
+  user: "${HOST_UID:-1000}:${HOST_GID:-1000}"
+  volumes:
+    - ./backend:/var/www/html
+    - app_vendor:/var/www/html/vendor
+    - ./docker/laravel/php-dev.ini:/usr/local/etc/php/conf.d/zzz-dev.ini:ro
+
 services:
+  app:
+    <<: *laravel-dev
+  worker:
+    <<: *laravel-dev
   db:
     ports:
       - "127.0.0.1:${DB_PORT:-5432}:5432"
@@ -13,3 +27,8 @@ services:
   node:
     ports:
       - "127.0.0.1:${NODE_PORT:-3000}:${NODE_PORT:-3000}"
+
+volumes:
+  # Atenção: após mudar composer.json/composer.lock, rebuild + `docker compose down` e
+  # `docker volume rm sigof_app_vendor` para o vendor novo da imagem substituir o antigo.
+  app_vendor:

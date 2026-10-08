@@ -10,3 +10,4 @@ backend/storage/logs/*
 backend/storage/framework/*/*
 backend/bootstrap/cache/*.php
 backend/.env
+!backend/.env.testing

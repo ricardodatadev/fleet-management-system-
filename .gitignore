@@ -1,0 +1,8 @@
+.maestri/
+.env
+node_modules/
+vendor/
+dist/
+coverage/
+__pycache__/
+.venv/

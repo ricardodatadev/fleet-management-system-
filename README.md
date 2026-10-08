@@ -1,1 +1,56 @@
-SIGOF-M — Sistema Integrado de Gestão e Otimização de Frota e Manutenção
+# SIGOF-M — Sistema Integrado de Gestão e Otimização de Frota e Manutenção
+
+Monorepo da Fase 1 (fundação + cadastros). Fonte de verdade da fase: especificação `fase-1-especificacao` v1.1.
+
+> **Estado atual:** apenas o scaffold (F1-01). Compose, Laravel, serviços e frontend chegam nas tarefas F1-02 em diante; `make` falha com mensagem clara enquanto o alvo não existe.
+
+## Arquitetura
+
+Monólito modular Laravel + 2 serviços, tudo em Docker Compose (projeto `sigof`).
+
+| Serviço | Papel | Pasta |
+|---|---|---|
+| nginx | Único ponto público; serve a SPA, `/api/` → PHP-FPM, `/socket.io/` → node | `docker/nginx` |
+| app | Laravel (PHP-FPM) | `backend`, `docker/laravel` |
+| worker | Laravel Horizon | `backend` |
+| db | PostgreSQL 16 + pgvector | `docker/postgres` |
+| redis | Redis 7 (filas, cache, sessão, pub/sub) | — |
+| python | FastAPI (`/health`; interno) | `services/python-ai` |
+| node | Fastify + Socket.io | `services/node-realtime` |
+| frontend | Vite HMR (somente no override de dev) | `frontend` |
+
+## Quickstart (quando F1-02..F1-17 estiverem prontas)
+
+```bash
+cp .env.example .env      # preencha TODOS os valores "change-me"
+make up                   # sobe os containers
+make init                 # key:generate + migrate
+make seed                 # admin + parâmetros (+ demo em local/testing)
+bash scripts/smoke.sh     # verificação ponta a ponta (F1-20)
+```
+
+Acesse `http://localhost:${WEB_HTTP_PORT}/` (padrão 80). Documentação da API: `/api/documentation` apenas com `L5_SWAGGER_ENABLED=true`.
+
+Alvos do Makefile: `up, down, init, migrate, seed, test, lint, ci` (stubs até F1-02/F1-03/F1-17/F1-19).
+
+## Portas
+
+- `docker-compose.yml` (base/produção): publica **somente o nginx** em `${WEB_HTTP_PORT:-80}`.
+- `docker-compose.override.yml` (dev, carregado automaticamente): db, redis, python e node em `127.0.0.1` apenas.
+- TLS: terminado na borda em produção (bloco 443 comentado no nginx).
+
+## Segredos
+
+Nenhum segredo no repositório. Tudo vem de `${VAR}` do `.env` (ignorado pelo git); `.env.example` usa placeholders `change-me`. Não use o compose com senhas padrão.
+
+## Git
+
+Repositório, `main`, `develop` e merges são do Escrivão. Branches `feat/f1-XX-slug`, commits convencionais.
+
+## Desvios em relação à especificação original
+
+Resumo; detalhes em [`docs/adr/0001-desvios-spec.md`](docs/adr/0001-desvios-spec.md): Laravel última estável (D1), Sanctum Bearer e não OAuth2 (D2), monólito modular + 2 serviços (D3), só nginx publicado (D4), sem senhas hardcoded (D5), sem `version:` no compose (D6), envelope próprio em vez de JSON:API (D9), somente Redis (D10), Node LTS vigente (D11), sem Horizon exposto (D12).
+
+## Troubleshooting
+
+A preencher conforme as tarefas F1-02..F1-20 forem entregues.

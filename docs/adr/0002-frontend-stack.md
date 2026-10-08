@@ -28,6 +28,19 @@ A spec Fase 1 (A.5) define a stack do frontend. Este ADR registra as versões ex
 | msw | 2.15.0 |
 | jest-axe / @types/jest-axe | 11.0.0 / 3.5.9 |
 | openapi-typescript | 7.13.0 |
+| radix-ui | 1.7.0 (F1-22) |
+| lucide-react | 1.53.0 (F1-22) |
+
+## Dependências adicionadas na F1-22 (componentes base)
+
+Ambas constam da stack aprovada (A.5: "Tailwind CSS + Radix UI primitives (padrão shadcn), lucide-react"); nenhuma dependência fora da A.5 foi adicionada.
+
+| Pacote | Por quê | Alternativas descartadas |
+|---|---|---|
+| `radix-ui` 1.7.0 (dependência) | Primitivos acessíveis sem estilo para os componentes com comportamento complexo de teclado/foco: Dialog (Modal, Drawer), AlertDialog (ConfirmDialog), Tabs, Tooltip, Switch, Checkbox e RadioGroup. Entregam foco preso, ESC, roving tabindex e papéis WAI-ARIA corretos, o que sustenta o critério "0 violações axe" e a navegação por teclado da G.1/G.3. Pacote único (metapacote) em vez de um `@radix-ui/react-*` por primitivo: uma versão só para pinar e auditar; o tree-shaking do Vite mantém no bundle só o que é importado. | Implementar à mão (alto risco de regressão de acessibilidade); pacotes `@radix-ui/react-*` separados (mais versões para manter alinhadas). |
+| `lucide-react` 1.53.0 (dependência) | Ícones SVG (setas de ordenação, chevrons, fechar, check, spinner) como componentes React com tree-shaking por ícone. Todos usados com `aria-hidden`, o nome acessível vem do texto/`label` do controle. | SVG inline copiado (sem padronização); fontes de ícone (não fazem tree-shaking e têm pior acessibilidade). |
+
+Não usados de propósito: `Select` é o `<select>` nativo (abre o seletor do SO em touch, mais robusto no tablet que o Select do Radix) e o `Combobox` de busca remota é próprio (WAI-ARIA 1.2), porque o Radix não tem combobox. Toast também é próprio (região `aria-live`), por ser simples e não precisar de swipe.
 
 ## Desvios de "latest"
 

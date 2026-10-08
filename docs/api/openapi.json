@@ -1,0 +1,394 @@
+{
+    "openapi": "3.0.0",
+    "info": {
+        "title": "SIGOF-M API",
+        "description": "API REST do SIGOF-M (Sistema Integrado de Gestão e Otimização de Frota e Manutenção). Todas as respostas, inclusive erros, usam o envelope {status, message, errors, data[, meta]}.",
+        "license": {
+            "name": "Proprietary"
+        },
+        "version": "0.1.0"
+    },
+    "servers": [
+        {
+            "url": "/api/v1",
+            "description": "API v1 (mesma origem, via nginx)"
+        }
+    ],
+    "paths": {
+        "/health": {
+            "get": {
+                "tags": [
+                    "Infra"
+                ],
+                "summary": "Saúde da aplicação (db e redis)",
+                "description": "Público e fora do rate limit. 503 se db ou redis estiverem fora (o corpo traz o estado de cada componente em `data`).",
+                "operationId": "health",
+                "responses": {
+                    "200": {
+                        "description": "Todos os componentes ativos.",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "allOf": [
+                                        {
+                                            "$ref": "#/components/schemas/Envelope"
+                                        },
+                                        {
+                                            "properties": {
+                                                "data": {
+                                                    "$ref": "#/components/schemas/HealthData"
+                                                }
+                                            },
+                                            "type": "object"
+                                        }
+                                    ]
+                                }
+                            }
+                        }
+                    },
+                    "503": {
+                        "description": "Algum componente indisponível.",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "allOf": [
+                                        {
+                                            "$ref": "#/components/schemas/ErrorEnvelope"
+                                        },
+                                        {
+                                            "properties": {
+                                                "data": {
+                                                    "$ref": "#/components/schemas/HealthData"
+                                                }
+                                            },
+                                            "type": "object"
+                                        }
+                                    ]
+                                }
+                            }
+                        }
+                    }
+                },
+                "security": []
+            }
+        },
+        "/meta/enums": {
+            "get": {
+                "tags": [
+                    "Infra"
+                ],
+                "summary": "Enums e metadados para selects (esqueleto)",
+                "description": "Esqueleto vazio na F1-06. Será protegido por bearerAuth na F1-10 (perfil: qualquer autenticado).",
+                "operationId": "metaEnums",
+                "responses": {
+                    "200": {
+                        "description": "Enums disponíveis (vazio por enquanto).",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "allOf": [
+                                        {
+                                            "$ref": "#/components/schemas/Envelope"
+                                        },
+                                        {
+                                            "properties": {
+                                                "data": {
+                                                    "properties": {
+                                                        "enums": {
+                                                            "type": "object"
+                                                        }
+                                                    },
+                                                    "type": "object"
+                                                }
+                                            },
+                                            "type": "object"
+                                        }
+                                    ]
+                                }
+                            }
+                        }
+                    },
+                    "429": {
+                        "$ref": "#/components/responses/TooManyRequests"
+                    },
+                    "500": {
+                        "$ref": "#/components/responses/ServerError"
+                    }
+                },
+                "security": []
+            }
+        }
+    },
+    "components": {
+        "schemas": {
+            "HealthData": {
+                "required": [
+                    "app",
+                    "db",
+                    "redis",
+                    "version"
+                ],
+                "properties": {
+                    "app": {
+                        "type": "string",
+                        "enum": [
+                            "up"
+                        ]
+                    },
+                    "db": {
+                        "type": "string",
+                        "enum": [
+                            "up",
+                            "down"
+                        ]
+                    },
+                    "redis": {
+                        "type": "string",
+                        "enum": [
+                            "up",
+                            "down"
+                        ]
+                    },
+                    "version": {
+                        "type": "string",
+                        "example": "0.1.0"
+                    }
+                },
+                "type": "object"
+            },
+            "Envelope": {
+                "description": "Envelope padrão de toda resposta.",
+                "required": [
+                    "status",
+                    "message",
+                    "errors",
+                    "data"
+                ],
+                "properties": {
+                    "status": {
+                        "description": "Definições globais da OpenAPI (info, servidor, segurança, schemas e respostas reutilizáveis).\nOs endpoints são anotados nos próprios controllers.",
+                        "type": "string",
+                        "enum": [
+                            "success",
+                            "error"
+                        ]
+                    },
+                    "message": {
+                        "type": "string",
+                        "example": "Operação realizada com sucesso."
+                    },
+                    "errors": {
+                        "type": "object",
+                        "nullable": true,
+                        "additionalProperties": {
+                            "type": "array",
+                            "items": {
+                                "type": "string"
+                            }
+                        }
+                    },
+                    "data": {
+                        "description": "Objeto, lista ou null conforme o endpoint (qualquer tipo)."
+                    },
+                    "meta": {
+                        "$ref": "#/components/schemas/Pagination"
+                    }
+                },
+                "type": "object"
+            },
+            "Pagination": {
+                "description": "Presente (`meta`) apenas em listas paginadas.",
+                "required": [
+                    "current_page",
+                    "per_page",
+                    "total",
+                    "last_page"
+                ],
+                "properties": {
+                    "current_page": {
+                        "type": "integer",
+                        "example": 1
+                    },
+                    "per_page": {
+                        "type": "integer",
+                        "example": 15
+                    },
+                    "total": {
+                        "type": "integer",
+                        "example": 0
+                    },
+                    "last_page": {
+                        "type": "integer",
+                        "example": 1
+                    }
+                },
+                "type": "object"
+            },
+            "ErrorEnvelope": {
+                "description": "Resposta de erro (401, 403, 404, 405, 409, 429, 500, 503).",
+                "required": [
+                    "status",
+                    "message",
+                    "errors",
+                    "data"
+                ],
+                "properties": {
+                    "status": {
+                        "type": "string",
+                        "enum": [
+                            "error"
+                        ]
+                    },
+                    "message": {
+                        "type": "string",
+                        "example": "Recurso não encontrado."
+                    },
+                    "errors": {
+                        "type": "object",
+                        "example": null,
+                        "nullable": true
+                    },
+                    "data": {
+                        "description": "Sempre null em erros.",
+                        "example": null
+                    }
+                },
+                "type": "object"
+            },
+            "ValidationErrorEnvelope": {
+                "description": "Erro de validação (422): `errors` mapeia campo → mensagens.",
+                "required": [
+                    "status",
+                    "message",
+                    "errors",
+                    "data"
+                ],
+                "properties": {
+                    "status": {
+                        "type": "string",
+                        "enum": [
+                            "error"
+                        ]
+                    },
+                    "message": {
+                        "type": "string",
+                        "example": "Os dados informados são inválidos."
+                    },
+                    "errors": {
+                        "type": "object",
+                        "example": {
+                            "email": [
+                                "O campo email é obrigatório."
+                            ]
+                        },
+                        "additionalProperties": {
+                            "type": "array",
+                            "items": {
+                                "type": "string"
+                            }
+                        }
+                    },
+                    "data": {
+                        "description": "Sempre null em erros.",
+                        "example": null
+                    }
+                },
+                "type": "object"
+            }
+        },
+        "responses": {
+            "Unauthenticated": {
+                "description": "Não autenticado (401).",
+                "content": {
+                    "application/json": {
+                        "schema": {
+                            "$ref": "#/components/schemas/ErrorEnvelope"
+                        }
+                    }
+                }
+            },
+            "Forbidden": {
+                "description": "Acesso negado (403).",
+                "content": {
+                    "application/json": {
+                        "schema": {
+                            "$ref": "#/components/schemas/ErrorEnvelope"
+                        }
+                    }
+                }
+            },
+            "NotFound": {
+                "description": "Recurso não encontrado (404).",
+                "content": {
+                    "application/json": {
+                        "schema": {
+                            "$ref": "#/components/schemas/ErrorEnvelope"
+                        }
+                    }
+                }
+            },
+            "Conflict": {
+                "description": "Conflito de regra de negócio (409).",
+                "content": {
+                    "application/json": {
+                        "schema": {
+                            "$ref": "#/components/schemas/ErrorEnvelope"
+                        }
+                    }
+                }
+            },
+            "ValidationError": {
+                "description": "Dados inválidos (422).",
+                "content": {
+                    "application/json": {
+                        "schema": {
+                            "$ref": "#/components/schemas/ValidationErrorEnvelope"
+                        }
+                    }
+                }
+            },
+            "TooManyRequests": {
+                "description": "Limite de requisições excedido (429).",
+                "headers": {
+                    "Retry-After": {
+                        "description": "Segundos até poder tentar novamente.",
+                        "schema": {
+                            "type": "integer"
+                        }
+                    }
+                },
+                "content": {
+                    "application/json": {
+                        "schema": {
+                            "$ref": "#/components/schemas/ErrorEnvelope"
+                        }
+                    }
+                }
+            },
+            "ServerError": {
+                "description": "Erro interno (500), sem detalhes técnicos com APP_DEBUG=false.",
+                "content": {
+                    "application/json": {
+                        "schema": {
+                            "$ref": "#/components/schemas/ErrorEnvelope"
+                        }
+                    }
+                }
+            }
+        },
+        "securitySchemes": {
+            "bearerAuth": {
+                "type": "http",
+                "description": "Token obtido em POST /auth/login (expira em 12 h).",
+                "bearerFormat": "Sanctum personal access token",
+                "scheme": "bearer"
+            }
+        }
+    },
+    "tags": [
+        {
+            "name": "Infra",
+            "description": "Infra"
+        }
+    ]
+}

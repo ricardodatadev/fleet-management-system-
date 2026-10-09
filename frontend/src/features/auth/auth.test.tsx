@@ -23,6 +23,13 @@ import type { Role } from './types';
 
 const loginField = () => screen.findByLabelText('Usuário');
 
+/** Sair agora fica no menu do avatar da topbar (F1-36). */
+async function logoutViaUserMenu() {
+  const user = userEvent.setup();
+  await user.click(await screen.findByRole('button', { name: /^Menu do usuário/ }));
+  await user.click(await screen.findByRole('menuitem', { name: 'Sair' }));
+}
+
 async function fillAndSubmit(username: string, password: string) {
   const user = userEvent.setup();
   await user.type(await loginField(), username);
@@ -393,7 +400,7 @@ describe('Guardas de rota', () => {
     );
     storeSession('tok-salvo');
     const { location } = renderApp('/ativos/equipamentos');
-    await userEvent.setup().click(await screen.findByRole('button', { name: 'Sair' }));
+    await logoutViaUserMenu();
     await screen.findByRole('heading', { name: 'Entrar' });
     expect(logoutAuth).toBe('Bearer tok-salvo');
     expect(storedSession()).toBeNull();
@@ -405,7 +412,7 @@ describe('Guardas de rota', () => {
     server.use(http.post(API('/auth/logout'), () => fail(500, 'Erro.')));
     storeSession();
     renderApp('/ativos/equipamentos');
-    await userEvent.setup().click(await screen.findByRole('button', { name: 'Sair' }));
+    await logoutViaUserMenu();
     await screen.findByRole('heading', { name: 'Entrar' });
     expect(storedSession()).toBeNull();
   });

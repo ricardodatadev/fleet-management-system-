@@ -47,7 +47,7 @@ export function AppLayout() {
       <a
         href={`#${MAIN_ID}`}
         onClick={skipToContent}
-        className="sr-only z-50 inline-flex min-h-12 min-w-12 items-center rounded-lg bg-brand-600 px-4 font-semibold text-white focus:not-sr-only focus:fixed focus:top-2 focus:left-2"
+        className="sr-only z-50 inline-flex min-h-12 min-w-12 items-center rounded-control bg-brand px-4 font-bold text-on-brand focus:not-sr-only focus:fixed focus:top-2 focus:left-2"
       >
         Ir para o conteúdo
       </a>

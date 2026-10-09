@@ -37,7 +37,7 @@ export function NavGroup({ title, children, collapsed = false }: NavGroupProps) 
       <p
         id={id}
         className={cn(
-          'px-3 text-xs font-bold tracking-wide text-ink-muted uppercase',
+          'px-3 text-xs font-bold tracking-wide text-text-muted uppercase',
           collapsed && 'sr-only',
         )}
       >
@@ -73,7 +73,7 @@ export function NavItem({
 }: NavItemProps) {
   const itemBase = cn(
     TAP_MIN_CLASSES,
-    'flex w-full items-center gap-3 rounded-lg text-left',
+    'flex w-full items-center gap-3 rounded-control text-left',
     collapsed ? 'justify-center px-0' : 'px-3',
   );
   // Modo ícones, desabilitado: ícone esmaecido (único sinal visual além do tooltip; no modo
@@ -102,7 +102,7 @@ export function NavItem({
             aria-disabled="true"
             className={cn(
               itemBase,
-              'cursor-not-allowed text-ink-muted',
+              'cursor-not-allowed text-text-muted',
               !collapsed && 'opacity-70',
             )}
             onClick={(event) => event.preventDefault()}
@@ -162,8 +162,8 @@ const ActiveLink = forwardRef<
       }}
       className={cn(
         className,
-        'font-semibold',
-        active ? 'bg-brand-600 text-white' : 'text-ink hover:bg-surface-muted',
+        'font-bold',
+        active ? 'bg-brand text-on-brand' : 'text-text hover:bg-surface-muted',
       )}
     >
       {children}

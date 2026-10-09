@@ -11,10 +11,10 @@ interface ToastItem extends ToastOptions {
 }
 
 const toneClasses: Record<ToastTone, string> = {
-  info: 'border-blue-700 bg-blue-50 text-blue-950',
-  success: 'border-green-700 bg-green-50 text-green-950',
-  warning: 'border-yellow-700 bg-yellow-50 text-yellow-950',
-  danger: 'border-red-700 bg-red-50 text-red-950',
+  info: 'border-info bg-info-subtle',
+  success: 'border-success bg-success-subtle',
+  warning: 'border-warning-accent bg-warning-subtle',
+  danger: 'border-danger bg-danger-subtle',
 };
 
 function ToastView({ item, onDismiss }: { item: ToastItem; onDismiss: (id: string) => void }) {
@@ -30,12 +30,12 @@ function ToastView({ item, onDismiss }: { item: ToastItem; onDismiss: (id: strin
     <div
       role={tone === 'danger' ? 'alert' : 'status'}
       className={cn(
-        'flex items-start gap-2 rounded-lg border-l-4 p-3 pl-4 shadow-lg',
+        'flex items-start gap-2 rounded-card border-l-4 p-3 pl-4 text-text shadow-lg',
         toneClasses[tone],
       )}
     >
       <div className="flex-1">
-        <p className="font-semibold">{title}</p>
+        <p className="font-bold">{title}</p>
         {description && <p className="text-sm">{description}</p>}
       </div>
       <IconButton

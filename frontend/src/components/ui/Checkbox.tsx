@@ -25,18 +25,18 @@ export const Checkbox = forwardRef<HTMLButtonElement, CheckboxProps>(function Ch
         id={checkboxId}
         className={cn(
           TAP_MIN_CLASSES,
-          'group inline-flex shrink-0 items-center justify-center rounded-lg bg-transparent disabled:cursor-not-allowed disabled:opacity-50',
+          'group inline-flex shrink-0 items-center justify-center rounded-control bg-transparent disabled:cursor-not-allowed disabled:opacity-50',
         )}
         {...rest}
       >
-        <span className="inline-flex size-6 items-center justify-center rounded border-2 border-ink-muted bg-surface text-white group-data-[state=checked]:border-brand-600 group-data-[state=checked]:bg-brand-600 group-data-[state=indeterminate]:border-brand-600 group-data-[state=indeterminate]:bg-brand-600">
+        <span className="inline-flex size-6 items-center justify-center rounded-control border-2 border-border-strong bg-surface text-on-brand group-data-[state=checked]:border-brand group-data-[state=checked]:bg-brand group-data-[state=indeterminate]:border-brand group-data-[state=indeterminate]:bg-brand">
           <CheckboxPrimitive.Indicator>
             <Check aria-hidden="true" className="size-4" strokeWidth={3} />
           </CheckboxPrimitive.Indicator>
         </span>
       </CheckboxPrimitive.Root>
       {label && (
-        <label htmlFor={checkboxId} className="min-h-12 flex-1 content-center text-ink">
+        <label htmlFor={checkboxId} className="min-h-12 flex-1 content-center text-text">
           {label}
         </label>
       )}

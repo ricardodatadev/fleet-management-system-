@@ -22,7 +22,7 @@ export function TabsList({
 
 const tabBase = cn(
   TAP_MIN_CLASSES,
-  'inline-flex items-center gap-2 border-b-2 px-4 font-semibold whitespace-nowrap',
+  'inline-flex items-center gap-2 border-b-2 px-4 font-bold whitespace-nowrap',
 );
 
 export interface TabsTriggerProps {
@@ -42,7 +42,10 @@ export function TabsTrigger({ value, children, disabled = false }: TabsTriggerPr
           aria-selected="false"
           aria-disabled="true"
           tabIndex={-1}
-          className={cn(tabBase, 'cursor-not-allowed border-transparent text-ink-muted opacity-70')}
+          className={cn(
+            tabBase,
+            'cursor-not-allowed border-transparent text-text-muted opacity-70',
+          )}
           onClick={(event) => event.preventDefault()}
         >
           {children}
@@ -56,7 +59,7 @@ export function TabsTrigger({ value, children, disabled = false }: TabsTriggerPr
       value={value}
       className={cn(
         tabBase,
-        'border-transparent text-ink-muted hover:text-ink data-[state=active]:border-brand-600 data-[state=active]:text-brand-600',
+        'border-transparent text-text-muted hover:text-text data-[state=active]:border-brand data-[state=active]:text-brand',
       )}
     >
       {children}

@@ -40,7 +40,7 @@ describe('Button', () => {
 
   it('aplica a variante', () => {
     render(<Button variant="danger">Excluir</Button>);
-    expect(screen.getByRole('button')).toHaveClass('bg-danger-600');
+    expect(screen.getByRole('button')).toHaveClass('bg-danger');
   });
 
   it('não tem violações de acessibilidade', async () => {

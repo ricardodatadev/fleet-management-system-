@@ -5,7 +5,10 @@ import { Badge, StatusPill } from './Badge';
 describe('Badge', () => {
   it('renderiza o texto com o tom', () => {
     render(<Badge tone="success">Definido nesta filial</Badge>);
-    expect(screen.getByText('Definido nesta filial')).toHaveClass('bg-green-100');
+    expect(screen.getByText('Definido nesta filial')).toHaveClass(
+      'bg-success-subtle',
+      'text-success',
+    );
   });
 });
 

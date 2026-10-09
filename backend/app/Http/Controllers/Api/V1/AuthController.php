@@ -20,6 +20,7 @@ use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Facades\Password;
+use Illuminate\Support\Str;
 use Illuminate\Validation\ValidationException;
 use Laravel\Sanctum\PersonalAccessToken;
 use OpenApi\Attributes as OA;
@@ -265,10 +266,14 @@ class AuthController extends Controller
 
         if ($user !== null) {
             DB::transaction(function () use ($user, $broker) {
-                // createToken substitui o token anterior do e-mail (uso único, 60 min).
+                // createToken substitui o token anterior do e-mail (uso único, 60 min) e grava o hash do token.
                 $user->sendPasswordResetNotification($broker->createToken($user));
                 $this->audit->record(AuditAction::PasswordResetRequested, $user);
             });
+        } else {
+            // Tempo uniforme (D.2 v1.7): o caminho com usuário paga o hash do token no createToken; sem
+            // usuário (inexistente, inativo ou excluído) paga um hash equivalente, descartado.
+            Hash::make(Str::random(64));
         }
 
         return ApiResponse::success(null, __('auth.reset_link_sent'));

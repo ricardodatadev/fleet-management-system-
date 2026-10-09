@@ -9,6 +9,7 @@ use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Notifications\ChannelManager;
 use Illuminate\Notifications\SendQueuedNotifications;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Facades\Notification;
 use Illuminate\Support\Facades\Queue;
 use Illuminate\Testing\TestResponse;
@@ -66,6 +67,35 @@ it('forgot: sempre 200 com a mesma mensagem (existente, inexistente, inativo, ex
 
     $log = AuditLog::query()->where('action', 'password_reset_requested')->sole();
     expect($log->actor_id)->toBeNull()->and($log->auditable_id)->toBe($active->id)->and($log->metadata)->toBeNull();
+});
+
+it('forgot: tempo uniforme — sem usuário (inexistente, inativo ou excluído) também paga um hash, igual ao createToken', function (Closure $setup) {
+    $email = $setup();
+    Hash::spy();
+
+    forgot($email)->assertOk()->assertJsonPath('message', __('auth.reset_link_sent'));
+
+    Hash::shouldHaveReceived('make')->once();
+    Notification::assertNothingSent();
+})->with([
+    'inexistente' => [fn () => 'ninguem@example.com'],
+    'inativo' => [fn () => User::factory()->inactive()->create(['email' => 'inativo@example.com'])->email],
+    'excluído' => [function () {
+        $user = User::factory()->create(['email' => 'excluido@example.com']);
+        $user->delete();
+
+        return $user->email;
+    }],
+]);
+
+it('forgot: com usuário ativo, o hash é o do token gravado (createToken), sem hash extra', function () {
+    $user = User::factory()->create(['email' => 'ativo@example.com']);
+
+    forgot('ativo@example.com')->assertOk();
+
+    $stored = DB::table('password_reset_tokens')->where('email', 'ativo@example.com')->value('token');
+    expect(password_get_info($stored)['algoName'])->toBe('bcrypt')
+        ->and(Hash::check(sentToken($user), $stored))->toBeTrue();
 });
 
 it('forgot: e-mail vazio ou malformado → 422 em errors.email', function () {

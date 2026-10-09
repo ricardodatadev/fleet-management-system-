@@ -25,4 +25,6 @@ export default tseslint.config(
     },
   },
   { files: ['vite.config.ts', 'eslint.config.js'], languageOptions: { globals: globals.node } },
+  // Utilitários de teste não passam pelo Fast Refresh.
+  { files: ['src/test/**'], rules: { 'react-refresh/only-export-components': 'off' } },
 );

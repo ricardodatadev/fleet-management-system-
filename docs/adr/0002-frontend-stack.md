@@ -59,4 +59,5 @@ Reavaliar ESLint 10 e TypeScript 6+ quando jsx-a11y, openapi-typescript e typesc
 
 - **Decisão:** manter v6 na Fase 1.
 - **Mitigação obrigatória na F1-23:** o parâmetro `?next=` do login só é aceito se for path relativo iniciado por `/`, rejeitando `//` e `\` (fallback para `/`), com teste. Nenhum outro redirect deve usar entrada do usuário sem essa validação.
+- **Implementado (F1-23):** `frontend/src/features/auth/safeNext.ts`, usado no login e no redirect de quem já está logado; testes em `safeNext.test.ts` (inclui `//`, `\`, URL absoluta, `javascript:`, caracteres de controle e `/login`) e `auth.test.tsx`.
 - **Revisão:** avaliar upgrade para React Router v7 em fase futura (junto com a revisão do PWA/offline, D15).

@@ -6,6 +6,8 @@ export interface ApiErrorInit {
   message: string;
   errors?: FieldErrors | null;
   requestId?: string | null;
+  /** Segundos de espera indicados pelo header `Retry-After` (429). */
+  retryAfter?: number | null;
   cause?: unknown;
 }
 
@@ -17,13 +19,22 @@ export class ApiError extends Error {
   readonly status: number;
   readonly errors: FieldErrors | null;
   readonly requestId: string | null;
+  readonly retryAfter: number | null;
 
-  constructor({ status, message, errors = null, requestId = null, cause }: ApiErrorInit) {
+  constructor({
+    status,
+    message,
+    errors = null,
+    requestId = null,
+    retryAfter = null,
+    cause,
+  }: ApiErrorInit) {
     super(message, { cause });
     this.name = 'ApiError';
     this.status = status;
     this.errors = errors;
     this.requestId = requestId;
+    this.retryAfter = retryAfter;
   }
 
   get isNetworkError(): boolean {
@@ -36,6 +47,10 @@ export class ApiError extends Error {
 
   get isValidation(): boolean {
     return this.status === 422;
+  }
+
+  get isTooManyRequests(): boolean {
+    return this.status === 429;
   }
 
   get isConflict(): boolean {

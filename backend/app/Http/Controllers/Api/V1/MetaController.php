@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers\Api\V1;
 
+use App\Enums\Role;
 use App\Http\Controllers\Controller;
 use App\Models\Branch;
 use App\Support\Api\ApiResponse;
@@ -30,8 +31,11 @@ class MetaController extends Controller
                         properties: [new OA\Property(
                             property: 'enums',
                             type: 'object',
-                            required: ['branch_types'],
-                            properties: [new OA\Property(property: 'branch_types', type: 'array', items: new OA\Items(type: 'string', enum: Branch::TYPES))],
+                            required: ['branch_types', 'roles'],
+                            properties: [
+                                new OA\Property(property: 'branch_types', type: 'array', items: new OA\Items(type: 'string', enum: Branch::TYPES)),
+                                new OA\Property(property: 'roles', type: 'array', items: new OA\Items(type: 'string', enum: ['operator', 'mechanic', 'leader', 'admin'])),
+                            ],
                         )],
                     )]),
                 ]),
@@ -45,6 +49,7 @@ class MetaController extends Controller
     {
         return ApiResponse::success(['enums' => [
             'branch_types' => Branch::TYPES,
+            'roles' => Role::values(),
         ]]);
     }
 }

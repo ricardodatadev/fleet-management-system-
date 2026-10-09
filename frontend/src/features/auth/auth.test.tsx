@@ -14,6 +14,8 @@ import {
   storedSession,
 } from '@/test/auth';
 import { server } from '@/test/server';
+import { DEVICE_NAME } from './api';
+import { SESSION_STORAGE_KEY } from './session';
 import type { Role } from './types';
 
 async function fillAndSubmit(email: string, password: string) {
@@ -44,7 +46,7 @@ describe('Login', () => {
     ).toBeInTheDocument();
     expect(location()).toBe('/ativos/equipamentos');
     expect(storedSession()).toMatchObject({ token: 'tok-novo' });
-    expect(body).toMatchObject({ email: 'ana@example.com', device_name: 'sigof-web' });
+    expect(body).toMatchObject({ email: 'ana@example.com', device_name: DEVICE_NAME });
     expect(screen.getByText('Ana Souza')).toBeInTheDocument();
     expect(screen.getByText('PCM/Gestor/Admin')).toBeInTheDocument();
     server.events.removeAllListeners();
@@ -346,7 +348,9 @@ describe('Guardas de rota', () => {
     await screen.findByRole('heading', { name: 'Frotas & Equipamentos' });
     act(() => {
       localStorage.clear();
-      window.dispatchEvent(new StorageEvent('storage', { key: 'sigof.session', newValue: null }));
+      window.dispatchEvent(
+        new StorageEvent('storage', { key: SESSION_STORAGE_KEY, newValue: null }),
+      );
     });
     await screen.findByRole('heading', { name: 'Entrar' });
   });

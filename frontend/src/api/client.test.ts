@@ -4,7 +4,7 @@ import { server } from '@/test/server';
 import { ApiClient, parseRetryAfter } from './client';
 import { ApiError, NETWORK_ERROR_MESSAGE } from './errors';
 
-const BASE = 'http://sigof.test/api/v1';
+const BASE = 'http://api.test/api/v1';
 const url = (path: string) => `${BASE}${path}`;
 
 const envelope = (over: Record<string, unknown> = {}) => ({

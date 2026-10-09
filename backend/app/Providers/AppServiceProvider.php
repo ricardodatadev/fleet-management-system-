@@ -2,10 +2,17 @@
 
 namespace App\Providers;
 
+use App\Models\AuditLog;
+use App\Models\Branch;
 use App\Models\User;
+use App\Policies\AuditLogPolicy;
+use App\Policies\BranchPolicy;
+use App\Policies\UserPolicy;
 use App\Support\Audit\AuditContext;
+use App\Support\Rbac\Rbac;
 use Illuminate\Cache\RateLimiting\Limit;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Gate;
 use Illuminate\Support\Facades\Queue;
 use Illuminate\Support\Facades\RateLimiter;
 use Illuminate\Support\ServiceProvider;
@@ -49,6 +56,13 @@ class AppServiceProvider extends ServiceProvider
 
         // Política de senha (spec D.2): mín. 10 caracteres, maiúscula, minúscula e número.
         Password::defaults(fn () => Password::min(10)->mixedCase()->numbers());
+
+        // RBAC (spec E): Gates por permissão + auth.session; policies dos models existentes
+        // (cada cadastro F1-11..16 registra a sua aqui).
+        Rbac::register();
+        Gate::policy(User::class, UserPolicy::class);
+        Gate::policy(Branch::class, BranchPolicy::class);
+        Gate::policy(AuditLog::class, AuditLogPolicy::class);
 
         // Token de usuário inativo ou soft-deleted (tokenable null) não autentica.
         Sanctum::authenticateAccessTokensUsing(

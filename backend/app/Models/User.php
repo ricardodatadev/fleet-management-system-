@@ -60,4 +60,14 @@ class User extends Authenticatable
     {
         return $this->role->permissions();
     }
+
+    public function hasPermission(string $permission): bool
+    {
+        return in_array($permission, $this->permissions(), true);
+    }
+
+    public function isAdmin(): bool
+    {
+        return $this->role === Role::Admin;
+    }
 }

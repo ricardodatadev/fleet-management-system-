@@ -26,6 +26,7 @@ class AuditLog extends Model
     public const AUDITABLE_TYPES = [
         'branch' => Branch::class,
         'cost_center' => CostCenter::class,
+        'employee' => Employee::class,
         'equipment_family' => EquipmentFamily::class,
         'user' => User::class,
     ];

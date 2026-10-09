@@ -142,6 +142,17 @@ Pesquisa de 2026-10-08. Versões do backend confirmadas no packagist/`composer s
 - **Dependentes:** `activeDependents()` já declara a chave `equipments`, mas a checagem fica desligada até a F1-15 criar a tabela.
 - **Base (pendência da F1-12):** `softDeleteGuarded` responde 404 quando a linha travada já está excluída (duas exclusões concorrentes), sem excluir de novo e sem um segundo `deleted` no audit. Vale para todos os cadastros (teste por model).
 
+## Notas de implementação (F1-14 — colaboradores)
+
+- **Tabela** `employees` conforme a C.5, com CHECKs (job_type, cnh_category, `hourly_cost ≥ 0`), UQ parcial em `registration` e em `user_id` (vínculo 1:1 entre não excluídos), índices em `branch_id`, `job_type` e `cost_center_id`. `BranchScoped`: o líder vê só a própria filial. `hourly_cost` tem cast `float` (número JSON, como `preventive_lead_pct`).
+- **Campos por `job_type`** (`Employee::TYPE_FIELDS`): valor não nulo em campo de outro tipo → 422. Na troca de tipo, cada campo preenchido do tipo anterior precisa vir como null no payload (422 por campo), sem limpeza silenciosa.
+- **Consistência de filial**, na transação e com as linhas relacionadas travadas: filial (`lockBranch`), centro de custo e usuário vinculado com `FOR SHARE`. Centro de custo de outra filial ou excluído → 422. Usuário não-admin de outra filial → 422 (em `user_id`, ou em `branch_id` quando quem muda é a filial do colaborador). No sentido inverso, `PUT /users` (mudar `branch_id` ou rebaixar de admin) e `PUT /cost-centers` (mudar a filial) travam a própria linha `FOR UPDATE` antes de checar, e esperam quem grava colaborador.
+- **`persist`** aceita um mapa índice → campo, para o 422 de corrida apontar `registration` ou `user_id`.
+- **Restore (409):** matrícula reutilizada, usuário excluído ou já vinculado, filial ou centro de custo excluído. Decisão: também 409 se, enquanto o colaborador estava excluído, o usuário vinculado (não-admin) ou o centro de custo passou para outra filial, porque a regra de consistência só vê os não excluídos.
+- **409 no pai:** filial, centro de custo e usuário com colaborador não excluído → `dependents` contém `employees`. Colaborador responsável por equipamento (`equipments`) fica declarado e desligado até a F1-15.
+- **Mensagens de validação (adendo da F1-14, achado no smoke da F1-30):** `lang/pt_BR/validation.php` cobre todas as regras do Laravel, com todas as variantes (um teste compara as chaves com o arquivo `en` do framework) e traduz os nomes dos campos dos cadastros em `attributes` (ex.: `preventive_lead_pct` → "percentual de pré-alerta"). As mensagens montadas fora do Validator usam `App\Support\Api\FieldMessage`. Um teste garante que nenhum 422 dos cadastros sai com chave crua ou nome técnico com sublinhado.
+- `/auth/me` devolve `employee` = `{id, registration, name, job_type, branch_id}` ou null (relação `User::employee` sem o escopo de filial). `/meta/enums` ganha `job_types` e `cnh_categories`; alias de auditoria `employee`.
+
 ## Notas de implementação (F1-33 — nome do sistema em fonte única, D17)
 
 - **Fonte única:** `.env.example` define `APP_NAME` (nome curto), `APP_FULL_NAME` (nome completo) e `APP_SLUG` (identificador técnico); `POSTGRES_DB`/`POSTGRES_USER` usam o slug. Um rebrand é editar valores e os literais da allowlist, nunca caçar strings (passo a passo em `docs/renaming.md`).

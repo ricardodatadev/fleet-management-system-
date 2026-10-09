@@ -4,6 +4,7 @@ use App\Http\Controllers\Concerns\CrudActions;
 use App\Models\AuditLog;
 use App\Models\Branch;
 use App\Models\CostCenter;
+use App\Models\Employee;
 use App\Models\EquipmentFamily;
 use App\Models\User;
 use Illuminate\Database\Eloquent\Model;
@@ -42,6 +43,7 @@ it('softDeleteGuarded: linha travada já excluída (exclusão concorrente) → 4
     'centro de custo' => [CostCenter::class],
     'família' => [EquipmentFamily::class],
     'usuário' => [User::class],
+    'colaborador' => [Employee::class],
 ]);
 
 it('softDeleteGuarded: registro ativo é excluído uma vez (caminho normal)', function () {

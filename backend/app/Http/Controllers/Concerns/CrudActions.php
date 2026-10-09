@@ -4,6 +4,7 @@ namespace App\Http\Controllers\Concerns;
 
 use App\Exceptions\DomainConflictException;
 use App\Models\Branch;
+use App\Support\Api\FieldMessage;
 use Closure;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\ModelNotFoundException;
@@ -18,20 +19,30 @@ use Illuminate\Validation\ValidationException;
 trait CrudActions
 {
     /**
-     * Grava (create/update). Se o índice único parcial de `code` for violado por concorrência após a
-     * validação, responde 422 no campo, como a própria validação faria.
+     * Grava (create/update). Se um índice único parcial for violado por concorrência após a validação,
+     * responde 422 no campo, como a própria validação faria. $uniqueField é o campo, ou um mapa
+     * nome do índice → campo quando a tabela tem mais de um (o primeiro é o padrão).
      *
      * @template T
      *
      * @param  Closure(): T  $callback
+     * @param  string|array<string, string>  $uniqueField
      * @return T
      */
-    protected function persist(Closure $callback, string $uniqueField = 'code'): mixed
+    protected function persist(Closure $callback, string|array $uniqueField = 'code'): mixed
     {
         try {
             return DB::transaction($callback);
-        } catch (UniqueConstraintViolationException) {
-            throw ValidationException::withMessages([$uniqueField => __('validation.unique', ['attribute' => $uniqueField])]);
+        } catch (UniqueConstraintViolationException $e) {
+            $fields = (array) $uniqueField;
+            $field = reset($fields);
+            foreach ($fields as $index => $candidate) {
+                if (is_string($index) && str_contains($e->getMessage(), $index)) {
+                    $field = $candidate;
+                }
+            }
+
+            throw ValidationException::withMessages([$field => FieldMessage::for('unique', $field)]);
         }
     }
 
@@ -118,7 +129,7 @@ trait CrudActions
     protected function lockBranch(mixed $branchId): void
     {
         if ($branchId !== null && Branch::query()->whereKey($branchId)->sharedLock()->first(['id']) === null) {
-            throw ValidationException::withMessages(['branch_id' => __('validation.exists', ['attribute' => 'branch_id'])]);
+            throw ValidationException::withMessages(['branch_id' => FieldMessage::for('exists', 'branch_id')]);
         }
     }
 }

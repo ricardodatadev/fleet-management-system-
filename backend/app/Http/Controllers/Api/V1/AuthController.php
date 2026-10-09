@@ -6,6 +6,7 @@ use App\Enums\AuditAction;
 use App\Http\Controllers\Controller;
 use App\Http\Requests\Auth\ChangePasswordRequest;
 use App\Http\Requests\Auth\LoginRequest;
+use App\Http\Resources\EmployeeResource;
 use App\Http\Resources\UserResource;
 use App\Models\User;
 use App\Support\Api\ApiResponse;
@@ -34,7 +35,20 @@ use OpenApi\Attributes as OA;
     required: ['user', 'employee', 'permissions'],
     properties: [
         new OA\Property(property: 'user', ref: '#/components/schemas/AuthUser'),
-        new OA\Property(property: 'employee', description: 'Colaborador vinculado (preenchido a partir da F1-14).', type: 'object', nullable: true, example: null),
+        new OA\Property(
+            property: 'employee',
+            description: 'Colaborador vinculado ao usuário (1:1); null quando não há.',
+            type: 'object',
+            nullable: true,
+            required: ['id', 'registration', 'name', 'job_type', 'branch_id'],
+            properties: [
+                new OA\Property(property: 'id', type: 'integer', example: 1),
+                new OA\Property(property: 'registration', type: 'string', example: 'MAT-00123'),
+                new OA\Property(property: 'name', type: 'string', example: 'João Pereira'),
+                new OA\Property(property: 'job_type', type: 'string', enum: ['driver', 'mechanic', 'leader', 'admin_staff']),
+                new OA\Property(property: 'branch_id', type: 'integer', example: 1),
+            ],
+        ),
         new OA\Property(
             property: 'permissions',
             description: 'Permissões do perfil (config/rbac.php). auth.* é implícito e não aparece.',
@@ -176,8 +190,7 @@ class AuthController extends Controller
 
         return ApiResponse::success([
             'user' => (new UserResource($user->load('branch')))->resolve($request),
-            // TODO(F1-14): colaborador vinculado (employees.user_id).
-            'employee' => null,
+            'employee' => EmployeeResource::summary($user->employee),
             'permissions' => $user->permissions(),
         ]);
     }

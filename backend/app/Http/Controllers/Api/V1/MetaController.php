@@ -5,6 +5,7 @@ namespace App\Http\Controllers\Api\V1;
 use App\Enums\Role;
 use App\Http\Controllers\Controller;
 use App\Models\Branch;
+use App\Models\Employee;
 use App\Models\EquipmentFamily;
 use App\Support\Api\ApiResponse;
 use Illuminate\Http\JsonResponse;
@@ -32,12 +33,14 @@ class MetaController extends Controller
                         properties: [new OA\Property(
                             property: 'enums',
                             type: 'object',
-                            required: ['branch_types', 'roles', 'equipment_categories', 'criticalities'],
+                            required: ['branch_types', 'roles', 'equipment_categories', 'criticalities', 'job_types', 'cnh_categories'],
                             properties: [
                                 new OA\Property(property: 'branch_types', type: 'array', items: new OA\Items(type: 'string', enum: Branch::TYPES)),
                                 new OA\Property(property: 'roles', type: 'array', items: new OA\Items(type: 'string', enum: ['operator', 'mechanic', 'leader', 'admin'])),
                                 new OA\Property(property: 'equipment_categories', type: 'array', items: new OA\Items(type: 'string', enum: EquipmentFamily::CATEGORIES)),
                                 new OA\Property(property: 'criticalities', type: 'array', items: new OA\Items(type: 'string', enum: EquipmentFamily::CRITICALITIES)),
+                                new OA\Property(property: 'job_types', type: 'array', items: new OA\Items(type: 'string', enum: Employee::JOB_TYPES)),
+                                new OA\Property(property: 'cnh_categories', type: 'array', items: new OA\Items(type: 'string', enum: Employee::CNH_CATEGORIES)),
                             ],
                         )],
                     )]),
@@ -55,6 +58,8 @@ class MetaController extends Controller
             'roles' => Role::values(),
             'equipment_categories' => EquipmentFamily::CATEGORIES,
             'criticalities' => EquipmentFamily::CRITICALITIES,
+            'job_types' => Employee::JOB_TYPES,
+            'cnh_categories' => Employee::CNH_CATEGORIES,
         ]]);
     }
 }

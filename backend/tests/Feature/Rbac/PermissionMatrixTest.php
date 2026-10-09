@@ -4,6 +4,7 @@ use App\Enums\Role;
 use App\Models\AuditLog;
 use App\Models\Branch;
 use App\Models\CostCenter;
+use App\Models\Employee;
 use App\Models\EquipmentFamily;
 use App\Models\User;
 use App\Support\Rbac\Rbac;
@@ -168,6 +169,14 @@ function routeMatrix(): array
         ['PATCH', 'equipment-families/{equipment_family}', ['name' => 'Renomeada'], $adminOnly(200)],
         ['DELETE', 'equipment-families/{equipment_family}', [], $adminOnly(200)],
         ['POST', 'equipment-families/{equipment_family}/restore', [], $adminOnly(200), ['equipment_family' => 'trashed_equipment_family']],
+        // F1-14 — colaboradores (employees.view: L, A; manage: A). Fixture na filial do usuário: visível ao L.
+        ['GET', 'employees', [], $leaderAndAdmin],
+        ['POST', 'employees', ['registration' => 'MAT-NOVA', 'name' => 'Novo', 'job_type' => 'leader', 'branch_id' => '{branch}'], $adminOnly(201)],
+        ['GET', 'employees/{employee}', [], $leaderAndAdmin],
+        ['PUT', 'employees/{employee}', ['name' => 'Renomeado'], $adminOnly(200)],
+        ['PATCH', 'employees/{employee}', ['name' => 'Renomeado'], $adminOnly(200)],
+        ['DELETE', 'employees/{employee}', [], $adminOnly(200)],
+        ['POST', 'employees/{employee}/restore', [], $adminOnly(200), ['employee' => 'trashed_employee']],
         // F1-11 — usuários (users.view/users.manage: A) e auditoria (audit.view: A, somente leitura)
         ['GET', 'users', [], $adminOnly(200)],
         ['POST', 'users', ['name' => 'Novo', 'email' => 'novo@example.com', 'password' => 'NovaSenha2026', 'role' => 'admin'], $adminOnly(201)],
@@ -181,9 +190,15 @@ function routeMatrix(): array
     ];
 }
 
-/** Registros usados nas rotas com {parâmetro}; criados por caso (banco limpo a cada teste). */
-function routeFixtures(): array
+/**
+ * Registros usados nas rotas com {parâmetro}; criados por caso (banco limpo a cada teste). Registros com
+ * escopo de filial ficam na filial do usuário do caso (ou numa nova, para o admin).
+ */
+function routeFixtures(User $user): array
 {
+    $ownBranchId = $user->branch_id ?? Branch::factory()->create()->id;
+    $trashedEmployee = Employee::factory()->create(['branch_id' => $ownBranchId]);
+    $trashedEmployee->delete();
     $trashedBranch = Branch::factory()->create();
     $trashedBranch->delete();
     $trashedCostCenter = CostCenter::factory()->global()->create();
@@ -202,6 +217,8 @@ function routeFixtures(): array
         'trashed_equipment_family' => $trashedFamily->id,
         'user' => User::factory()->create()->id, // operador: pode ser excluído
         'trashed_user' => $trashedUser->id,
+        'employee' => Employee::factory()->create(['branch_id' => $ownBranchId])->id,
+        'trashed_employee' => $trashedEmployee->id,
         'audit_log' => AuditLog::query()->value('id'),
     ];
 }
@@ -221,8 +238,10 @@ function routeMatrixCases(): array
 
 it('rotas: perfil × rota × HTTP esperado', function (string $role, string $method, string $uri, array $payload, int $status, array $params) {
     $user = userWithRole(Role::from($role), $role === 'admin' ? null : Branch::factory()->create());
-    $fixtures = routeFixtures();
+    $fixtures = routeFixtures($user);
     $uri = preg_replace_callback('/\{(\w+)\}/', fn ($m) => (string) $fixtures[$params[$m[1]] ?? $m[1]], $uri);
+    // payload pode referenciar fixtures ('{branch}' → id)
+    $payload = array_map(fn ($v) => is_string($v) && preg_match('/^\{(\w+)\}$/', $v, $m) ? $fixtures[$m[1]] : $v, $payload);
 
     api($method, $uri, $payload, bearer($user))->assertStatus($status);
 })->with(routeMatrixCases());

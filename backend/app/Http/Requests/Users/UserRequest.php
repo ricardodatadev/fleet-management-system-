@@ -5,6 +5,7 @@ namespace App\Http\Requests\Users;
 use App\Enums\Role;
 use App\Http\Requests\ResourceRequest;
 use App\Models\User;
+use App\Support\Api\FieldMessage;
 use Illuminate\Validation\Rule;
 use Illuminate\Validation\Rules\Password;
 use Illuminate\Validation\Validator;
@@ -41,7 +42,7 @@ class UserRequest extends ResourceRequest
             $branchId = $this->has('branch_id') ? $this->input('branch_id') : $target?->branch_id;
 
             if ($role !== null && $role !== Role::Admin && $branchId === null) {
-                $validator->errors()->add('branch_id', __('validation.required', ['attribute' => 'branch_id']));
+                $validator->errors()->add('branch_id', FieldMessage::for('required', 'branch_id'));
             }
         }];
     }

@@ -8,12 +8,14 @@ use App\Http\Requests\CostCenters\CostCenterRequest;
 use App\Http\Resources\CostCenterResource;
 use App\Models\Branch;
 use App\Models\CostCenter;
+use App\Models\Scopes\BranchScope;
 use App\Support\Api\ApiResponse;
 use App\Support\Api\ListQuery;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Gate;
+use Illuminate\Validation\ValidationException;
 use OpenApi\Attributes as OA;
 
 #[OA\Schema(
@@ -129,7 +131,7 @@ class CostCenterController extends Controller
         path: '/cost-centers/{cost_center}',
         operationId: 'costCentersUpdate',
         summary: 'Atualiza centro de custo (parcial; PUT = PATCH)',
-        description: 'Permissão: cost_centers.manage. Só os campos enviados são validados e gravados.',
+        description: 'Permissão: cost_centers.manage. Só os campos enviados são validados e gravados. Trocar a filial com colaboradores de outra filial vinculados → 422.',
         tags: ['Centros de custo'],
         security: [['bearerAuth' => []]],
         parameters: [new OA\Parameter(name: 'cost_center', in: 'path', required: true, schema: new OA\Schema(type: 'integer'))],
@@ -165,7 +167,14 @@ class CostCenterController extends Controller
         Gate::authorize('update', $costCenter);
         $this->persist(function () use ($request, $costCenter) {
             if ($request->has('branch_id')) {
-                $this->lockBranch($request->validated('branch_id'));
+                $branchId = $request->validated('branch_id');
+                $this->lockBranch($branchId);
+                // Colaboradores de outra filial perderiam a consistência (D.2 v1.5). A linha é travada antes
+                // da checagem: quem grava colaborador trava o centro de custo com FOR SHARE.
+                CostCenter::query()->withoutGlobalScope(BranchScope::class)->whereKey($costCenter->getKey())->lockForUpdate()->first(['id']);
+                if ($branchId !== null && $costCenter->employees()->where('branch_id', '!=', $branchId)->exists()) {
+                    throw ValidationException::withMessages(['branch_id' => __('api.cost_center_employees_other_branch')]);
+                }
             }
             $costCenter->update($request->validated());
         });

@@ -79,7 +79,7 @@ it('409 conflito de domínio', function () {
 it('422 validação com errors por campo em pt-BR', function () {
     $body = assertEnvelope($this->postJson('/api/v1/_t/validate', ['qty' => 0]), 'error', 422);
     expect($body['errors'])->toHaveKeys(['name', 'qty']);
-    expect($body['errors']['name'][0])->toBe('O campo name é obrigatório.');
+    expect($body['errors']['name'][0])->toBe('O campo nome é obrigatório.');
     expect($body['data'])->toBeNull();
 });
 

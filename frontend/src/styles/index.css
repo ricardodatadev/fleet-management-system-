@@ -39,6 +39,13 @@
   --on-brand: #ffffff;
   --focus: #0b5864; /* contorno de foco: 8.1:1 sobre surface */
 
+  /* Topbar escura (grafite-petróleo) */
+  --topbar-bg: #12343b;
+  --topbar-hover: #1d4a53;
+  --on-topbar: #ffffff; /* 13.3:1 sobre topbar-bg; 9.7:1 no hover */
+  --on-topbar-muted: #b9cfd3; /* filial/perfil: 8.2:1 sobre topbar-bg */
+  --topbar-focus: #7fd4e2; /* contorno de foco sobre o escuro: 7.9:1 */
+
   /* Inverso (tooltip) */
   --inverse: #1d2426;
   --on-inverse: #ffffff;
@@ -76,6 +83,11 @@
   --color-brand-subtle: var(--brand-subtle);
   --color-on-brand: var(--on-brand);
   --color-focus: var(--focus);
+  --color-topbar: var(--topbar-bg);
+  --color-topbar-hover: var(--topbar-hover);
+  --color-on-topbar: var(--on-topbar);
+  --color-on-topbar-muted: var(--on-topbar-muted);
+  --color-topbar-focus: var(--topbar-focus);
   --color-inverse: var(--inverse);
   --color-on-inverse: var(--on-inverse);
   --color-success: var(--success);

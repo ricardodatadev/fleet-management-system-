@@ -5,7 +5,7 @@ import { cn } from '@/lib/cn';
 import { TAP_MIN_CLASSES } from '@/lib/tokens';
 import { buttonBase, buttonVariants } from './styles';
 
-export type ButtonVariant = 'primary' | 'secondary' | 'danger' | 'ghost';
+export type ButtonVariant = 'primary' | 'secondary' | 'danger' | 'ghost' | 'topbar';
 
 export interface ButtonProps extends ButtonHTMLAttributes<HTMLButtonElement> {
   variant?: ButtonVariant;

@@ -184,7 +184,16 @@ describe('tokens de cor (F1-36)', () => {
     ['text', 'danger-subtle', 4.5],
     ['text', 'warning-subtle', 4.5],
     ['text', 'info-subtle', 4.5],
+    // Topbar escura e avatar (iniciais sobre o círculo claro).
+    ['on-topbar', 'topbar-bg', 4.5],
+    ['on-topbar', 'topbar-hover', 4.5],
+    ['on-topbar-muted', 'topbar-bg', 4.5],
+    ['on-topbar-muted', 'topbar-hover', 4.5],
+    ['brand-pressed', 'brand-subtle', 4.5],
     // Não-texto (WCAG 1.4.11): contorno de campo e foco >= 3:1.
+    ['topbar-focus', 'topbar-bg', 3],
+    ['topbar-focus', 'topbar-hover', 3],
+    ['brand-subtle', 'topbar-bg', 3],
     ['border-strong', 'surface', 3],
     ['focus', 'surface', 3],
     ['focus', 'bg', 3],

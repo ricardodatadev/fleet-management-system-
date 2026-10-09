@@ -8,6 +8,8 @@ export const buttonVariants: Record<ButtonVariant, string> = {
   secondary: 'border border-border bg-surface text-text hover:bg-surface-muted',
   danger: 'bg-danger text-on-danger hover:bg-danger-hover',
   ghost: 'bg-transparent text-brand hover:bg-surface-muted',
+  /** Sobre o fundo escuro da topbar. */
+  topbar: 'bg-transparent text-on-topbar hover:bg-topbar-hover',
 };
 
 export const fieldBase =

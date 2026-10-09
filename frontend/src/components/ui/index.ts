@@ -1,3 +1,6 @@
+export { Avatar } from './Avatar';
+export { initials } from './initials';
+export type { AvatarProps } from './Avatar';
 export { Badge, StatusPill } from './Badge';
 export type { BadgeProps, BadgeTone, EntityStatus, StatusPillProps } from './Badge';
 export { Button } from './Button';

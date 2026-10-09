@@ -59,7 +59,7 @@ class Branch extends Model
     }
 
     /**
-     * Dependentes ativos (não excluídos) que impedem a exclusão (409). Equipamentos entram na F1-15.
+     * Dependentes ativos (não excluídos) que impedem a exclusão (409).
      *
      * @return list<string> chaves de tradução em api.dependents.*
      */
@@ -69,6 +69,7 @@ class Branch extends Model
             'cost_centers' => $this->costCenters()->exists(),
             'users' => $this->users()->exists(),
             'employees' => $this->employees()->exists(),
+            'equipments' => Equipment::query()->withoutGlobalScope(Scopes\BranchScope::class)->where('branch_id', $this->getKey())->exists(),
         ]));
     }
 }

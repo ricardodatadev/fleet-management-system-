@@ -258,7 +258,7 @@ it('409 no pai: filial, centro de custo e usuário com colaborador não excluíd
     api('DELETE', "branches/{$this->y->id}", token: $this->token)->assertOk();
 });
 
-it('dependentes do colaborador: chave equipments declarada, desligada até a F1-15', function () {
+it('dependentes do colaborador: sem equipamento sob a responsabilidade dele, a exclusão passa (o 409 está no EquipmentsTest)', function () {
     $employee = Employee::factory()->create(['branch_id' => $this->x->id]);
 
     expect($employee->activeDependents())->toBe([]);

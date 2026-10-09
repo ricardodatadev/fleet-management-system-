@@ -40,6 +40,7 @@
                                 "branch",
                                 "cost_center",
                                 "employee",
+                                "equipment",
                                 "equipment_family",
                                 "user"
                             ]
@@ -814,7 +815,7 @@
                     "Filiais"
                 ],
                 "summary": "Exclui filial (soft delete)",
-                "description": "Permissão: branches.manage. 409 se houver centros de custo ou usuários ativos (não excluídos) vinculados; equipamentos e colaboradores entram nas F1-14/15.",
+                "description": "Permissão: branches.manage. 409 (`errors.dependents`) se houver centros de custo, usuários, colaboradores ou equipamentos ativos (não excluídos) vinculados.",
                 "operationId": "branchesDestroy",
                 "parameters": [
                     {
@@ -1167,7 +1168,7 @@
                     "Centros de custo"
                 ],
                 "summary": "Atualiza centro de custo (parcial; PUT = PATCH)",
-                "description": "Permissão: cost_centers.manage. Só os campos enviados são validados e gravados. Trocar a filial com colaboradores de outra filial vinculados → 422.",
+                "description": "Permissão: cost_centers.manage. Só os campos enviados são validados e gravados. Trocar a filial com colaboradores ou equipamentos de outra filial vinculados → 422.",
                 "operationId": "costCentersUpdate",
                 "parameters": [
                     {
@@ -1227,7 +1228,7 @@
                     "Centros de custo"
                 ],
                 "summary": "Exclui centro de custo (soft delete)",
-                "description": "Permissão: cost_centers.manage. 409 se houver equipamentos ou colaboradores ativos vinculados (regras ativadas nas F1-14/15).",
+                "description": "Permissão: cost_centers.manage. 409 (`errors.dependents` com `employees` e/ou `equipments`) se houver colaboradores ou equipamentos ativos vinculados.",
                 "operationId": "costCentersDestroy",
                 "parameters": [
                     {
@@ -1420,14 +1421,10 @@
                     {
                         "name": "job_type",
                         "in": "query",
+                        "description": "Um ou mais, separados por vírgula (ex.: `leader,admin_staff`); valor fora de driver, mechanic, leader e admin_staff em qualquer posição → 422.",
                         "schema": {
                             "type": "string",
-                            "enum": [
-                                "driver",
-                                "mechanic",
-                                "leader",
-                                "admin_staff"
-                            ]
+                            "example": "leader,admin_staff"
                         }
                     },
                     {
@@ -1653,7 +1650,7 @@
                     "Colaboradores"
                 ],
                 "summary": "Exclui colaborador (soft delete)",
-                "description": "Permissão: employees.manage. 409 (`errors.dependents=[\"equipments\"]`) se for responsável por equipamento ativo, regra ativada na F1-15. O usuário vinculado fica livre.",
+                "description": "Permissão: employees.manage. 409 (`errors.dependents=[\"equipments\"]`) se for responsável por equipamento ativo. O usuário vinculado fica livre.",
                 "operationId": "employeesDestroy",
                 "parameters": [
                     {
@@ -1790,6 +1787,439 @@
                             "application/json": {
                                 "schema": {
                                     "$ref": "#/components/schemas/EmployeeEnvelope"
+                                }
+                            }
+                        }
+                    },
+                    "401": {
+                        "$ref": "#/components/responses/Unauthenticated"
+                    },
+                    "403": {
+                        "$ref": "#/components/responses/Forbidden"
+                    },
+                    "404": {
+                        "$ref": "#/components/responses/NotFound"
+                    },
+                    "409": {
+                        "$ref": "#/components/responses/Conflict"
+                    },
+                    "429": {
+                        "$ref": "#/components/responses/TooManyRequests"
+                    }
+                },
+                "security": [
+                    {
+                        "bearerAuth": []
+                    }
+                ]
+            }
+        },
+        "/equipments": {
+            "get": {
+                "tags": [
+                    "Equipamentos"
+                ],
+                "summary": "Lista equipamentos",
+                "description": "Permissão: equipments.view (todos os perfis). Escopo: não-admin vê só a própria filial. Busca `q` em code, name e plate. Ordenação: code, name, plate, status, year, acquisition_date (`-` = desc; padrão code).",
+                "operationId": "equipmentsIndex",
+                "parameters": [
+                    {
+                        "$ref": "#/components/parameters/Page"
+                    },
+                    {
+                        "$ref": "#/components/parameters/PerPage"
+                    },
+                    {
+                        "$ref": "#/components/parameters/Search"
+                    },
+                    {
+                        "name": "sort",
+                        "in": "query",
+                        "schema": {
+                            "type": "string",
+                            "example": "-year,code"
+                        }
+                    },
+                    {
+                        "name": "family_id",
+                        "in": "query",
+                        "schema": {
+                            "type": "integer"
+                        }
+                    },
+                    {
+                        "name": "branch_id",
+                        "in": "query",
+                        "schema": {
+                            "type": "integer"
+                        }
+                    },
+                    {
+                        "name": "cost_center_id",
+                        "in": "query",
+                        "schema": {
+                            "type": "integer"
+                        }
+                    },
+                    {
+                        "name": "status",
+                        "in": "query",
+                        "schema": {
+                            "type": "string",
+                            "enum": [
+                                "active",
+                                "inactive",
+                                "disposed"
+                            ]
+                        }
+                    },
+                    {
+                        "name": "responsible_employee_id",
+                        "in": "query",
+                        "schema": {
+                            "type": "integer"
+                        }
+                    },
+                    {
+                        "$ref": "#/components/parameters/WithTrashed"
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Lista paginada.",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "allOf": [
+                                        {
+                                            "$ref": "#/components/schemas/Envelope"
+                                        },
+                                        {
+                                            "required": [
+                                                "meta"
+                                            ],
+                                            "properties": {
+                                                "data": {
+                                                    "type": "array",
+                                                    "items": {
+                                                        "$ref": "#/components/schemas/Equipment"
+                                                    }
+                                                }
+                                            },
+                                            "type": "object"
+                                        }
+                                    ]
+                                }
+                            }
+                        }
+                    },
+                    "401": {
+                        "$ref": "#/components/responses/Unauthenticated"
+                    },
+                    "403": {
+                        "$ref": "#/components/responses/Forbidden"
+                    },
+                    "422": {
+                        "$ref": "#/components/responses/ValidationError"
+                    },
+                    "429": {
+                        "$ref": "#/components/responses/TooManyRequests"
+                    }
+                },
+                "security": [
+                    {
+                        "bearerAuth": []
+                    }
+                ]
+            },
+            "post": {
+                "tags": [
+                    "Equipamentos"
+                ],
+                "summary": "Cria equipamento",
+                "description": "Permissão: equipments.manage. 422: code ou placa duplicados entre ativos; placa fora do formato; família, filial, centro de custo ou responsável inexistente ou excluído; centro de custo de outra filial; responsável de outra filial; ano fora de 1950..ano atual + 1.",
+                "operationId": "equipmentsStore",
+                "requestBody": {
+                    "required": true,
+                    "content": {
+                        "application/json": {
+                            "schema": {
+                                "$ref": "#/components/schemas/EquipmentInput"
+                            }
+                        }
+                    }
+                },
+                "responses": {
+                    "201": {
+                        "description": "Criado (status=active, odômetro e horímetro 0 quando omitidos).",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/EquipmentEnvelope"
+                                }
+                            }
+                        }
+                    },
+                    "401": {
+                        "$ref": "#/components/responses/Unauthenticated"
+                    },
+                    "403": {
+                        "$ref": "#/components/responses/Forbidden"
+                    },
+                    "422": {
+                        "$ref": "#/components/responses/ValidationError"
+                    },
+                    "429": {
+                        "$ref": "#/components/responses/TooManyRequests"
+                    }
+                },
+                "security": [
+                    {
+                        "bearerAuth": []
+                    }
+                ]
+            }
+        },
+        "/equipments/{equipment}": {
+            "get": {
+                "tags": [
+                    "Equipamentos"
+                ],
+                "summary": "Detalha equipamento",
+                "description": "Permissão: equipments.view. Excluído ou de outra filial (não-admin) → 404.",
+                "operationId": "equipmentsShow",
+                "parameters": [
+                    {
+                        "name": "equipment",
+                        "in": "path",
+                        "required": true,
+                        "schema": {
+                            "type": "integer"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Equipamento.",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/EquipmentEnvelope"
+                                }
+                            }
+                        }
+                    },
+                    "401": {
+                        "$ref": "#/components/responses/Unauthenticated"
+                    },
+                    "403": {
+                        "$ref": "#/components/responses/Forbidden"
+                    },
+                    "404": {
+                        "$ref": "#/components/responses/NotFound"
+                    },
+                    "429": {
+                        "$ref": "#/components/responses/TooManyRequests"
+                    }
+                },
+                "security": [
+                    {
+                        "bearerAuth": []
+                    }
+                ]
+            },
+            "put": {
+                "tags": [
+                    "Equipamentos"
+                ],
+                "summary": "Atualiza equipamento (parcial; PUT = PATCH)",
+                "description": "Permissão: equipments.manage. Só os campos enviados são validados e gravados; as regras de filial valem também ao trocar a filial do equipamento.",
+                "operationId": "equipmentsUpdate",
+                "parameters": [
+                    {
+                        "name": "equipment",
+                        "in": "path",
+                        "required": true,
+                        "schema": {
+                            "type": "integer"
+                        }
+                    }
+                ],
+                "requestBody": {
+                    "required": true,
+                    "content": {
+                        "application/json": {
+                            "schema": {
+                                "$ref": "#/components/schemas/EquipmentInput"
+                            }
+                        }
+                    }
+                },
+                "responses": {
+                    "200": {
+                        "description": "Atualizado.",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/EquipmentEnvelope"
+                                }
+                            }
+                        }
+                    },
+                    "401": {
+                        "$ref": "#/components/responses/Unauthenticated"
+                    },
+                    "403": {
+                        "$ref": "#/components/responses/Forbidden"
+                    },
+                    "404": {
+                        "$ref": "#/components/responses/NotFound"
+                    },
+                    "422": {
+                        "$ref": "#/components/responses/ValidationError"
+                    },
+                    "429": {
+                        "$ref": "#/components/responses/TooManyRequests"
+                    }
+                },
+                "security": [
+                    {
+                        "bearerAuth": []
+                    }
+                ]
+            },
+            "delete": {
+                "tags": [
+                    "Equipamentos"
+                ],
+                "summary": "Exclui equipamento (soft delete)",
+                "description": "Permissão: equipments.manage. Exclusão concorrente de equipamento já excluído → 404.",
+                "operationId": "equipmentsDestroy",
+                "parameters": [
+                    {
+                        "name": "equipment",
+                        "in": "path",
+                        "required": true,
+                        "schema": {
+                            "type": "integer"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Excluído (`data` null).",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/Envelope"
+                                }
+                            }
+                        }
+                    },
+                    "401": {
+                        "$ref": "#/components/responses/Unauthenticated"
+                    },
+                    "403": {
+                        "$ref": "#/components/responses/Forbidden"
+                    },
+                    "404": {
+                        "$ref": "#/components/responses/NotFound"
+                    },
+                    "429": {
+                        "$ref": "#/components/responses/TooManyRequests"
+                    }
+                },
+                "security": [
+                    {
+                        "bearerAuth": []
+                    }
+                ]
+            },
+            "patch": {
+                "tags": [
+                    "Equipamentos"
+                ],
+                "summary": "Atualiza equipamento (parcial; igual ao PUT)",
+                "operationId": "equipmentsPatch",
+                "parameters": [
+                    {
+                        "name": "equipment",
+                        "in": "path",
+                        "required": true,
+                        "schema": {
+                            "type": "integer"
+                        }
+                    }
+                ],
+                "requestBody": {
+                    "required": true,
+                    "content": {
+                        "application/json": {
+                            "schema": {
+                                "$ref": "#/components/schemas/EquipmentInput"
+                            }
+                        }
+                    }
+                },
+                "responses": {
+                    "200": {
+                        "description": "Atualizado.",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/EquipmentEnvelope"
+                                }
+                            }
+                        }
+                    },
+                    "401": {
+                        "$ref": "#/components/responses/Unauthenticated"
+                    },
+                    "403": {
+                        "$ref": "#/components/responses/Forbidden"
+                    },
+                    "404": {
+                        "$ref": "#/components/responses/NotFound"
+                    },
+                    "422": {
+                        "$ref": "#/components/responses/ValidationError"
+                    },
+                    "429": {
+                        "$ref": "#/components/responses/TooManyRequests"
+                    }
+                },
+                "security": [
+                    {
+                        "bearerAuth": []
+                    }
+                ]
+            }
+        },
+        "/equipments/{equipment}/restore": {
+            "post": {
+                "tags": [
+                    "Equipamentos"
+                ],
+                "summary": "Restaura equipamento excluído",
+                "description": "Permissão: equipments.manage. 409 se não estiver excluído, se o code ou a placa foram reutilizados, se a filial, a família ou o centro de custo vinculado está excluído (ou o centro de custo mudou para outra filial), ou se o responsável está excluído ou em outra filial.",
+                "operationId": "equipmentsRestore",
+                "parameters": [
+                    {
+                        "name": "equipment",
+                        "in": "path",
+                        "required": true,
+                        "schema": {
+                            "type": "integer"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Restaurado.",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/EquipmentEnvelope"
                                 }
                             }
                         }
@@ -2086,7 +2516,7 @@
                     "Famílias de equipamento"
                 ],
                 "summary": "Exclui família de equipamento (soft delete)",
-                "description": "Permissão: equipment_families.manage. 409 (`errors.dependents=[\"equipments\"]`) se houver equipamentos ativos, regra ativada na F1-15. Exclusão concorrente de família já excluída → 404.",
+                "description": "Permissão: equipment_families.manage. 409 (`errors.dependents=[\"equipments\"]`) se houver equipamentos ativos. Exclusão concorrente de família já excluída → 404.",
                 "operationId": "equipmentFamiliesDestroy",
                 "parameters": [
                     {
@@ -2336,7 +2766,8 @@
                                                                 "equipment_categories",
                                                                 "criticalities",
                                                                 "job_types",
-                                                                "cnh_categories"
+                                                                "cnh_categories",
+                                                                "equipment_statuses"
                                                             ],
                                                             "properties": {
                                                                 "branch_types": {
@@ -2415,6 +2846,17 @@
                                                                             "AE"
                                                                         ]
                                                                     }
+                                                                },
+                                                                "equipment_statuses": {
+                                                                    "type": "array",
+                                                                    "items": {
+                                                                        "type": "string",
+                                                                        "enum": [
+                                                                            "active",
+                                                                            "inactive",
+                                                                            "disposed"
+                                                                        ]
+                                                                    }
                                                                 }
                                                             },
                                                             "type": "object"
@@ -2491,6 +2933,18 @@
                         "in": "query",
                         "schema": {
                             "type": "integer"
+                        }
+                    },
+                    {
+                        "name": "has_employee",
+                        "in": "query",
+                        "description": "1 = com colaborador vinculado (não excluído); 0 = sem. Outro valor → 422.",
+                        "schema": {
+                            "type": "integer",
+                            "enum": [
+                                0,
+                                1
+                            ]
                         }
                     },
                     {
@@ -3200,6 +3654,125 @@
                         "properties": {
                             "data": {
                                 "$ref": "#/components/schemas/Employee"
+                            }
+                        },
+                        "type": "object"
+                    }
+                ]
+            },
+            "EquipmentInput": {
+                "description": "Create: code, name, family_id, branch_id e cost_center_id obrigatórios. Update (PUT = PATCH): parcial. `code` em trim + maiúsculas. `plate`: maiúsculas, sem espaços nem hífen, depois `^[A-Z0-9]{5,8}$`; única entre não excluídos sobre o valor normalizado. `year` entre 1950 e o ano atual + 1. `cost_center_id`: não excluído e da mesma filial do equipamento ou sem filial. `responsible_employee_id`: colaborador não excluído da mesma filial. Família, filial, centro de custo e responsável existentes e não excluídos.",
+                "properties": {
+                    "code": {
+                        "type": "string",
+                        "example": "CAM-001",
+                        "maxLength": 30
+                    },
+                    "name": {
+                        "type": "string",
+                        "example": "Caminhão basculante 01",
+                        "maxLength": 150
+                    },
+                    "family_id": {
+                        "type": "integer",
+                        "example": 1
+                    },
+                    "branch_id": {
+                        "type": "integer",
+                        "example": 1
+                    },
+                    "cost_center_id": {
+                        "type": "integer",
+                        "example": 1
+                    },
+                    "responsible_employee_id": {
+                        "type": "integer",
+                        "nullable": true
+                    },
+                    "plate": {
+                        "type": "string",
+                        "example": "abc-1d23",
+                        "nullable": true
+                    },
+                    "serial_number": {
+                        "type": "string",
+                        "nullable": true,
+                        "maxLength": 60
+                    },
+                    "manufacturer": {
+                        "type": "string",
+                        "nullable": true,
+                        "maxLength": 80
+                    },
+                    "model": {
+                        "type": "string",
+                        "nullable": true,
+                        "maxLength": 80
+                    },
+                    "year": {
+                        "type": "integer",
+                        "nullable": true,
+                        "minimum": 1950
+                    },
+                    "status": {
+                        "type": "string",
+                        "default": "active",
+                        "enum": [
+                            "active",
+                            "inactive",
+                            "disposed"
+                        ]
+                    },
+                    "criticality_override": {
+                        "type": "string",
+                        "nullable": true,
+                        "enum": [
+                            "low",
+                            "medium",
+                            "high",
+                            "critical"
+                        ]
+                    },
+                    "odometer_km": {
+                        "type": "number",
+                        "format": "float",
+                        "default": 0,
+                        "minimum": 0
+                    },
+                    "hour_meter": {
+                        "type": "number",
+                        "format": "float",
+                        "default": 0,
+                        "minimum": 0
+                    },
+                    "acquisition_date": {
+                        "type": "string",
+                        "format": "date",
+                        "nullable": true
+                    },
+                    "acquisition_value": {
+                        "type": "number",
+                        "format": "float",
+                        "nullable": true,
+                        "minimum": 0
+                    },
+                    "notes": {
+                        "type": "string",
+                        "nullable": true,
+                        "maxLength": 5000
+                    }
+                },
+                "type": "object"
+            },
+            "EquipmentEnvelope": {
+                "allOf": [
+                    {
+                        "$ref": "#/components/schemas/Envelope"
+                    },
+                    {
+                        "properties": {
+                            "data": {
+                                "$ref": "#/components/schemas/Equipment"
                             }
                         },
                         "type": "object"
@@ -3970,6 +4543,215 @@
                 },
                 "type": "object"
             },
+            "EquipmentRef": {
+                "required": [
+                    "id",
+                    "code",
+                    "name"
+                ],
+                "properties": {
+                    "id": {
+                        "type": "integer",
+                        "example": 1
+                    },
+                    "code": {
+                        "type": "string",
+                        "example": "X-01"
+                    },
+                    "name": {
+                        "type": "string",
+                        "example": "Nome"
+                    }
+                },
+                "type": "object"
+            },
+            "Equipment": {
+                "required": [
+                    "id",
+                    "code",
+                    "name",
+                    "family",
+                    "branch",
+                    "cost_center",
+                    "responsible_employee",
+                    "plate",
+                    "serial_number",
+                    "manufacturer",
+                    "model",
+                    "year",
+                    "status",
+                    "criticality",
+                    "criticality_source",
+                    "criticality_override",
+                    "odometer_km",
+                    "hour_meter",
+                    "acquisition_date",
+                    "acquisition_value",
+                    "notes",
+                    "created_at",
+                    "updated_at",
+                    "deleted_at"
+                ],
+                "properties": {
+                    "id": {
+                        "type": "integer",
+                        "example": 1
+                    },
+                    "code": {
+                        "type": "string",
+                        "example": "CAM-001",
+                        "maxLength": 30
+                    },
+                    "name": {
+                        "type": "string",
+                        "example": "Caminhão basculante 01",
+                        "maxLength": 150
+                    },
+                    "family": {
+                        "$ref": "#/components/schemas/EquipmentRef"
+                    },
+                    "branch": {
+                        "$ref": "#/components/schemas/EquipmentRef"
+                    },
+                    "cost_center": {
+                        "$ref": "#/components/schemas/EquipmentRef"
+                    },
+                    "responsible_employee": {
+                        "required": [
+                            "id",
+                            "registration",
+                            "name"
+                        ],
+                        "properties": {
+                            "id": {
+                                "type": "integer",
+                                "example": 1
+                            },
+                            "registration": {
+                                "type": "string",
+                                "example": "MAT-00123"
+                            },
+                            "name": {
+                                "type": "string",
+                                "example": "João Pereira"
+                            }
+                        },
+                        "type": "object",
+                        "nullable": true
+                    },
+                    "plate": {
+                        "description": "Maiúsculas, sem espaços nem hífen.",
+                        "type": "string",
+                        "pattern": "^[A-Z0-9]{5,8}$",
+                        "example": "ABC1D23",
+                        "nullable": true
+                    },
+                    "serial_number": {
+                        "type": "string",
+                        "nullable": true,
+                        "maxLength": 60
+                    },
+                    "manufacturer": {
+                        "type": "string",
+                        "nullable": true,
+                        "maxLength": 80
+                    },
+                    "model": {
+                        "type": "string",
+                        "nullable": true,
+                        "maxLength": 80
+                    },
+                    "year": {
+                        "type": "integer",
+                        "example": 2022,
+                        "nullable": true,
+                        "minimum": 1950
+                    },
+                    "status": {
+                        "type": "string",
+                        "enum": [
+                            "active",
+                            "inactive",
+                            "disposed"
+                        ]
+                    },
+                    "criticality": {
+                        "description": "Efetiva: override do equipamento ou a da família.",
+                        "type": "string",
+                        "enum": [
+                            "low",
+                            "medium",
+                            "high",
+                            "critical"
+                        ]
+                    },
+                    "criticality_source": {
+                        "type": "string",
+                        "enum": [
+                            "family",
+                            "override"
+                        ]
+                    },
+                    "criticality_override": {
+                        "type": "string",
+                        "nullable": true,
+                        "enum": [
+                            "low",
+                            "medium",
+                            "high",
+                            "critical"
+                        ]
+                    },
+                    "odometer_km": {
+                        "description": "Número JSON (1 casa).",
+                        "type": "number",
+                        "format": "float",
+                        "example": 125430.5,
+                        "minimum": 0
+                    },
+                    "hour_meter": {
+                        "description": "Número JSON (1 casa).",
+                        "type": "number",
+                        "format": "float",
+                        "example": 3210,
+                        "minimum": 0
+                    },
+                    "acquisition_date": {
+                        "type": "string",
+                        "format": "date",
+                        "nullable": true
+                    },
+                    "acquisition_value": {
+                        "description": "Número JSON (2 casas).",
+                        "type": "number",
+                        "format": "float",
+                        "example": 450000,
+                        "nullable": true,
+                        "minimum": 0
+                    },
+                    "notes": {
+                        "type": "string",
+                        "nullable": true
+                    },
+                    "created_at": {
+                        "type": "string",
+                        "format": "date-time",
+                        "nullable": true
+                    },
+                    "updated_at": {
+                        "type": "string",
+                        "format": "date-time",
+                        "nullable": true
+                    },
+                    "deleted_at": {
+                        "description": "Sempre presente; null quando ativo.",
+                        "type": "string",
+                        "format": "date-time",
+                        "nullable": true
+                    }
+                },
+                "type": "object"
+            },
             "User": {
                 "required": [
                     "id",
@@ -3978,6 +4760,7 @@
                     "email",
                     "role",
                     "branch",
+                    "employee",
                     "is_active",
                     "last_login_at",
                     "created_at",
@@ -4037,6 +4820,30 @@
                             "name": {
                                 "type": "string",
                                 "example": "Matriz"
+                            }
+                        },
+                        "type": "object",
+                        "nullable": true
+                    },
+                    "employee": {
+                        "description": "Colaborador vinculado (não excluído); null quando não há.",
+                        "required": [
+                            "id",
+                            "registration",
+                            "name"
+                        ],
+                        "properties": {
+                            "id": {
+                                "type": "integer",
+                                "example": 1
+                            },
+                            "registration": {
+                                "type": "string",
+                                "example": "MAT-00123"
+                            },
+                            "name": {
+                                "type": "string",
+                                "example": "João Pereira"
                             }
                         },
                         "type": "object",
@@ -4481,6 +5288,10 @@
         {
             "name": "Colaboradores",
             "description": "Colaboradores"
+        },
+        {
+            "name": "Equipamentos",
+            "description": "Equipamentos"
         },
         {
             "name": "Famílias de equipamento",

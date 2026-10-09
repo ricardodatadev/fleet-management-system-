@@ -15,6 +15,7 @@ use App\Support\Api\ApiResponse;
 use App\Support\Api\ListQuery;
 use App\Support\Audit\AuditService;
 use App\Support\Users\UsernameGenerator;
+use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
@@ -48,6 +49,9 @@ class UserController extends Controller
 {
     use CrudActions;
 
+    /** Relações embutidas no item (filial e colaborador vinculado), com eager load na lista. */
+    private const RELATIONS = ['branch', 'employee'];
+
     /** Índices únicos parciais → campo do 422 quando a corrida passa pela validação. */
     private const UNIQUE_INDEXES = ['users_email_unique' => 'email', 'users_username_unique' => 'username'];
 
@@ -67,6 +71,7 @@ class UserController extends Controller
             new OA\Parameter(name: 'sort', in: 'query', schema: new OA\Schema(type: 'string', example: '-last_login_at,name')),
             new OA\Parameter(name: 'role', in: 'query', schema: new OA\Schema(type: 'string', enum: ['operator', 'mechanic', 'leader', 'admin'])),
             new OA\Parameter(name: 'branch_id', in: 'query', schema: new OA\Schema(type: 'integer')),
+            new OA\Parameter(name: 'has_employee', in: 'query', description: '1 = com colaborador vinculado (não excluído); 0 = sem. Outro valor → 422.', schema: new OA\Schema(type: 'integer', enum: [0, 1])),
             new OA\Parameter(ref: '#/components/parameters/IsActive'),
             new OA\Parameter(ref: '#/components/parameters/WithTrashed'),
         ],
@@ -84,9 +89,15 @@ class UserController extends Controller
     public function index(Request $request): JsonResponse
     {
         // User nunca usa BranchScoped (alerta da F1-10): o filtro por filial é o parâmetro explícito.
-        $paginator = ListQuery::for($request, User::query()->with('branch'))
+        $paginator = ListQuery::for($request, User::query()->with(self::RELATIONS))
             ->search(['name', 'username', 'email'])
-            ->filters(['role' => ['string', Rule::enum(Role::class)], 'branch_id' => ['integer'], 'is_active' => ['boolean']])
+            ->filters(
+                ['role' => ['string', Rule::enum(Role::class)], 'branch_id' => ['integer'], 'is_active' => ['boolean'], 'has_employee' => ['boolean']],
+                // vínculo com colaborador não excluído (o select do form de colaborador esconde quem já está vinculado)
+                ['has_employee' => function (Builder $q, bool $has): void {
+                    $has ? $q->whereHas('employee') : $q->whereDoesntHave('employee');
+                }],
+            )
             ->sortable(['name', 'username', 'email', 'role', 'created_at', 'last_login_at'], 'name')
             ->paginate();
 
@@ -117,7 +128,7 @@ class UserController extends Controller
             return User::query()->create($request->validated());
         }, self::UNIQUE_INDEXES);
 
-        return ApiResponse::item(new ManagedUserResource($user->refresh()->load('branch')), __('api.created'), 201);
+        return ApiResponse::item(new ManagedUserResource($user->refresh()->load(self::RELATIONS)), __('api.created'), 201);
     }
 
     #[OA\Get(
@@ -140,7 +151,7 @@ class UserController extends Controller
     {
         Gate::authorize('view', $user);
 
-        return ApiResponse::item(new ManagedUserResource($user->load('branch')));
+        return ApiResponse::item(new ManagedUserResource($user->load(self::RELATIONS)));
     }
 
     #[OA\Put(
@@ -220,7 +231,7 @@ class UserController extends Controller
             }
         }, self::UNIQUE_INDEXES);
 
-        return ApiResponse::item(new ManagedUserResource($user->refresh()->load('branch')), __('api.updated'));
+        return ApiResponse::item(new ManagedUserResource($user->refresh()->load(self::RELATIONS)), __('api.updated'));
     }
 
     #[OA\Delete(
@@ -288,7 +299,7 @@ class UserController extends Controller
                 : null;
         }, ['email', 'username']);
 
-        return ApiResponse::item(new ManagedUserResource($restored->load('branch')), __('api.restored'));
+        return ApiResponse::item(new ManagedUserResource($restored->load(self::RELATIONS)), __('api.restored'));
     }
 
     /**

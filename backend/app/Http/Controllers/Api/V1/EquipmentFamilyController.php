@@ -177,7 +177,7 @@ class EquipmentFamilyController extends Controller
         path: '/equipment-families/{equipment_family}',
         operationId: 'equipmentFamiliesDestroy',
         summary: 'Exclui família de equipamento (soft delete)',
-        description: 'Permissão: equipment_families.manage. 409 (`errors.dependents=["equipments"]`) se houver equipamentos ativos, regra ativada na F1-15. Exclusão concorrente de família já excluída → 404.',
+        description: 'Permissão: equipment_families.manage. 409 (`errors.dependents=["equipments"]`) se houver equipamentos ativos. Exclusão concorrente de família já excluída → 404.',
         tags: ['Famílias de equipamento'],
         security: [['bearerAuth' => []]],
         parameters: [new OA\Parameter(name: 'equipment_family', in: 'path', required: true, schema: new OA\Schema(type: 'integer'))],

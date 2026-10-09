@@ -11,7 +11,7 @@ read_env() { sed -n "s/^$1=//p" .env.example | tail -n 1 | sed 's/^"\(.*\)"$/\1/
 slug="$(read_env APP_SLUG)"
 name="$(read_env APP_NAME)"
 full_name="$(read_env APP_FULL_NAME)"
-old_name='si''gof'
+old_name='sig''of'
 
 tmp="$(mktemp -d)"
 trap 'rm -rf "$tmp"' EXIT

@@ -22,7 +22,7 @@ allowlist_file="scripts/brand-allowlist.txt"
 history_file="docs/adr/0001-desvios-spec.md"
 history_entry='^[0-9]+:\| D17 \|'   # saída do grep -n: "<linha>:| D17 | ..."
 # Nome antigo montado sem o literal, para a própria guarda não conter a marca antiga.
-old_name='si''gof'
+old_name='sig''of'
 
 read_env() {
     local value

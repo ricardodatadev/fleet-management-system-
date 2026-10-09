@@ -48,7 +48,7 @@ Arquivo: `scripts/brand-allowlist.txt` (um caminho por linha, com o motivo após
 | `README.md` | título e apresentação do projeto |
 | `docs/adr/0001-desvios-spec.md` | entrada D17, registro histórico do rebrand |
 
-A guarda também falha se uma entrada da allowlist não existir mais, e se o nome anterior aparecer em qualquer lugar fora da linha D17 do ADR-0001 (o padrão é montado no script sem o literal).
+A guarda também falha se uma entrada da allowlist não existir mais, e se o nome anterior aparecer em qualquer lugar fora da linha D17 do ADR-0001 (o padrão é montado no script sem o literal nem o slug atual).
 
 ## Regras da guarda
 

@@ -6,7 +6,8 @@ import { server } from './server';
 export interface FakeRecord {
   id: number;
   name: string;
-  is_active: boolean;
+  /** Ausente em recursos sem `is_active` (ex.: equipamentos, que têm `status`). */
+  is_active?: boolean;
   deleted_at: string | null;
 }
 
@@ -204,6 +205,7 @@ export function mockMetaEnums() {
           roles: ['operator', 'mechanic', 'leader', 'admin'],
           job_types: ['driver', 'mechanic', 'leader', 'admin_staff'],
           cnh_categories: ['A', 'B', 'C', 'D', 'E', 'AB', 'AC', 'AD', 'AE'],
+          equipment_statuses: ['active', 'inactive', 'disposed'],
         },
       }),
     ),

@@ -35,9 +35,9 @@ export interface MeData {
   permissions: string[];
 }
 
-/** POST /auth/login (v1.7): `login` com `@` é e-mail, sem `@` é username. */
+/** POST /auth/login (v1.8): só username; o backend faz trim + minúsculas. */
 export interface LoginCredentials {
-  login: string;
+  username: string;
   password: string;
 }
 

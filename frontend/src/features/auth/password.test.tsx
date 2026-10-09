@@ -270,7 +270,7 @@ describe('Telas públicas', () => {
     const notice = await screen.findByRole('status');
     expect(within(notice).getByText(RESET_OK)).toBeInTheDocument();
 
-    await user.type(screen.getByLabelText('E-mail ou usuário'), 'anasouza');
+    await user.type(screen.getByLabelText('Usuário'), 'anasouza');
     await user.type(screen.getByLabelText(/^Senha/), 'errada');
     await user.click(screen.getByRole('button', { name: 'Entrar' }));
     await screen.findByRole('alert');

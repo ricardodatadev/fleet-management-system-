@@ -21,20 +21,20 @@ export interface LoginLocationState {
 }
 
 interface FieldErrors {
-  login?: string;
+  username?: string;
   password?: string;
 }
 
 /**
- * Login por e-mail ou usuário (v1.7). Sem validação bloqueante no cliente: a obrigatoriedade vem
- * do 422 por campo do backend (G.1).
+ * Login por usuário (v1.8; o e-mail serve só para recuperar a senha). Sem validação bloqueante
+ * no cliente: a obrigatoriedade vem do 422 por campo do backend (G.1).
  */
 export function LoginPage() {
   const auth = useAuth();
   const navigate = useNavigate();
   const location = useLocation();
   const [params] = useSearchParams();
-  const [login, setLogin] = useState('');
+  const [username, setUsername] = useState('');
   const [password, setPassword] = useState('');
   const [fieldErrors, setFieldErrors] = useState<FieldErrors>({});
   const [formError, setFormError] = useState<string | null>(null);
@@ -51,7 +51,8 @@ export function LoginPage() {
     setFieldErrors({});
     setFormError(null);
     setSubmitting(true);
-    const credentials = { login: login.trim(), password };
+    // Sem normalizar: trim e minúsculas são do backend (v1.8).
+    const credentials = { username, password };
     try {
       await auth.login(credentials);
       navigate(safeNext(params.get('next')), { replace: true });
@@ -67,15 +68,15 @@ export function LoginPage() {
         return;
       }
       if (error.isValidation) {
-        // Com os dois campos preenchidos, o 422 em `login` é a credencial inválida (genérica, igual
-        // para e-mail e usuário): vai para o topo, sem acusar um campo. Senão é obrigatoriedade.
-        const filled = credentials.login !== '' && credentials.password !== '';
+        // Com os dois campos preenchidos (o backend faz trim), o 422 é a credencial inválida,
+        // genérica: vai para o topo, sem acusar um campo. Senão é obrigatoriedade, por campo.
+        const filled = username.trim() !== '' && password !== '';
         if (filled && !error.fieldMessage('password')) {
-          setFormError(error.fieldMessage('login') ?? error.message);
+          setFormError(error.fieldMessage('username') ?? error.message);
           return;
         }
         setFieldErrors({
-          login: error.fieldMessage('login'),
+          username: error.fieldMessage('username'),
           password: error.fieldMessage('password'),
         });
         return;
@@ -92,9 +93,9 @@ export function LoginPage() {
       )}
 
       <form noValidate onSubmit={onSubmit} className="flex flex-col gap-4">
-        <FormField label="E-mail ou usuário" required hideRequiredMark error={fieldErrors.login}>
+        <FormField label="Usuário" required hideRequiredMark error={fieldErrors.username}>
           <Input
-            name="login"
+            name="username"
             autoComplete="username"
             autoCapitalize="none"
             autoCorrect="off"
@@ -102,9 +103,9 @@ export function LoginPage() {
             // Foco automático exigido pela spec (G.4-1); é o primeiro campo da tela.
             // eslint-disable-next-line jsx-a11y/no-autofocus
             autoFocus
-            value={login}
-            invalid={Boolean(fieldErrors.login)}
-            onChange={(event) => setLogin(event.target.value)}
+            value={username}
+            invalid={Boolean(fieldErrors.username)}
+            onChange={(event) => setUsername(event.target.value)}
           />
         </FormField>
 

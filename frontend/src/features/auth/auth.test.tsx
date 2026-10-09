@@ -6,6 +6,8 @@ import { api } from '@/api';
 import {
   API,
   INVALID_CREDENTIALS,
+  PASSWORD_REQUIRED,
+  USERNAME_REQUIRED,
   fail,
   futureIso,
   mockAuthApi,
@@ -19,24 +21,29 @@ import { DEVICE_NAME } from './api';
 import { SESSION_STORAGE_KEY } from './session';
 import type { Role } from './types';
 
-const loginField = () => screen.findByLabelText('E-mail ou usuário');
+const loginField = () => screen.findByLabelText('Usuário');
 
-async function fillAndSubmit(login: string, password: string) {
+async function fillAndSubmit(username: string, password: string) {
   const user = userEvent.setup();
-  await user.type(await loginField(), login);
+  await user.type(await loginField(), username);
   await user.type(screen.getByLabelText(/^Senha/), password);
   await user.click(screen.getByRole('button', { name: 'Entrar' }));
   return user;
 }
 
 describe('Login', () => {
-  it('campo "E-mail ou usuário" com foco automático e autocomplete=username; sem cadastro', async () => {
+  it('campo "Usuário" (autocomplete, sem capitalizar/corrigir) com foco; sem cadastro', async () => {
     mockAuthApi();
     renderApp('/login');
     const field = await loginField();
     expect(field).toHaveFocus();
-    expect(field).toHaveAttribute('autocomplete', 'username');
     expect(field).toHaveAttribute('type', 'text');
+    expect(field).toHaveAttribute('name', 'username');
+    expect(field).toHaveAttribute('autocomplete', 'username');
+    expect(field).toHaveAttribute('autocapitalize', 'none');
+    expect(field).toHaveAttribute('autocorrect', 'off');
+    expect(field).toHaveAttribute('spellcheck', 'false');
+    expect(screen.queryByLabelText(/e-mail/i)).toBeNull();
     expect(screen.queryByRole('link', { name: /cadastr|criar conta|registr/i })).toBeNull();
     expect(screen.queryByRole('button', { name: /cadastr|criar conta|registr/i })).toBeNull();
   });
@@ -48,14 +55,14 @@ describe('Login', () => {
       if (request.url.endsWith('/auth/login')) body = await request.clone().json();
     });
     const { location } = renderApp('/login');
-    await fillAndSubmit('ana@example.com', 'senha-correta');
+    await fillAndSubmit('anasouza', 'senha-correta');
     expect(
       await screen.findByRole('heading', { name: 'Frotas & Equipamentos' }),
     ).toBeInTheDocument();
     expect(location()).toBe('/ativos/equipamentos');
     expect(storedSession()).toMatchObject({ token: 'tok-novo' });
     expect(body).toEqual({
-      login: 'ana@example.com',
+      username: 'anasouza',
       password: 'senha-correta',
       device_name: DEVICE_NAME,
     });
@@ -64,7 +71,7 @@ describe('Login', () => {
     server.events.removeAllListeners();
   });
 
-  it('login por username envia `login` (trim) e entra', async () => {
+  it('username vai sem normalizar (o backend faz trim + minúsculas) e entra', async () => {
     mockAuthApi('admin');
     let body: Record<string, unknown> | undefined;
     server.events.on('request:start', async ({ request }) => {
@@ -74,7 +81,8 @@ describe('Login', () => {
     await fillAndSubmit('  AnaSouza ', 'senha-correta');
     await screen.findByRole('heading', { name: 'Frotas & Equipamentos' });
     expect(location()).toBe('/ativos/equipamentos');
-    expect(body).toMatchObject({ login: 'AnaSouza' });
+    expect(body).toMatchObject({ username: '  AnaSouza ' });
+    expect(body).not.toHaveProperty('login');
     expect(body).not.toHaveProperty('email');
     server.events.removeAllListeners();
   });
@@ -82,7 +90,7 @@ describe('Login', () => {
   it('respeita next relativo', async () => {
     mockAuthApi('admin');
     const { location } = renderApp('/login?next=%2Fparametros');
-    await fillAndSubmit('ana@example.com', 'senha-correta');
+    await fillAndSubmit('anasouza', 'senha-correta');
     await screen.findByRole('heading', { name: 'Painel de Parâmetros' });
     expect(location()).toBe('/parametros');
   });
@@ -92,16 +100,16 @@ describe('Login', () => {
     async (next) => {
       mockAuthApi('admin');
       const { location } = renderApp(`/login?next=${encodeURIComponent(next)}`);
-      await fillAndSubmit('ana@example.com', 'senha-correta');
+      await fillAndSubmit('anasouza', 'senha-correta');
       await screen.findByRole('heading', { name: 'Frotas & Equipamentos' });
       expect(location()).toBe('/ativos/equipamentos');
     },
   );
 
   it.each([
-    ['e-mail', 'ana@example.com'],
-    ['username', 'anasouza'],
-    ['login inexistente', 'ninguem'],
+    ['e-mail digitado no lugar do usuário', 'ana@example.com'],
+    ['senha errada', 'anasouza'],
+    ['usuário inexistente', 'ninguem'],
   ])('422 genérico (%s): mensagem no topo, sem acusar campo e sem sessão', async (_case, login) => {
     mockAuthApi();
     const { location } = renderApp('/login');
@@ -118,7 +126,7 @@ describe('Login', () => {
       http.post(API('/auth/login'), () => fail(403, 'Usuário inativo. Procure o administrador.')),
     );
     renderApp('/login');
-    await fillAndSubmit('ana@example.com', 'senha-correta');
+    await fillAndSubmit('anasouza', 'senha-correta');
     expect(await screen.findByRole('alert')).toHaveTextContent(
       'Usuário inativo. Procure o administrador.',
     );
@@ -135,7 +143,7 @@ describe('Login', () => {
       }),
     );
     renderApp('/login');
-    const user = await fillAndSubmit('ana@example.com', 'qualquer');
+    const user = await fillAndSubmit('anasouza', 'qualquer');
     const alert = await screen.findByRole('alert');
     expect(alert).toHaveTextContent('Muitas requisições');
     expect(alert).toHaveTextContent('Tente novamente em 30 segundos.');
@@ -169,7 +177,7 @@ describe('Login', () => {
     vi.useRealTimers();
   });
 
-  it('campos vazios não bloqueiam o envio: o 422 por campo do backend aparece em cada campo', async () => {
+  it('campos vazios não bloqueiam o envio: o 422 por campo aparece em username e senha', async () => {
     mockAuthApi();
     let calls = 0;
     server.events.on('request:start', ({ request }) => {
@@ -181,17 +189,39 @@ describe('Login', () => {
     const login = await loginField();
     await waitFor(() => expect(login).toHaveAttribute('aria-invalid', 'true'));
     expect(calls).toBe(1);
-    expect(login).toHaveAccessibleDescription('O campo e-mail ou usuário é obrigatório.');
-    expect(screen.getByLabelText(/^Senha/)).toHaveAccessibleDescription(
-      'O campo senha é obrigatório.',
-    );
+    expect(login).toHaveAccessibleDescription(USERNAME_REQUIRED);
+    expect(screen.getByLabelText(/^Senha/)).toHaveAccessibleDescription(PASSWORD_REQUIRED);
     expect(screen.queryByRole('alert')).not.toBeInTheDocument();
 
-    // Só a senha vazia: o erro fica só nela.
-    await user.type(login, 'anasouza');
+    server.events.removeAllListeners();
+  });
+
+  it('422 só de username (só espaços): erro no campo usuário, senha sem erro', async () => {
+    mockAuthApi();
+    renderApp('/login');
+    await fillAndSubmit('   ', 'senha-correta');
+    const login = await loginField();
+    await waitFor(() => expect(login).toHaveAttribute('aria-invalid', 'true'));
+    expect(login).toHaveAccessibleDescription(USERNAME_REQUIRED);
+    expect(screen.getByLabelText(/^Senha/)).not.toHaveAttribute('aria-invalid');
+    expect(screen.queryByRole('alert')).not.toBeInTheDocument();
+  });
+
+  it('422 só de senha: erro no campo senha, usuário sem erro', async () => {
+    mockAuthApi();
+    let body: Record<string, unknown> | undefined;
+    server.events.on('request:start', async ({ request }) => {
+      if (request.url.endsWith('/auth/login')) body = await request.clone().json();
+    });
+    renderApp('/login');
+    const user = userEvent.setup();
+    await user.type(await loginField(), 'anasouza');
     await user.click(screen.getByRole('button', { name: 'Entrar' }));
-    await waitFor(() => expect(login).not.toHaveAttribute('aria-invalid'));
-    expect(screen.getByLabelText(/^Senha/)).toHaveAttribute('aria-invalid', 'true');
+    const password = screen.getByLabelText(/^Senha/);
+    await waitFor(() => expect(password).toHaveAttribute('aria-invalid', 'true'));
+    expect(password).toHaveAccessibleDescription(PASSWORD_REQUIRED);
+    expect(await loginField()).not.toHaveAttribute('aria-invalid');
+    expect(body).toEqual({ username: 'anasouza', password: '', device_name: DEVICE_NAME });
     server.events.removeAllListeners();
   });
 
@@ -214,7 +244,7 @@ describe('Login', () => {
   it('rede indisponível mostra mensagem do cliente', async () => {
     server.use(http.post(API('/auth/login'), () => Response.error()));
     renderApp('/login');
-    await fillAndSubmit('ana@example.com', 'senha-correta');
+    await fillAndSubmit('anasouza', 'senha-correta');
     expect(await screen.findByRole('alert')).toHaveTextContent('Não foi possível conectar');
   });
 
@@ -231,7 +261,7 @@ describe('Login', () => {
     const { container } = renderApp('/login');
     await loginField();
     expect(await axe(container)).toHaveNoViolations();
-    await fillAndSubmit('ana@example.com', 'errada');
+    await fillAndSubmit('anasouza', 'errada');
     await screen.findByRole('alert');
     expect(await axe(container)).toHaveNoViolations();
   });

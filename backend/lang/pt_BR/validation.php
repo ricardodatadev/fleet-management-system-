@@ -164,7 +164,7 @@ return [
 
     'custom' => [
         'username' => [
-            'regex' => 'Use só letras minúsculas sem acento e números, de 3 a 30 caracteres.',
+            'regex' => 'Use letras minúsculas sem acento, números e ponto (não no início, no fim nem repetido), de 3 a 30 caracteres.',
         ],
     ],
 

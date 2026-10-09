@@ -3324,7 +3324,7 @@
                 "type": "object"
             },
             "UserInput": {
-                "description": "Create: name, username, email, password e role obrigatórios. Update (PUT = PATCH): parcial. `username`: trim + minúsculas e depois `^[a-z0-9]{3,30}$` (acento, espaço, ponto, `_`, `-` ou `@` → 422, sem transliteração), único entre não excluídos. `email` é gravado em minúsculas e é único entre usuários não excluídos. `password`: mín. 10 caracteres, com maiúscula, minúscula e número. `branch_id` é obrigatório quando o perfil (enviado ou atual) não é admin, inclusive ao trocar de admin para outro perfil; filial existente e não excluída (inativa é aceita).",
+                "description": "Create: name, username, email, password e role obrigatórios. Update (PUT = PATCH): parcial. `username`: trim + minúsculas e depois letras minúsculas sem acento, números e ponto (não no início, no fim nem repetido), 3 a 30 caracteres; fora disso (acento, espaço, `_`, `-`, `@`, `..`) → 422, sem transliteração; único entre não excluídos. `email` é gravado em minúsculas e é único entre usuários não excluídos. `password`: mín. 10 caracteres, com maiúscula, minúscula e número. `branch_id` é obrigatório quando o perfil (enviado ou atual) não é admin, inclusive ao trocar de admin para outro perfil; filial existente e não excluída (inativa é aceita).",
                 "properties": {
                     "name": {
                         "type": "string",
@@ -3333,8 +3333,8 @@
                     },
                     "username": {
                         "type": "string",
-                        "pattern": "^[a-z0-9]{3,30}$",
-                        "example": "anasouza",
+                        "pattern": "^(?=.{3,30}$)[a-z0-9]+(\\.[a-z0-9]+)*$",
+                        "example": "ana.souza",
                         "maxLength": 30,
                         "minLength": 3
                     },
@@ -3996,9 +3996,12 @@
                         "maxLength": 120
                     },
                     "username": {
+                        "description": "Minúsculas sem acento, números e ponto (não no início, no fim nem repetido), 3 a 30.",
                         "type": "string",
-                        "pattern": "^[a-z0-9]{3,30}$",
-                        "example": "anasouza"
+                        "pattern": "^(?=.{3,30}$)[a-z0-9]+(\\.[a-z0-9]+)*$",
+                        "example": "ana.souza",
+                        "maxLength": 30,
+                        "minLength": 3
                     },
                     "email": {
                         "type": "string",
@@ -4085,9 +4088,12 @@
                         "example": "Ana Souza"
                     },
                     "username": {
+                        "description": "Minúsculas sem acento, números e ponto (não no início, no fim nem repetido), 3 a 30.",
                         "type": "string",
-                        "pattern": "^[a-z0-9]{3,30}$",
-                        "example": "anasouza"
+                        "pattern": "^(?=.{3,30}$)[a-z0-9]+(\\.[a-z0-9]+)*$",
+                        "example": "ana.souza",
+                        "maxLength": 30,
+                        "minLength": 3
                     },
                     "email": {
                         "type": "string",

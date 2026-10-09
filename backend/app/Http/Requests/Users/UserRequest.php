@@ -6,6 +6,7 @@ use App\Enums\Role;
 use App\Http\Requests\ResourceRequest;
 use App\Models\User;
 use App\Support\Api\FieldMessage;
+use App\Support\Users\UsernameGenerator;
 use Illuminate\Validation\Rule;
 use Illuminate\Validation\Rules\Password;
 use Illuminate\Validation\Validator;
@@ -21,8 +22,8 @@ class UserRequest extends ResourceRequest
     {
         return [
             'name' => [...$this->requiredOnCreate(), 'string', 'max:120'],
-            // trim + minúsculas no prepareForValidation; o resto é validado, sem transliterar (D.2 v1.7)
-            'username' => [...$this->requiredOnCreate(), 'string', 'regex:/^[a-z0-9]{3,30}$/', Rule::unique('users', 'username')->whereNull('deleted_at')->ignore($this->target()?->getKey())],
+            // trim + minúsculas no prepareForValidation; o resto é validado, sem transliterar (D.2 v1.9)
+            'username' => [...$this->requiredOnCreate(), 'string', 'regex:'.UsernameGenerator::PATTERN, Rule::unique('users', 'username')->whereNull('deleted_at')->ignore($this->target()?->getKey())],
             'email' => [...$this->requiredOnCreate(), 'string', 'email', 'max:190', Rule::unique('users', 'email')->whereNull('deleted_at')->ignore($this->target()?->getKey())],
             'password' => [...$this->requiredOnCreate(), 'string', 'max:255', Password::defaults()],
             'role' => [...$this->requiredOnCreate(), Rule::enum(Role::class)],

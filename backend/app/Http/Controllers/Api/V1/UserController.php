@@ -14,6 +14,7 @@ use App\Models\User;
 use App\Support\Api\ApiResponse;
 use App\Support\Api\ListQuery;
 use App\Support\Audit\AuditService;
+use App\Support\Users\UsernameGenerator;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
@@ -25,10 +26,10 @@ use OpenApi\Attributes as OA;
 
 #[OA\Schema(
     schema: 'UserInput',
-    description: 'Create: name, username, email, password e role obrigatórios. Update (PUT = PATCH): parcial. `username`: trim + minúsculas e depois `^[a-z0-9]{3,30}$` (acento, espaço, ponto, `_`, `-` ou `@` → 422, sem transliteração), único entre não excluídos. `email` é gravado em minúsculas e é único entre usuários não excluídos. `password`: mín. 10 caracteres, com maiúscula, minúscula e número. `branch_id` é obrigatório quando o perfil (enviado ou atual) não é admin, inclusive ao trocar de admin para outro perfil; filial existente e não excluída (inativa é aceita).',
+    description: 'Create: name, username, email, password e role obrigatórios. Update (PUT = PATCH): parcial. `username`: trim + minúsculas e depois letras minúsculas sem acento, números e ponto (não no início, no fim nem repetido), 3 a 30 caracteres; fora disso (acento, espaço, `_`, `-`, `@`, `..`) → 422, sem transliteração; único entre não excluídos. `email` é gravado em minúsculas e é único entre usuários não excluídos. `password`: mín. 10 caracteres, com maiúscula, minúscula e número. `branch_id` é obrigatório quando o perfil (enviado ou atual) não é admin, inclusive ao trocar de admin para outro perfil; filial existente e não excluída (inativa é aceita).',
     properties: [
         new OA\Property(property: 'name', type: 'string', maxLength: 120, example: 'Ana Souza'),
-        new OA\Property(property: 'username', type: 'string', pattern: '^[a-z0-9]{3,30}$', minLength: 3, maxLength: 30, example: 'anasouza'),
+        new OA\Property(property: 'username', type: 'string', pattern: UsernameGenerator::REGEX, minLength: 3, maxLength: 30, example: 'ana.souza'),
         new OA\Property(property: 'email', type: 'string', format: 'email', maxLength: 190, example: 'ana@example.com'),
         new OA\Property(property: 'password', type: 'string', format: 'password', minLength: 10, maxLength: 255, writeOnly: true),
         new OA\Property(property: 'role', type: 'string', enum: ['operator', 'mechanic', 'leader', 'admin']),

@@ -4,6 +4,7 @@ use App\Enums\Role;
 use App\Models\AuditLog;
 use App\Models\Branch;
 use App\Models\User;
+use App\Support\Api\OpenApi\OpenApiBuilder;
 use App\Support\Users\UsernameGenerator;
 use Database\Factories\UserFactory;
 use Illuminate\Database\QueryException;
@@ -12,7 +13,7 @@ use Illuminate\Support\Facades\DB;
 
 uses(RefreshDatabase::class);
 
-const USERNAME_RULE = 'Use só letras minúsculas sem acento e números, de 3 a 30 caracteres.';
+const USERNAME_RULE = 'Use letras minúsculas sem acento, números e ponto (não no início, no fim nem repetido), de 3 a 30 caracteres.';
 
 beforeEach(function () {
     $this->admin = userWithRole(Role::Admin);
@@ -51,13 +52,22 @@ it('backfill: acento, símbolos, e-mail curto, vazio, colisão com sufixo 2, 3�
     }
 });
 
-it('CHECK do banco rejeita username fora de ^[a-z0-9]{3,30}$ no SQL', function (string $username) {
+it('CHECK do banco rejeita username fora do formato v1.9 no SQL', function (string $username) {
     $insert = fn () => DB::table('users')->insert([
         'name' => 'SQL', 'username' => $username, 'email' => 'sql@example.com', 'password' => 'x', 'role' => 'admin',
     ]);
 
     expect(fn () => DB::transaction($insert))->toThrow(QueryException::class);
-})->with(['maiúscula' => 'Ana123', 'espaço' => 'ana souza', 'acento' => 'joão', 'ponto' => 'ana.s', 'sublinhado' => 'ana_s', 'curto' => 'ab', 'longo' => str_repeat('a', 31)]);
+})->with([
+    'maiúscula' => 'Ana123', 'espaço' => 'ana souza', 'acento' => 'joão', 'sublinhado' => 'ana_s', 'hífen' => 'ana-s', 'curto' => 'ab', 'longo' => str_repeat('a', 31),
+    'ponto no início' => '.joao', 'ponto no fim' => 'joao.', 'ponto repetido' => 'joao..silva', 'só ponto' => '...', 'longo com ponto' => str_repeat('a', 15).'.'.str_repeat('b', 15),
+]);
+
+it('CHECK do banco aceita username com ponto no meio e nos limites de tamanho', function (string $username) {
+    DB::table('users')->insert(['name' => 'SQL', 'username' => $username, 'email' => "{$username}@example.com", 'password' => 'x', 'role' => 'admin']);
+
+    expect(DB::table('users')->where('username', $username)->exists())->toBeTrue();
+})->with(['joao.silva', 'a.b.c', 'joao.silva2', 'ana', str_repeat('a', 14).'.'.str_repeat('b', 15)]);
 
 it('username obrigatório no create; maiúscula ou espaço nas pontas é aceito já normalizado', function () {
     $payload = ['name' => 'Ana', 'email' => 'ana@example.com', 'password' => 'SenhaForte2026', 'role' => 'operator', 'branch_id' => $this->branch->id];
@@ -66,13 +76,28 @@ it('username obrigatório no create; maiúscula ou espaço nas pontas é aceito 
     api('POST', 'users', [...$payload, 'username' => '  AnaSouza1 '], $this->token)->assertCreated()->assertJsonPath('data.username', 'anasouza1');
 });
 
-it('username com acento, espaço interno, ponto, _, -, @ ou tamanho fora de 3..30 → 422 com a mensagem, sem transliterar', function (string $username) {
+it('username aceito com ponto no meio (v1.9): joao.silva, a.b.c, joao.silva2, ana; maiúscula/espaço nas pontas normalizados', function (string $input, string $stored) {
+    $user = User::factory()->create(['username' => 'original', 'branch_id' => $this->branch->id]);
+
+    api('PATCH', "users/{$user->id}", ['username' => $input], $this->token)->assertOk()->assertJsonPath('data.username', $stored);
+})->with([
+    'joao.silva' => ['joao.silva', 'joao.silva'],
+    'a.b.c' => ['a.b.c', 'a.b.c'],
+    'joao.silva2' => ['joao.silva2', 'joao.silva2'],
+    'ana' => ['ana', 'ana'],
+    'caixa e espaços' => ['  Joao.Silva ', 'joao.silva'],
+]);
+
+it('username com ponto no início/fim/repetido, acento, espaço interno, _, -, @ ou tamanho fora de 3..30 → 422 com a mensagem, sem transliterar', function (string $username) {
     $user = User::factory()->create(['username' => 'original', 'branch_id' => $this->branch->id]);
 
     api('PATCH', "users/{$user->id}", ['username' => $username], $this->token)
         ->assertStatus(422)->assertJsonPath('errors.username.0', USERNAME_RULE);
     expect($user->refresh()->username)->toBe('original');
-})->with(['acento' => 'joão', 'espaço interno' => 'ana souza', 'ponto' => 'ana.souza', 'sublinhado' => 'ana_souza', 'hífen' => 'ana-souza', 'arroba' => 'ana@souza', 'curto' => 'ab', 'longo' => str_repeat('a', 31)]);
+})->with([
+    'ponto no início' => '.joao', 'ponto no fim' => 'joao.', 'ponto repetido' => 'joao..silva', 'sublinhado' => 'joao_silva', 'hífen' => 'joao-silva',
+    'acento' => 'joão.silva', 'espaço interno' => 'jo ao', 'curto' => 'ab', 'arroba' => 'ana@souza', 'longo' => str_repeat('a', 31),
+]);
 
 it('username duplicado entre ativos → 422 (sem diferenciar caixa); de excluído é permitido; restore 409 se reutilizado', function () {
     $other = User::factory()->create(['username' => 'ana', 'branch_id' => $this->branch->id]);
@@ -100,6 +125,18 @@ it('/users: q busca em username, sort por username; resposta, /auth/me e auditor
     $id = api('POST', 'users', ['name' => 'Novo', 'username' => 'novo', 'email' => 'novo@example.com', 'password' => 'SenhaForte2026', 'role' => 'admin'], $this->token)->json('data.id');
     $log = AuditLog::query()->where('action', 'created')->where('auditable_type', (new User)->getMorphClass())->where('auditable_id', $id)->sole();
     expect($log->new_values['username'])->toBe('novo');
+});
+
+it('login com username que tem ponto (joao.silva) entra normalmente, inclusive com caixa e espaços', function () {
+    $user = User::factory()->create(['username' => 'joao.silva', 'branch_id' => $this->branch->id]);
+
+    foreach (['joao.silva', ' Joao.Silva '] as $username) {
+        api('POST', 'auth/login', ['username' => $username, 'password' => UserFactory::PASSWORD, 'device_name' => 'pest'])
+            ->assertOk()->assertJsonPath('data.user.id', $user->id)->assertJsonPath('data.user.username', 'joao.silva');
+    }
+    // sem validação de formato no login: '..' ou '_' caem no 422 genérico, não numa mensagem de formato
+    api('POST', 'auth/login', ['username' => 'joao..silva', 'password' => UserFactory::PASSWORD, 'device_name' => 'pest'])
+        ->assertStatus(422)->assertJsonPath('errors', ['username' => [__('auth.failed')]]);
 });
 
 it('login por username com caixa mista e espaços nas pontas (v1.8: só username)', function () {
@@ -142,4 +179,13 @@ it('throttle de login pela chave normalizada do username: caixa e espaços difer
     }
     $from('ALVO')->assertStatus(429)->assertHeader('Retry-After');
     $from('alvo', '10.9.9.8')->assertStatus(422); // outro IP segue liberado
+});
+
+it('OpenAPI: username de User, AuthUser e UserInput com o pattern v1.9 e a regra na descrição', function () {
+    $spec = json_decode(file_get_contents(OpenApiBuilder::versionedPath()), true, 512, JSON_THROW_ON_ERROR)['components']['schemas'];
+
+    foreach (['User', 'AuthUser', 'UserInput'] as $schema) {
+        expect($spec[$schema]['properties']['username'])->toMatchArray(['pattern' => UsernameGenerator::REGEX, 'minLength' => 3, 'maxLength' => 30]);
+    }
+    expect($spec['UserInput']['description'])->toContain('ponto (não no início, no fim nem repetido)');
 });

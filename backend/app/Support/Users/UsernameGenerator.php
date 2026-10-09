@@ -12,7 +12,13 @@ use Illuminate\Support\Str;
  */
 final class UsernameGenerator
 {
-    public const PATTERN = '/^[a-z0-9]{3,30}$/';
+    /**
+     * Formato do username (D.2 v1.9): minúsculas sem acento, números e ponto; o ponto não pode estar no
+     * início, no fim nem repetido; 3 a 30 caracteres. O backfill só gera [a-z0-9], um subconjunto.
+     */
+    public const REGEX = '^(?=.{3,30}$)[a-z0-9]+(\.[a-z0-9]+)*$';
+
+    public const PATTERN = '/'.self::REGEX.'/';
 
     public const MAX = 30;
 

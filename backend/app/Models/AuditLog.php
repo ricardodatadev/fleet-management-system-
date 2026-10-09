@@ -29,6 +29,7 @@ class AuditLog extends Model
         'employee' => Employee::class,
         'equipment' => Equipment::class,
         'equipment_family' => EquipmentFamily::class,
+        'setting' => Setting::class,
         'user' => User::class,
     ];
 

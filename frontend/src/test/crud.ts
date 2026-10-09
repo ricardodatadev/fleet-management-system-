@@ -5,7 +5,6 @@ import { server } from './server';
 
 export interface FakeRecord {
   id: number;
-  code: string;
   name: string;
   is_active: boolean;
   deleted_at: string | null;
@@ -14,8 +13,12 @@ export interface FakeRecord {
 export interface MockCrudOptions<T extends FakeRecord> {
   /** Campos pesquisados por `q` (contém, sem diferenciar maiúsculas). */
   searchFields?: (keyof T)[];
-  /** Filtros planos aceitos (igualdade; `is_active` aceita 1/0). */
+  /** Filtros planos aceitos (igualdade; `is_active` aceita 1/0; lista CSV = qualquer um deles). */
   filters?: string[];
+  /** Campo único entre não excluídos (422 se repetido) e como normalizá-lo. Padrão: `code`, maiúsculas. */
+  unique?: { field: string; normalize: (value: string) => string; message?: string };
+  /** Ordenação padrão do recurso (sem `sort`). Padrão: `code`. */
+  defaultSort?: string;
   /** Whitelist de `sort` do recurso; campo fora dela → 422, como na API. */
   sortable: string[];
   /** Monta o registro a partir do payload (create) ou do registro atual + payload (update). */
@@ -66,23 +69,31 @@ export function mockCrudApi<T extends FakeRecord>(
   fake.failLists = (failure) => {
     listFailure = failure;
   };
-  const searchFields = options.searchFields ?? ['code', 'name'];
+  const searchFields = options.searchFields ?? (['code', 'name'] as (keyof T)[]);
+  const unique = options.unique ?? {
+    field: 'code',
+    normalize: (value: string) => value.trim().toUpperCase(),
+  };
+  const uniqueOf = (record: T) => (record as unknown as Record<string, unknown>)[unique.field];
   const byId = (id: unknown) => fake.records.find((record) => record.id === Number(id));
   const codeTaken = (code: unknown, ignoreId?: number) =>
     typeof code === 'string' &&
     fake.records.some(
-      (r) => !r.deleted_at && r.id !== ignoreId && r.code === code.trim().toUpperCase(),
+      (r) => !r.deleted_at && r.id !== ignoreId && uniqueOf(r) === unique.normalize(code),
     );
 
   function write(body: Record<string, unknown>, current?: T) {
     const errors: FieldErrors = { ...options.validate?.(body) };
-    if ('code' in body && codeTaken(body.code, current?.id)) errors.code = [DUPLICATE_CODE];
+    const key = unique.field;
+    if (key in body && codeTaken(body[key], current?.id)) {
+      errors[key] = [unique.message ?? DUPLICATE_CODE];
+    }
     if (Object.keys(errors).length > 0) {
       return fail(422, 'Os dados informados são inválidos.', errors);
     }
     const id = current?.id ?? Math.max(0, ...fake.records.map((r) => r.id)) + 1;
-    const normalized =
-      typeof body.code === 'string' ? { code: body.code.trim().toUpperCase() } : {};
+    const raw = body[unique.field];
+    const normalized = typeof raw === 'string' ? { [unique.field]: unique.normalize(raw) } : {};
     const record = options.build({ ...body, ...normalized }, id, current);
     if (current) fake.records[fake.records.indexOf(current)] = record;
     else fake.records.push(record);
@@ -112,13 +123,14 @@ export function mockCrudApi<T extends FakeRecord>(
       for (const name of options.filters ?? []) {
         const value = params.get(name);
         if (value === null) continue;
+        const accepted = value.split(',');
         rows = rows.filter((r) => {
           const field = (r as unknown as Record<string, unknown>)[name];
           if (typeof field === 'boolean') return field === (value === '1');
-          return String(field) === value;
+          return accepted.includes(String(field));
         });
       }
-      const sort = params.get('sort') ?? 'code';
+      const sort = params.get('sort') ?? options.defaultSort ?? 'code';
       if (!options.sortable.includes(sort.replace(/^-/, ''))) {
         return fail(422, 'Os dados informados são inválidos.', {
           sort: ['A ordenação informada é inválida.'],
@@ -170,7 +182,7 @@ export function mockCrudApi<T extends FakeRecord>(
     http.post(API(`${endpoint}/:id/restore`), ({ params }) => {
       const current = byId(params.id);
       if (!current) return fail(404, 'Registro não encontrado.');
-      if (!current.deleted_at || codeTaken(current.code, current.id)) {
+      if (!current.deleted_at || codeTaken(uniqueOf(current), current.id)) {
         return fail(409, 'Não é possível restaurar: o código já está em uso.');
       }
       current.deleted_at = null;
@@ -189,6 +201,9 @@ export function mockMetaEnums() {
           branch_types: ['filial', 'garagem', 'oficina'],
           equipment_categories: ['light_vehicle', 'truck', 'agri_machine', 'implement', 'support'],
           criticalities: ['low', 'medium', 'high', 'critical'],
+          roles: ['operator', 'mechanic', 'leader', 'admin'],
+          job_types: ['driver', 'mechanic', 'leader', 'admin_staff'],
+          cnh_categories: ['A', 'B', 'C', 'D', 'E', 'AB', 'AC', 'AD', 'AE'],
         },
       }),
     ),

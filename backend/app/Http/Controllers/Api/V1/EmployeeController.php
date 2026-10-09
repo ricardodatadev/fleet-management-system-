@@ -9,6 +9,7 @@ use App\Http\Resources\EmployeeResource;
 use App\Models\Branch;
 use App\Models\CostCenter;
 use App\Models\Employee;
+use App\Models\Equipment;
 use App\Models\Scopes\BranchScope;
 use App\Models\User;
 use App\Support\Api\ApiResponse;
@@ -195,7 +196,7 @@ class EmployeeController extends Controller
         path: '/employees/{employee}',
         operationId: 'employeesDestroy',
         summary: 'Exclui colaborador (soft delete)',
-        description: 'Permissão: employees.manage. 409 (`errors.dependents=["equipments"]`) se for responsável por equipamento ativo, regra ativada na F1-15. O usuário vinculado fica livre.',
+        description: 'Permissão: employees.manage. 409 (`errors.dependents=["equipments"]`) se for responsável por equipamento ativo. O usuário vinculado fica livre.',
         tags: ['Colaboradores'],
         security: [['bearerAuth' => []]],
         parameters: [new OA\Parameter(name: 'employee', in: 'path', required: true, schema: new OA\Schema(type: 'integer'))],
@@ -254,6 +255,16 @@ class EmployeeController extends Controller
         $branchId = $branchChanged ? $data['branch_id'] : $employee?->branch_id;
         if ($branchChanged) {
             $this->lockBranch($branchId);
+        }
+
+        // Responsável por equipamentos de outra filial (D.2, F1-15). A linha do colaborador é travada antes
+        // da checagem: quem grava equipamento trava o responsável com FOR SHARE.
+        if ($branchChanged && $employee !== null && (int) $branchId !== (int) $employee->branch_id) {
+            Employee::query()->withoutGlobalScope(BranchScope::class)->whereKey($employee->getKey())->lockForUpdate()->first(['id']);
+            if (Equipment::query()->withoutGlobalScope(BranchScope::class)
+                ->where('responsible_employee_id', $employee->getKey())->where('branch_id', '!=', $branchId)->exists()) {
+                throw ValidationException::withMessages(['branch_id' => __('api.employee_equipments_other_branch')]);
+            }
         }
 
         $costCenterId = array_key_exists('cost_center_id', $data) ? $data['cost_center_id'] : $employee?->cost_center_id;

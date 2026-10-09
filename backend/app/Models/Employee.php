@@ -83,15 +83,14 @@ class Employee extends Model
     }
 
     /**
-     * Dependentes ativos que impedem a exclusão (409): colaborador responsável por equipamento
-     * (chave `equipments`), ativado na F1-15 quando a tabela existir.
+     * Dependentes ativos que impedem a exclusão (409): equipamentos sob a responsabilidade do colaborador.
      *
      * @return list<string>
      */
     public function activeDependents(): array
     {
         return array_keys(array_filter([
-            'equipments' => false, // F1-15: equipamentos com responsible_employee_id = este
+            'equipments' => Equipment::query()->withoutGlobalScope(Scopes\BranchScope::class)->where('responsible_employee_id', $this->getKey())->exists(),
         ]));
     }
 }

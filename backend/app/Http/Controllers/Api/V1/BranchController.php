@@ -169,7 +169,7 @@ class BranchController extends Controller
         path: '/branches/{branch}',
         operationId: 'branchesDestroy',
         summary: 'Exclui filial (soft delete)',
-        description: 'Permissão: branches.manage. 409 se houver centros de custo ou usuários ativos (não excluídos) vinculados; equipamentos e colaboradores entram nas F1-14/15.',
+        description: 'Permissão: branches.manage. 409 (`errors.dependents`) se houver centros de custo, usuários, colaboradores ou equipamentos ativos (não excluídos) vinculados.',
         tags: ['Filiais'],
         security: [['bearerAuth' => []]],
         parameters: [new OA\Parameter(name: 'branch', in: 'path', required: true, schema: new OA\Schema(type: 'integer'))],

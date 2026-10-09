@@ -8,6 +8,7 @@ use App\Http\Requests\CostCenters\CostCenterRequest;
 use App\Http\Resources\CostCenterResource;
 use App\Models\Branch;
 use App\Models\CostCenter;
+use App\Models\Equipment;
 use App\Models\Scopes\BranchScope;
 use App\Support\Api\ApiResponse;
 use App\Support\Api\ListQuery;
@@ -131,7 +132,7 @@ class CostCenterController extends Controller
         path: '/cost-centers/{cost_center}',
         operationId: 'costCentersUpdate',
         summary: 'Atualiza centro de custo (parcial; PUT = PATCH)',
-        description: 'Permissão: cost_centers.manage. Só os campos enviados são validados e gravados. Trocar a filial com colaboradores de outra filial vinculados → 422.',
+        description: 'Permissão: cost_centers.manage. Só os campos enviados são validados e gravados. Trocar a filial com colaboradores ou equipamentos de outra filial vinculados → 422.',
         tags: ['Centros de custo'],
         security: [['bearerAuth' => []]],
         parameters: [new OA\Parameter(name: 'cost_center', in: 'path', required: true, schema: new OA\Schema(type: 'integer'))],
@@ -169,11 +170,15 @@ class CostCenterController extends Controller
             if ($request->has('branch_id')) {
                 $branchId = $request->validated('branch_id');
                 $this->lockBranch($branchId);
-                // Colaboradores de outra filial perderiam a consistência (D.2 v1.5). A linha é travada antes
-                // da checagem: quem grava colaborador trava o centro de custo com FOR SHARE.
+                // Colaboradores e equipamentos de outra filial perderiam a consistência (D.2). A linha é travada
+                // antes da checagem: quem grava colaborador ou equipamento trava o centro de custo com FOR SHARE.
                 CostCenter::query()->withoutGlobalScope(BranchScope::class)->whereKey($costCenter->getKey())->lockForUpdate()->first(['id']);
                 if ($branchId !== null && $costCenter->employees()->where('branch_id', '!=', $branchId)->exists()) {
                     throw ValidationException::withMessages(['branch_id' => __('api.cost_center_employees_other_branch')]);
+                }
+                if ($branchId !== null && Equipment::query()->withoutGlobalScope(BranchScope::class)
+                    ->where('cost_center_id', $costCenter->getKey())->where('branch_id', '!=', $branchId)->exists()) {
+                    throw ValidationException::withMessages(['branch_id' => __('api.cost_center_equipments_other_branch')]);
                 }
             }
             $costCenter->update($request->validated());
@@ -186,7 +191,7 @@ class CostCenterController extends Controller
         path: '/cost-centers/{cost_center}',
         operationId: 'costCentersDestroy',
         summary: 'Exclui centro de custo (soft delete)',
-        description: 'Permissão: cost_centers.manage. 409 se houver equipamentos ou colaboradores ativos vinculados (regras ativadas nas F1-14/15).',
+        description: 'Permissão: cost_centers.manage. 409 (`errors.dependents` com `employees` e/ou `equipments`) se houver colaboradores ou equipamentos ativos vinculados.',
         tags: ['Centros de custo'],
         security: [['bearerAuth' => []]],
         parameters: [new OA\Parameter(name: 'cost_center', in: 'path', required: true, schema: new OA\Schema(type: 'integer'))],

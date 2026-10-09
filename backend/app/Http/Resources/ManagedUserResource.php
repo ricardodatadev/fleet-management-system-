@@ -3,8 +3,8 @@
 namespace App\Http\Resources;
 
 use App\Models\User;
-use Illuminate\Http\Request;
 use App\Support\Users\UsernameGenerator;
+use Illuminate\Http\Request;
 use OpenApi\Attributes as OA;
 
 /**

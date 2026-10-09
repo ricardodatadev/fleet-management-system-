@@ -18,6 +18,17 @@ describe('FormField', () => {
     expect(input).toHaveAccessibleDescription('Formato Mercosul');
   });
 
+  it('obrigatório não renderiza asterisco, mantém só aria-required (G.1, v1.7)', () => {
+    const { container } = render(
+      <FormField label="Placa" required>
+        <Input />
+      </FormField>,
+    );
+    expect(container).not.toHaveTextContent('*');
+    expect(screen.getByText('Placa').tagName).toBe('LABEL');
+    expect(screen.getByRole('textbox', { name: 'Placa' })).toHaveAttribute('aria-required', 'true');
+  });
+
   it('exibe erro (ex.: 422) e marca o controle como inválido', () => {
     render(
       <FormField label="Placa" help="Formato Mercosul" error="Placa já cadastrada.">

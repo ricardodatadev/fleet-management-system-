@@ -14,6 +14,7 @@ export interface FormFieldProps {
   /** Mensagem de erro (ex.: do 422). Quando presente o controle recebe aria-invalid. */
   error?: string | null;
   help?: string;
+  /** Só `aria-required`: sem asterisco visual (G.1, v1.7); a obrigatoriedade vem do 422. */
   required?: boolean;
   className?: string;
   /** Função (recebe as props de acessibilidade) ou elemento único (props injetadas). */
@@ -37,12 +38,6 @@ export function FormField({ label, error, help, required, className, children }:
     <div className={cn('flex flex-col gap-2', className)}>
       <label htmlFor={id} className="font-semibold text-ink">
         {label}
-        {required && (
-          <span aria-hidden="true" className="text-danger-600">
-            {' '}
-            *
-          </span>
-        )}
       </label>
       {typeof children === 'function'
         ? children(control)

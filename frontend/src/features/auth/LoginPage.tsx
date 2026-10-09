@@ -92,7 +92,7 @@ export function LoginPage() {
       )}
 
       <form noValidate onSubmit={onSubmit} className="flex flex-col gap-4">
-        <FormField label="E-mail ou usuário" required error={fieldErrors.login}>
+        <FormField label="E-mail ou usuário" required hideRequiredMark error={fieldErrors.login}>
           <Input
             name="login"
             autoComplete="username"
@@ -108,7 +108,7 @@ export function LoginPage() {
           />
         </FormField>
 
-        <FormField label="Senha" required error={fieldErrors.password}>
+        <FormField label="Senha" required hideRequiredMark error={fieldErrors.password}>
           {(control) => (
             <PasswordInput
               {...control}

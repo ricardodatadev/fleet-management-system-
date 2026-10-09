@@ -18,15 +18,39 @@ describe('FormField', () => {
     expect(input).toHaveAccessibleDescription('Formato Mercosul');
   });
 
-  it('obrigatório não renderiza asterisco, mantém só aria-required (G.1, v1.7)', () => {
+  it('obrigatório mostra o asterisco (oculto do leitor de tela) e aria-required', () => {
     const { container } = render(
       <FormField label="Placa" required>
         <Input />
       </FormField>,
     );
-    expect(container).not.toHaveTextContent('*');
-    expect(screen.getByText('Placa').tagName).toBe('LABEL');
+    const label = container.querySelector('label');
+    expect(label).toHaveTextContent('Placa *');
+    expect(label?.querySelector('[aria-hidden="true"]')).toHaveTextContent('*');
+    // O nome acessível não inclui o asterisco.
     expect(screen.getByRole('textbox', { name: 'Placa' })).toHaveAttribute('aria-required', 'true');
+  });
+
+  it('hideRequiredMark: sem asterisco, mantendo aria-required (telas públicas, G.1)', () => {
+    const { container } = render(
+      <FormField label="Senha" required hideRequiredMark>
+        <Input />
+      </FormField>,
+    );
+    expect(container).not.toHaveTextContent('*');
+    expect(screen.getByRole('textbox', { name: 'Senha' })).toHaveAttribute('aria-required', 'true');
+  });
+
+  it('campo opcional não tem asterisco nem aria-required', () => {
+    const { container } = render(
+      <FormField label="Observações">
+        <Input />
+      </FormField>,
+    );
+    expect(container).not.toHaveTextContent('*');
+    expect(screen.getByRole('textbox', { name: 'Observações' })).not.toHaveAttribute(
+      'aria-required',
+    );
   });
 
   it('exibe erro (ex.: 422) e marca o controle como inválido', () => {

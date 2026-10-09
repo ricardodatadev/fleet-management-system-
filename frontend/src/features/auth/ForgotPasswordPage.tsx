@@ -58,7 +58,7 @@ export function ForgotPasswordPage() {
             <FormAlert message={formError} detail={locked ? retryText(lockedFor) : undefined} />
           )}
           <form noValidate onSubmit={onSubmit} className="flex flex-col gap-4">
-            <FormField label="E-mail" required error={emailError}>
+            <FormField label="E-mail" required hideRequiredMark error={emailError}>
               <Input
                 type="email"
                 name="email"

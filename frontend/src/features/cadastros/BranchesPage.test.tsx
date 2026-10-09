@@ -165,12 +165,21 @@ describe('Unidades/Filiais (F1-30)', () => {
     expect(await screen.findByText('Filial Sul')).toBeInTheDocument();
   });
 
-  it('obrigatórios vazios: erro no campo sem chamar a API', async () => {
+  it('obrigatórios com asterisco e pré-checagem no cliente: erro no campo sem chamar a API', async () => {
     const fake = mockBranches();
     const user = userEvent.setup();
     await renderPage();
     await user.click(await screen.findByRole('button', { name: 'Nova unidade' }));
     const dialog = await screen.findByRole('dialog');
+    // Fora das telas públicas o asterisco continua (decisão do usuário, G.1).
+    const labels = [...dialog.querySelectorAll('label')].map((l) => l.textContent?.trim());
+    expect(labels).toEqual(
+      expect.arrayContaining(['Código *', 'Nome *', 'Tipo *', 'Cidade', 'UF']),
+    );
+    expect(within(dialog).getByRole('textbox', { name: 'Código' })).toHaveAttribute(
+      'aria-required',
+      'true',
+    );
     await user.click(within(dialog).getByRole('button', { name: 'Salvar' }));
     expect(within(dialog).getByRole('textbox', { name: /Código/ })).toHaveAttribute(
       'aria-invalid',

@@ -100,7 +100,13 @@ export function ResetPasswordPage() {
         <FormAlert message={formError} detail={locked ? retryText(lockedFor) : undefined} />
       )}
       <form noValidate onSubmit={onSubmit} className="flex flex-col gap-4">
-        <FormField label="Nova senha" required help={PASSWORD_POLICY_HELP} error={passwordError}>
+        <FormField
+          label="Nova senha"
+          required
+          hideRequiredMark
+          help={PASSWORD_POLICY_HELP}
+          error={passwordError}
+        >
           {(control) => (
             <PasswordInput
               {...control}
@@ -114,7 +120,7 @@ export function ResetPasswordPage() {
             />
           )}
         </FormField>
-        <FormField label="Confirmar nova senha" required error={confirmationError}>
+        <FormField label="Confirmar nova senha" required hideRequiredMark error={confirmationError}>
           {(control) => (
             <PasswordInput
               {...control}

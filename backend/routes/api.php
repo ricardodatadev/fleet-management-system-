@@ -1,6 +1,8 @@
 <?php
 
 use App\Http\Controllers\Api\V1\AuthController;
+use App\Http\Controllers\Api\V1\BranchController;
+use App\Http\Controllers\Api\V1\CostCenterController;
 use App\Http\Controllers\Api\V1\HealthController;
 use App\Http\Controllers\Api\V1\MetaController;
 use Illuminate\Support\Facades\Route;
@@ -20,4 +22,21 @@ Route::middleware(['auth:sanctum', 'can:auth.session'])->group(function () {
     Route::get('auth/me', [AuthController::class, 'me'])->name('api.auth.me');
     Route::put('auth/password', [AuthController::class, 'changePassword'])->name('api.auth.password');
     Route::get('meta/enums', [MetaController::class, 'enums'])->name('api.meta.enums');
+});
+
+// Cadastros (D.2). Leitura com {recurso}.view; escrita, exclusão e restore com {recurso}.manage.
+// Autorização por instância (view/update/delete/restore) no controller, depois do binding.
+Route::middleware('auth:sanctum')->group(function () {
+    foreach ([
+        'branches' => [BranchController::class, 'branch', 'branches'],
+        'cost-centers' => [CostCenterController::class, 'cost_center', 'cost_centers'],
+    ] as $uri => [$controller, $param, $permission]) {
+        $name = 'api.'.str_replace('-', '_', $uri);
+        Route::get($uri, [$controller, 'index'])->middleware("can:{$permission}.view")->name("{$name}.index");
+        Route::post($uri, [$controller, 'store'])->middleware("can:{$permission}.manage")->name("{$name}.store");
+        Route::get("{$uri}/{{$param}}", [$controller, 'show'])->middleware("can:{$permission}.view")->name("{$name}.show");
+        Route::match(['PUT', 'PATCH'], "{$uri}/{{$param}}", [$controller, 'update'])->middleware("can:{$permission}.manage")->name("{$name}.update");
+        Route::delete("{$uri}/{{$param}}", [$controller, 'destroy'])->middleware("can:{$permission}.manage")->name("{$name}.destroy");
+        Route::post("{$uri}/{{$param}}/restore", [$controller, 'restore'])->middleware("can:{$permission}.manage")->withTrashed()->name("{$name}.restore");
+    }
 });

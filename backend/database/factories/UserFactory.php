@@ -23,6 +23,8 @@ class UserFactory extends Factory
     {
         return [
             'name' => fake()->name(),
+            // ^[a-z0-9]{3,30}$ (D.2 v1.7)
+            'username' => fake()->unique()->bothify('user########'),
             'email' => fake()->unique()->safeEmail(),
             'password' => static::$password ??= Hash::make(self::PASSWORD),
             'role' => Role::Operator,

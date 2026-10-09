@@ -1,10 +1,20 @@
 import type { FieldErrors } from '@/api';
-import type { CrudField, CrudRow, FormValues } from './types';
+import type { CrudField, CrudRow, FieldContext, FormValues } from './types';
 
 export const REQUIRED_MESSAGE = 'Campo obrigatório.';
 
 function rawValue<T extends CrudRow>(field: CrudField<T>, row: T): unknown {
   return field.get ? field.get(row) : (row as unknown as Record<string, unknown>)[field.name];
+}
+
+/** O campo é obrigatório neste contexto (asterisco + pré-checagem)? */
+export function isRequired<T extends CrudRow>(field: CrudField<T>, ctx: FieldContext<T>): boolean {
+  return typeof field.required === 'function' ? field.required(ctx) : Boolean(field.required);
+}
+
+/** O campo aparece com estes valores? */
+export function isVisible<T extends CrudRow>(field: CrudField<T>, values: FormValues): boolean {
+  return field.visible ? field.visible(values) : true;
 }
 
 /** Valores do formulário: do registro (edição) ou os defaults (criação). */
@@ -29,19 +39,30 @@ export function initialValues<T extends CrudRow>(
   return values;
 }
 
-/** Payload da API: vazio vira `null` em campo nullable e é omitido nos demais. */
+/**
+ * Payload da API: vazio vira `null` em campo nullable e é omitido nos demais; campo oculto e
+ * nullable vai `null`; campo travado não vai.
+ */
 export function toPayload<T extends CrudRow>(
   fields: CrudField<T>[],
   values: FormValues,
+  row: T | null = null,
 ): Record<string, unknown> {
   const payload: Record<string, unknown> = {};
   for (const field of fields) {
+    if (field.locked?.(row)) continue;
+    if (!isVisible(field, values)) {
+      if (field.kind !== 'switch' && field.nullable) payload[field.name] = null;
+      continue;
+    }
     const value = values[field.name];
     if (field.kind === 'switch') {
       payload[field.name] = Boolean(value);
       continue;
     }
-    const text = typeof value === 'string' ? value.trim() : '';
+    // Senha não leva trim: espaço faz parte dela.
+    const text =
+      typeof value === 'string' ? (field.kind === 'password' ? value : value.trim()) : '';
     if (text === '') {
       if (field.nullable) payload[field.name] = null;
       continue;
@@ -52,15 +73,16 @@ export function toPayload<T extends CrudRow>(
   return payload;
 }
 
-/** Validação mínima no cliente (obrigatórios); o 422 do servidor segue como fonte da verdade. */
+/** Validação mínima no cliente (obrigatórios visíveis); o 422 do servidor segue como fonte da verdade. */
 export function validate<T extends CrudRow>(
   fields: CrudField<T>[],
   values: FormValues,
+  row: T | null = null,
 ): FieldErrors {
   const errors: FieldErrors = {};
   for (const field of fields) {
-    const value = values[field.name];
-    if (field.required && field.kind !== 'switch' && String(value ?? '').trim() === '') {
+    if (field.kind === 'switch' || !isVisible(field, values) || field.locked?.(row)) continue;
+    if (isRequired(field, { row, values }) && String(values[field.name] ?? '').trim() === '') {
       errors[field.name] = [REQUIRED_MESSAGE];
     }
   }

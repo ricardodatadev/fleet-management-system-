@@ -12,6 +12,7 @@ use App\Models\Employee;
 use App\Models\Scopes\BranchScope;
 use App\Models\User;
 use App\Support\Api\ApiResponse;
+use App\Support\Api\FieldMessage;
 use App\Support\Api\ListQuery;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Http\JsonResponse;
@@ -259,7 +260,7 @@ class EmployeeController extends Controller
         if ($costCenterId !== null && ($branchChanged || array_key_exists('cost_center_id', $data))) {
             $costCenter = CostCenter::query()->withoutGlobalScope(BranchScope::class)->whereKey($costCenterId)->sharedLock()->first(['id', 'branch_id']);
             if ($costCenter === null) {
-                throw ValidationException::withMessages(['cost_center_id' => __('validation.exists', ['attribute' => 'cost_center_id'])]);
+                throw ValidationException::withMessages(['cost_center_id' => FieldMessage::for('exists', 'cost_center_id')]);
             }
             if ($costCenter->branch_id !== null && (int) $costCenter->branch_id !== (int) $branchId) {
                 throw ValidationException::withMessages(['cost_center_id' => __('api.employee_cost_center_branch_mismatch')]);
@@ -270,7 +271,7 @@ class EmployeeController extends Controller
         if ($userId !== null && ($branchChanged || array_key_exists('user_id', $data))) {
             $user = User::query()->whereKey($userId)->sharedLock()->first(['id', 'role', 'branch_id']);
             if ($user === null) {
-                throw ValidationException::withMessages(['user_id' => __('validation.exists', ['attribute' => 'user_id'])]);
+                throw ValidationException::withMessages(['user_id' => FieldMessage::for('exists', 'user_id')]);
             }
             if (! $user->isAdmin() && (int) $user->branch_id !== (int) $branchId) {
                 $field = array_key_exists('user_id', $data) ? 'user_id' : 'branch_id';

@@ -7,6 +7,7 @@ use App\Http\Controllers\Controller;
 use App\Http\Resources\AuditLogResource;
 use App\Models\AuditLog;
 use App\Support\Api\ApiResponse;
+use App\Support\Api\FieldMessage;
 use App\Support\Api\ListQuery;
 use Carbon\CarbonImmutable;
 use Illuminate\Database\Eloquent\Builder;
@@ -138,7 +139,7 @@ class AuditLogController extends Controller
         $to = $parse($input['to'] ?? null, true);
 
         if ($from !== null && $to !== null && $from->greaterThan($to)) {
-            throw ValidationException::withMessages(['to' => __('validation.after_or_equal', ['attribute' => 'to', 'date' => 'from'])]);
+            throw ValidationException::withMessages(['to' => FieldMessage::for('after_or_equal', 'to', ['date' => FieldMessage::label('from')])]);
         }
 
         return [$from, $to];

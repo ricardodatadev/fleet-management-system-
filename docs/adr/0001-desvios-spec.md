@@ -150,6 +150,7 @@ Pesquisa de 2026-10-08. Versões do backend confirmadas no packagist/`composer s
 - **`persist`** aceita um mapa índice → campo, para o 422 de corrida apontar `registration` ou `user_id`.
 - **Restore (409):** matrícula reutilizada, usuário excluído ou já vinculado, filial ou centro de custo excluído. Decisão: também 409 se, enquanto o colaborador estava excluído, o usuário vinculado (não-admin) ou o centro de custo passou para outra filial, porque a regra de consistência só vê os não excluídos.
 - **409 no pai:** filial, centro de custo e usuário com colaborador não excluído → `dependents` contém `employees`. Colaborador responsável por equipamento (`equipments`) fica declarado e desligado até a F1-15.
+- **Mensagens de validação (adendo da F1-14, achado no smoke da F1-30):** `lang/pt_BR/validation.php` cobre todas as regras do Laravel, com todas as variantes (um teste compara as chaves com o arquivo `en` do framework) e traduz os nomes dos campos dos cadastros em `attributes` (ex.: `preventive_lead_pct` → "percentual de pré-alerta"). As mensagens montadas fora do Validator usam `App\Support\Api\FieldMessage`. Um teste garante que nenhum 422 dos cadastros sai com chave crua ou nome técnico com sublinhado.
 - `/auth/me` devolve `employee` = `{id, registration, name, job_type, branch_id}` ou null (relação `User::employee` sem o escopo de filial). `/meta/enums` ganha `job_types` e `cnh_categories`; alias de auditoria `employee`.
 
 ## Notas de implementação (F1-33 — nome do sistema em fonte única, D17)

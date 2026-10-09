@@ -4,6 +4,7 @@ namespace App\Http\Requests\Employees;
 
 use App\Http\Requests\ResourceRequest;
 use App\Models\Employee;
+use App\Support\Api\FieldMessage;
 use Illuminate\Validation\Rule;
 use Illuminate\Validation\Validator;
 
@@ -68,10 +69,10 @@ class EmployeeRequest extends ResourceRequest
                 $sent = $this->has($field);
                 if ($sent && $this->input($field) !== null) {
                     // campo de outro tipo com valor
-                    $validator->errors()->add($field, __('api.employee_field_not_allowed', ['attribute' => $field, 'type' => $type]));
+                    $validator->errors()->add($field, FieldMessage::for('api.employee_field_not_allowed', $field, ['type' => (string) __("api.job_types.{$type}")]));
                 } elseif ($target !== null && $type !== $target->job_type && ! $sent && $target->getAttribute($field) !== null) {
                     // troca de tipo: o valor do tipo anterior precisa ser limpo explicitamente
-                    $validator->errors()->add($field, __('api.employee_field_must_be_cleared', ['attribute' => $field]));
+                    $validator->errors()->add($field, FieldMessage::for('api.employee_field_must_be_cleared', $field));
                 }
             }
         }];

@@ -4,6 +4,7 @@ namespace App\Http\Controllers\Concerns;
 
 use App\Exceptions\DomainConflictException;
 use App\Models\Branch;
+use App\Support\Api\FieldMessage;
 use Closure;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\ModelNotFoundException;
@@ -41,7 +42,7 @@ trait CrudActions
                 }
             }
 
-            throw ValidationException::withMessages([$field => __('validation.unique', ['attribute' => $field])]);
+            throw ValidationException::withMessages([$field => FieldMessage::for('unique', $field)]);
         }
     }
 
@@ -128,7 +129,7 @@ trait CrudActions
     protected function lockBranch(mixed $branchId): void
     {
         if ($branchId !== null && Branch::query()->whereKey($branchId)->sharedLock()->first(['id']) === null) {
-            throw ValidationException::withMessages(['branch_id' => __('validation.exists', ['attribute' => 'branch_id'])]);
+            throw ValidationException::withMessages(['branch_id' => FieldMessage::for('exists', 'branch_id')]);
         }
     }
 }

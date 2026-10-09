@@ -39,6 +39,7 @@
                             "enum": [
                                 "branch",
                                 "cost_center",
+                                "employee",
                                 "equipment_family",
                                 "user"
                             ]
@@ -1041,7 +1042,7 @@
                     "Centros de custo"
                 ],
                 "summary": "Atualiza centro de custo (parcial; PUT = PATCH)",
-                "description": "Permissão: cost_centers.manage. Só os campos enviados são validados e gravados.",
+                "description": "Permissão: cost_centers.manage. Só os campos enviados são validados e gravados. Trocar a filial com colaboradores de outra filial vinculados → 422.",
                 "operationId": "costCentersUpdate",
                 "parameters": [
                     {
@@ -1238,6 +1239,432 @@
                             "application/json": {
                                 "schema": {
                                     "$ref": "#/components/schemas/CostCenterEnvelope"
+                                }
+                            }
+                        }
+                    },
+                    "401": {
+                        "$ref": "#/components/responses/Unauthenticated"
+                    },
+                    "403": {
+                        "$ref": "#/components/responses/Forbidden"
+                    },
+                    "404": {
+                        "$ref": "#/components/responses/NotFound"
+                    },
+                    "409": {
+                        "$ref": "#/components/responses/Conflict"
+                    },
+                    "429": {
+                        "$ref": "#/components/responses/TooManyRequests"
+                    }
+                },
+                "security": [
+                    {
+                        "bearerAuth": []
+                    }
+                ]
+            }
+        },
+        "/employees": {
+            "get": {
+                "tags": [
+                    "Colaboradores"
+                ],
+                "summary": "Lista colaboradores",
+                "description": "Permissão: employees.view (L e A). Escopo: L vê só a própria filial. Busca `q` em name e registration. Ordenação: name, registration, job_type, hired_at (`-` = desc; padrão name).",
+                "operationId": "employeesIndex",
+                "parameters": [
+                    {
+                        "$ref": "#/components/parameters/Page"
+                    },
+                    {
+                        "$ref": "#/components/parameters/PerPage"
+                    },
+                    {
+                        "$ref": "#/components/parameters/Search"
+                    },
+                    {
+                        "name": "sort",
+                        "in": "query",
+                        "schema": {
+                            "type": "string",
+                            "example": "-created_at,name"
+                        }
+                    },
+                    {
+                        "name": "job_type",
+                        "in": "query",
+                        "schema": {
+                            "type": "string",
+                            "enum": [
+                                "driver",
+                                "mechanic",
+                                "leader",
+                                "admin_staff"
+                            ]
+                        }
+                    },
+                    {
+                        "name": "branch_id",
+                        "in": "query",
+                        "schema": {
+                            "type": "integer"
+                        }
+                    },
+                    {
+                        "$ref": "#/components/parameters/IsActive"
+                    },
+                    {
+                        "$ref": "#/components/parameters/WithTrashed"
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Lista paginada.",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "allOf": [
+                                        {
+                                            "$ref": "#/components/schemas/Envelope"
+                                        },
+                                        {
+                                            "required": [
+                                                "meta"
+                                            ],
+                                            "properties": {
+                                                "data": {
+                                                    "type": "array",
+                                                    "items": {
+                                                        "$ref": "#/components/schemas/Employee"
+                                                    }
+                                                }
+                                            },
+                                            "type": "object"
+                                        }
+                                    ]
+                                }
+                            }
+                        }
+                    },
+                    "401": {
+                        "$ref": "#/components/responses/Unauthenticated"
+                    },
+                    "403": {
+                        "$ref": "#/components/responses/Forbidden"
+                    },
+                    "422": {
+                        "$ref": "#/components/responses/ValidationError"
+                    },
+                    "429": {
+                        "$ref": "#/components/responses/TooManyRequests"
+                    }
+                },
+                "security": [
+                    {
+                        "bearerAuth": []
+                    }
+                ]
+            },
+            "post": {
+                "tags": [
+                    "Colaboradores"
+                ],
+                "summary": "Cria colaborador",
+                "description": "Permissão: employees.manage. 422: matrícula duplicada entre ativos; filial/centro de custo inexistente ou excluído; centro de custo de outra filial; usuário excluído, já vinculado ou (não-admin) de outra filial; campo fora do job_type.",
+                "operationId": "employeesStore",
+                "requestBody": {
+                    "required": true,
+                    "content": {
+                        "application/json": {
+                            "schema": {
+                                "$ref": "#/components/schemas/EmployeeInput"
+                            }
+                        }
+                    }
+                },
+                "responses": {
+                    "201": {
+                        "description": "Criado.",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/EmployeeEnvelope"
+                                }
+                            }
+                        }
+                    },
+                    "401": {
+                        "$ref": "#/components/responses/Unauthenticated"
+                    },
+                    "403": {
+                        "$ref": "#/components/responses/Forbidden"
+                    },
+                    "422": {
+                        "$ref": "#/components/responses/ValidationError"
+                    },
+                    "429": {
+                        "$ref": "#/components/responses/TooManyRequests"
+                    }
+                },
+                "security": [
+                    {
+                        "bearerAuth": []
+                    }
+                ]
+            }
+        },
+        "/employees/{employee}": {
+            "get": {
+                "tags": [
+                    "Colaboradores"
+                ],
+                "summary": "Detalha colaborador",
+                "description": "Permissão: employees.view. Excluído ou de outra filial (L) → 404.",
+                "operationId": "employeesShow",
+                "parameters": [
+                    {
+                        "name": "employee",
+                        "in": "path",
+                        "required": true,
+                        "schema": {
+                            "type": "integer"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Colaborador.",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/EmployeeEnvelope"
+                                }
+                            }
+                        }
+                    },
+                    "401": {
+                        "$ref": "#/components/responses/Unauthenticated"
+                    },
+                    "403": {
+                        "$ref": "#/components/responses/Forbidden"
+                    },
+                    "404": {
+                        "$ref": "#/components/responses/NotFound"
+                    },
+                    "429": {
+                        "$ref": "#/components/responses/TooManyRequests"
+                    }
+                },
+                "security": [
+                    {
+                        "bearerAuth": []
+                    }
+                ]
+            },
+            "put": {
+                "tags": [
+                    "Colaboradores"
+                ],
+                "summary": "Atualiza colaborador (parcial; PUT = PATCH)",
+                "description": "Permissão: employees.manage. Só os campos enviados são validados e gravados; as regras de filial valem também ao trocar a filial do colaborador.",
+                "operationId": "employeesUpdate",
+                "parameters": [
+                    {
+                        "name": "employee",
+                        "in": "path",
+                        "required": true,
+                        "schema": {
+                            "type": "integer"
+                        }
+                    }
+                ],
+                "requestBody": {
+                    "required": true,
+                    "content": {
+                        "application/json": {
+                            "schema": {
+                                "$ref": "#/components/schemas/EmployeeInput"
+                            }
+                        }
+                    }
+                },
+                "responses": {
+                    "200": {
+                        "description": "Atualizado.",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/EmployeeEnvelope"
+                                }
+                            }
+                        }
+                    },
+                    "401": {
+                        "$ref": "#/components/responses/Unauthenticated"
+                    },
+                    "403": {
+                        "$ref": "#/components/responses/Forbidden"
+                    },
+                    "404": {
+                        "$ref": "#/components/responses/NotFound"
+                    },
+                    "422": {
+                        "$ref": "#/components/responses/ValidationError"
+                    },
+                    "429": {
+                        "$ref": "#/components/responses/TooManyRequests"
+                    }
+                },
+                "security": [
+                    {
+                        "bearerAuth": []
+                    }
+                ]
+            },
+            "delete": {
+                "tags": [
+                    "Colaboradores"
+                ],
+                "summary": "Exclui colaborador (soft delete)",
+                "description": "Permissão: employees.manage. 409 (`errors.dependents=[\"equipments\"]`) se for responsável por equipamento ativo, regra ativada na F1-15. O usuário vinculado fica livre.",
+                "operationId": "employeesDestroy",
+                "parameters": [
+                    {
+                        "name": "employee",
+                        "in": "path",
+                        "required": true,
+                        "schema": {
+                            "type": "integer"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Excluído (`data` null).",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/Envelope"
+                                }
+                            }
+                        }
+                    },
+                    "401": {
+                        "$ref": "#/components/responses/Unauthenticated"
+                    },
+                    "403": {
+                        "$ref": "#/components/responses/Forbidden"
+                    },
+                    "404": {
+                        "$ref": "#/components/responses/NotFound"
+                    },
+                    "409": {
+                        "description": "Dependentes ativos.",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/DeleteConflictEnvelope"
+                                }
+                            }
+                        }
+                    },
+                    "429": {
+                        "$ref": "#/components/responses/TooManyRequests"
+                    }
+                },
+                "security": [
+                    {
+                        "bearerAuth": []
+                    }
+                ]
+            },
+            "patch": {
+                "tags": [
+                    "Colaboradores"
+                ],
+                "summary": "Atualiza colaborador (parcial; igual ao PUT)",
+                "operationId": "employeesPatch",
+                "parameters": [
+                    {
+                        "name": "employee",
+                        "in": "path",
+                        "required": true,
+                        "schema": {
+                            "type": "integer"
+                        }
+                    }
+                ],
+                "requestBody": {
+                    "required": true,
+                    "content": {
+                        "application/json": {
+                            "schema": {
+                                "$ref": "#/components/schemas/EmployeeInput"
+                            }
+                        }
+                    }
+                },
+                "responses": {
+                    "200": {
+                        "description": "Atualizado.",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/EmployeeEnvelope"
+                                }
+                            }
+                        }
+                    },
+                    "401": {
+                        "$ref": "#/components/responses/Unauthenticated"
+                    },
+                    "403": {
+                        "$ref": "#/components/responses/Forbidden"
+                    },
+                    "404": {
+                        "$ref": "#/components/responses/NotFound"
+                    },
+                    "422": {
+                        "$ref": "#/components/responses/ValidationError"
+                    },
+                    "429": {
+                        "$ref": "#/components/responses/TooManyRequests"
+                    }
+                },
+                "security": [
+                    {
+                        "bearerAuth": []
+                    }
+                ]
+            }
+        },
+        "/employees/{employee}/restore": {
+            "post": {
+                "tags": [
+                    "Colaboradores"
+                ],
+                "summary": "Restaura colaborador excluído",
+                "description": "Permissão: employees.manage. 409 se não estiver excluído, se a matrícula foi reutilizada, se o usuário vinculado está excluído, já vinculado a outro colaborador ou (não-admin) em outra filial, ou se a filial ou o centro de custo vinculado está excluído (ou o centro de custo mudou para outra filial).",
+                "operationId": "employeesRestore",
+                "parameters": [
+                    {
+                        "name": "employee",
+                        "in": "path",
+                        "required": true,
+                        "schema": {
+                            "type": "integer"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Restaurado.",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/EmployeeEnvelope"
                                 }
                             }
                         }
@@ -1782,7 +2209,9 @@
                                                                 "branch_types",
                                                                 "roles",
                                                                 "equipment_categories",
-                                                                "criticalities"
+                                                                "criticalities",
+                                                                "job_types",
+                                                                "cnh_categories"
                                                             ],
                                                             "properties": {
                                                                 "branch_types": {
@@ -1830,6 +2259,35 @@
                                                                             "medium",
                                                                             "high",
                                                                             "critical"
+                                                                        ]
+                                                                    }
+                                                                },
+                                                                "job_types": {
+                                                                    "type": "array",
+                                                                    "items": {
+                                                                        "type": "string",
+                                                                        "enum": [
+                                                                            "driver",
+                                                                            "mechanic",
+                                                                            "leader",
+                                                                            "admin_staff"
+                                                                        ]
+                                                                    }
+                                                                },
+                                                                "cnh_categories": {
+                                                                    "type": "array",
+                                                                    "items": {
+                                                                        "type": "string",
+                                                                        "enum": [
+                                                                            "A",
+                                                                            "B",
+                                                                            "C",
+                                                                            "D",
+                                                                            "E",
+                                                                            "AB",
+                                                                            "AC",
+                                                                            "AD",
+                                                                            "AE"
                                                                         ]
                                                                     }
                                                                 }
@@ -2066,7 +2524,7 @@
                     "Usuários"
                 ],
                 "summary": "Atualiza usuário (parcial; PUT = PATCH)",
-                "description": "Permissão: users.manage. Só os campos enviados são validados e gravados. Revoga todos os tokens do usuário ao trocar a senha de outro usuário ou ao desativá-lo (na própria senha, revoga os demais tokens). 409: alterar o próprio perfil, desativar a si mesmo, rebaixar ou desativar o último admin ativo.",
+                "description": "Permissão: users.manage. Só os campos enviados são validados e gravados. Usuário vinculado a colaborador: não-admin precisa ficar na filial do colaborador (422 ao mudar branch_id ou rebaixar de admin). Revoga todos os tokens do usuário ao trocar a senha de outro usuário ou ao desativá-lo (na própria senha, revoga os demais tokens). 409: alterar o próprio perfil, desativar a si mesmo, rebaixar ou desativar o último admin ativo.",
                 "operationId": "usersUpdate",
                 "parameters": [
                     {
@@ -2129,7 +2587,7 @@
                     "Usuários"
                 ],
                 "summary": "Exclui usuário (soft delete)",
-                "description": "Permissão: users.manage. Revoga todos os tokens do usuário. 409: excluir a si mesmo ou o último admin ativo (o vínculo com colaborador entra na F1-14).",
+                "description": "Permissão: users.manage. Revoga todos os tokens do usuário. 409: excluir a si mesmo, o último admin ativo ou usuário com colaborador vinculado não excluído (`errors.dependents=[\"employees\"]`).",
                 "operationId": "usersDestroy",
                 "parameters": [
                     {
@@ -2347,9 +2805,42 @@
                         "$ref": "#/components/schemas/AuthUser"
                     },
                     "employee": {
-                        "description": "Colaborador vinculado (preenchido a partir da F1-14).",
+                        "description": "Colaborador vinculado ao usuário (1:1); null quando não há.",
+                        "required": [
+                            "id",
+                            "registration",
+                            "name",
+                            "job_type",
+                            "branch_id"
+                        ],
+                        "properties": {
+                            "id": {
+                                "type": "integer",
+                                "example": 1
+                            },
+                            "registration": {
+                                "type": "string",
+                                "example": "MAT-00123"
+                            },
+                            "name": {
+                                "type": "string",
+                                "example": "João Pereira"
+                            },
+                            "job_type": {
+                                "type": "string",
+                                "enum": [
+                                    "driver",
+                                    "mechanic",
+                                    "leader",
+                                    "admin_staff"
+                                ]
+                            },
+                            "branch_id": {
+                                "type": "integer",
+                                "example": 1
+                            }
+                        },
                         "type": "object",
-                        "example": null,
                         "nullable": true
                     },
                     "permissions": {
@@ -2481,6 +2972,109 @@
                         "properties": {
                             "data": {
                                 "$ref": "#/components/schemas/CostCenter"
+                            }
+                        },
+                        "type": "object"
+                    }
+                ]
+            },
+            "EmployeeInput": {
+                "description": "Create: registration, name, job_type e branch_id obrigatórios. Update (PUT = PATCH): parcial. `registration` é gravada sem espaços nas pontas e em maiúsculas (única entre não excluídos). Campos de CNH só para `driver`; `specialty` e `hourly_cost` só para `mechanic` (valor em campo de outro tipo → 422). Ao trocar o `job_type`, os campos preenchidos do tipo anterior precisam vir como null no mesmo payload (senão 422). `cost_center_id`: não excluído e da mesma filial do colaborador ou sem filial. `user_id`: usuário não excluído e livre; se não for admin, precisa ser da mesma filial do colaborador.",
+                "properties": {
+                    "registration": {
+                        "type": "string",
+                        "example": "MAT-00123",
+                        "maxLength": 30
+                    },
+                    "name": {
+                        "type": "string",
+                        "example": "João Pereira",
+                        "maxLength": 120
+                    },
+                    "job_type": {
+                        "type": "string",
+                        "enum": [
+                            "driver",
+                            "mechanic",
+                            "leader",
+                            "admin_staff"
+                        ]
+                    },
+                    "branch_id": {
+                        "type": "integer",
+                        "example": 1
+                    },
+                    "cost_center_id": {
+                        "type": "integer",
+                        "nullable": true
+                    },
+                    "user_id": {
+                        "type": "integer",
+                        "nullable": true
+                    },
+                    "phone": {
+                        "type": "string",
+                        "nullable": true,
+                        "maxLength": 30
+                    },
+                    "hired_at": {
+                        "type": "string",
+                        "format": "date",
+                        "nullable": true
+                    },
+                    "cnh_number": {
+                        "type": "string",
+                        "nullable": true,
+                        "maxLength": 20
+                    },
+                    "cnh_category": {
+                        "type": "string",
+                        "nullable": true,
+                        "enum": [
+                            "A",
+                            "B",
+                            "C",
+                            "D",
+                            "E",
+                            "AB",
+                            "AC",
+                            "AD",
+                            "AE"
+                        ]
+                    },
+                    "cnh_expires_at": {
+                        "type": "string",
+                        "format": "date",
+                        "nullable": true
+                    },
+                    "specialty": {
+                        "type": "string",
+                        "nullable": true,
+                        "maxLength": 80
+                    },
+                    "hourly_cost": {
+                        "type": "number",
+                        "format": "float",
+                        "example": 85.5,
+                        "nullable": true,
+                        "minimum": 0
+                    },
+                    "is_active": {
+                        "type": "boolean",
+                        "default": true
+                    }
+                },
+                "type": "object"
+            },
+            "EmployeeEnvelope": {
+                "allOf": [
+                    {
+                        "$ref": "#/components/schemas/Envelope"
+                    },
+                    {
+                        "properties": {
+                            "data": {
+                                "$ref": "#/components/schemas/Employee"
                             }
                         },
                         "type": "object"
@@ -2933,6 +3527,196 @@
                         },
                         "type": "object",
                         "nullable": true
+                    },
+                    "is_active": {
+                        "type": "boolean"
+                    },
+                    "created_at": {
+                        "type": "string",
+                        "format": "date-time",
+                        "nullable": true
+                    },
+                    "updated_at": {
+                        "type": "string",
+                        "format": "date-time",
+                        "nullable": true
+                    },
+                    "deleted_at": {
+                        "description": "Sempre presente; null quando ativo.",
+                        "type": "string",
+                        "format": "date-time",
+                        "nullable": true
+                    }
+                },
+                "type": "object"
+            },
+            "Employee": {
+                "required": [
+                    "id",
+                    "registration",
+                    "name",
+                    "job_type",
+                    "branch",
+                    "cost_center",
+                    "user",
+                    "phone",
+                    "hired_at",
+                    "cnh_number",
+                    "cnh_category",
+                    "cnh_expires_at",
+                    "specialty",
+                    "hourly_cost",
+                    "is_active",
+                    "created_at",
+                    "updated_at",
+                    "deleted_at"
+                ],
+                "properties": {
+                    "id": {
+                        "type": "integer",
+                        "example": 1
+                    },
+                    "registration": {
+                        "description": "Matrícula (maiúsculas).",
+                        "type": "string",
+                        "example": "MAT-00123",
+                        "maxLength": 30
+                    },
+                    "name": {
+                        "type": "string",
+                        "example": "João Pereira",
+                        "maxLength": 120
+                    },
+                    "job_type": {
+                        "type": "string",
+                        "enum": [
+                            "driver",
+                            "mechanic",
+                            "leader",
+                            "admin_staff"
+                        ]
+                    },
+                    "branch": {
+                        "required": [
+                            "id",
+                            "code",
+                            "name"
+                        ],
+                        "properties": {
+                            "id": {
+                                "type": "integer",
+                                "example": 1
+                            },
+                            "code": {
+                                "type": "string",
+                                "example": "FIL-001"
+                            },
+                            "name": {
+                                "type": "string",
+                                "example": "Matriz"
+                            }
+                        },
+                        "type": "object"
+                    },
+                    "cost_center": {
+                        "required": [
+                            "id",
+                            "code",
+                            "name"
+                        ],
+                        "properties": {
+                            "id": {
+                                "type": "integer",
+                                "example": 1
+                            },
+                            "code": {
+                                "type": "string",
+                                "example": "CC-0101"
+                            },
+                            "name": {
+                                "type": "string",
+                                "example": "Manutenção pesada"
+                            }
+                        },
+                        "type": "object",
+                        "nullable": true
+                    },
+                    "user": {
+                        "description": "Usuário vinculado (1:1); null = sem acesso ao sistema.",
+                        "required": [
+                            "id",
+                            "name",
+                            "email"
+                        ],
+                        "properties": {
+                            "id": {
+                                "type": "integer",
+                                "example": 1
+                            },
+                            "name": {
+                                "type": "string",
+                                "example": "João Pereira"
+                            },
+                            "email": {
+                                "type": "string",
+                                "format": "email",
+                                "example": "joao@example.com"
+                            }
+                        },
+                        "type": "object",
+                        "nullable": true
+                    },
+                    "phone": {
+                        "type": "string",
+                        "nullable": true,
+                        "maxLength": 30
+                    },
+                    "hired_at": {
+                        "type": "string",
+                        "format": "date",
+                        "nullable": true
+                    },
+                    "cnh_number": {
+                        "description": "Só motorista.",
+                        "type": "string",
+                        "nullable": true,
+                        "maxLength": 20
+                    },
+                    "cnh_category": {
+                        "description": "Só motorista.",
+                        "type": "string",
+                        "nullable": true,
+                        "enum": [
+                            "A",
+                            "B",
+                            "C",
+                            "D",
+                            "E",
+                            "AB",
+                            "AC",
+                            "AD",
+                            "AE"
+                        ]
+                    },
+                    "cnh_expires_at": {
+                        "description": "Só motorista.",
+                        "type": "string",
+                        "format": "date",
+                        "nullable": true
+                    },
+                    "specialty": {
+                        "description": "Só mecânico.",
+                        "type": "string",
+                        "nullable": true,
+                        "maxLength": 80
+                    },
+                    "hourly_cost": {
+                        "description": "Só mecânico. Custo/hora; número JSON, até 2 casas.",
+                        "type": "number",
+                        "format": "float",
+                        "example": 85.5,
+                        "nullable": true,
+                        "minimum": 0
                     },
                     "is_active": {
                         "type": "boolean"
@@ -3541,6 +4325,10 @@
         {
             "name": "Centros de custo",
             "description": "Centros de custo"
+        },
+        {
+            "name": "Colaboradores",
+            "description": "Colaboradores"
         },
         {
             "name": "Famílias de equipamento",

@@ -158,6 +158,16 @@ function routeMatrix(): array
         ['PATCH', 'cost-centers/{cost_center}', ['name' => 'Renomeado'], $adminOnly(200)],
         ['DELETE', 'cost-centers/{cost_center}', [], $adminOnly(200)],
         ['POST', 'cost-centers/{cost_center}/restore', [], $adminOnly(200), ['cost_center' => 'trashed_cost_center']],
+        // F1-11 — usuários (users.view/users.manage: A) e auditoria (audit.view: A, somente leitura)
+        ['GET', 'users', [], $adminOnly(200)],
+        ['POST', 'users', ['name' => 'Novo', 'email' => 'novo@example.com', 'password' => 'NovaSenha2026', 'role' => 'admin'], $adminOnly(201)],
+        ['GET', 'users/{user}', [], $adminOnly(200)],
+        ['PUT', 'users/{user}', ['name' => 'Renomeado'], $adminOnly(200)],
+        ['PATCH', 'users/{user}', ['name' => 'Renomeado'], $adminOnly(200)],
+        ['DELETE', 'users/{user}', [], $adminOnly(200)],
+        ['POST', 'users/{user}/restore', [], $adminOnly(200), ['user' => 'trashed_user']],
+        ['GET', 'audit-logs', [], $adminOnly(200)],
+        ['GET', 'audit-logs/{audit_log}', [], $adminOnly(200)],
     ];
 }
 
@@ -168,12 +178,17 @@ function routeFixtures(): array
     $trashedBranch->delete();
     $trashedCostCenter = CostCenter::factory()->global()->create();
     $trashedCostCenter->delete();
+    $trashedUser = User::factory()->create();
+    $trashedUser->delete();
 
     return [
         'branch' => Branch::factory()->create()->id, // sem dependentes: pode ser excluída
         'trashed_branch' => $trashedBranch->id,
         'cost_center' => CostCenter::factory()->global()->create()->id,
         'trashed_cost_center' => $trashedCostCenter->id,
+        'user' => User::factory()->create()->id, // operador: pode ser excluído
+        'trashed_user' => $trashedUser->id,
+        'audit_log' => AuditLog::query()->value('id'),
     ];
 }
 

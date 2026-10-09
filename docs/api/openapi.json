@@ -15,6 +15,192 @@
         }
     ],
     "paths": {
+        "/audit-logs": {
+            "get": {
+                "tags": [
+                    "Auditoria"
+                ],
+                "summary": "Lista o audit trail (somente leitura)",
+                "description": "Permissão: audit.view (A). Ordenação fixa: event_at desc, id desc (`sort` é ignorado). `from`/`to` em ISO 8601 sobre event_at, inclusivos; data sem hora = dia inteiro em UTC (`from` às 00:00, `to` até 23:59:59.999999); `from` > `to` → 422. Não há escrita: POST/PUT/PATCH/DELETE → 405.",
+                "operationId": "auditLogsIndex",
+                "parameters": [
+                    {
+                        "$ref": "#/components/parameters/Page"
+                    },
+                    {
+                        "$ref": "#/components/parameters/PerPage"
+                    },
+                    {
+                        "name": "auditable_type",
+                        "in": "query",
+                        "description": "Alias curto do registro auditado; desconhecido → 422.",
+                        "schema": {
+                            "type": "string",
+                            "enum": [
+                                "branch",
+                                "cost_center",
+                                "user"
+                            ]
+                        }
+                    },
+                    {
+                        "name": "auditable_id",
+                        "in": "query",
+                        "schema": {
+                            "type": "integer"
+                        }
+                    },
+                    {
+                        "name": "actor_id",
+                        "in": "query",
+                        "schema": {
+                            "type": "integer"
+                        }
+                    },
+                    {
+                        "name": "action",
+                        "in": "query",
+                        "schema": {
+                            "type": "string",
+                            "enum": [
+                                "created",
+                                "updated",
+                                "deleted",
+                                "restored",
+                                "login_succeeded",
+                                "login_failed",
+                                "logout",
+                                "password_changed",
+                                "setting_changed",
+                                "setting_removed"
+                            ]
+                        }
+                    },
+                    {
+                        "name": "from",
+                        "in": "query",
+                        "description": "ISO 8601 (date-time ou só a data, dia inteiro em UTC); inclusivo.",
+                        "schema": {
+                            "type": "string",
+                            "example": "2026-10-01T00:00:00Z"
+                        }
+                    },
+                    {
+                        "name": "to",
+                        "in": "query",
+                        "description": "ISO 8601 (date-time ou só a data, até 23:59:59.999999 UTC); inclusivo; menor que `from` → 422.",
+                        "schema": {
+                            "type": "string",
+                            "example": "2026-10-31"
+                        }
+                    },
+                    {
+                        "name": "request_id",
+                        "in": "query",
+                        "schema": {
+                            "type": "string",
+                            "format": "uuid"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Lista paginada.",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "allOf": [
+                                        {
+                                            "$ref": "#/components/schemas/Envelope"
+                                        },
+                                        {
+                                            "required": [
+                                                "meta"
+                                            ],
+                                            "properties": {
+                                                "data": {
+                                                    "type": "array",
+                                                    "items": {
+                                                        "$ref": "#/components/schemas/AuditLog"
+                                                    }
+                                                }
+                                            },
+                                            "type": "object"
+                                        }
+                                    ]
+                                }
+                            }
+                        }
+                    },
+                    "401": {
+                        "$ref": "#/components/responses/Unauthenticated"
+                    },
+                    "403": {
+                        "$ref": "#/components/responses/Forbidden"
+                    },
+                    "422": {
+                        "$ref": "#/components/responses/ValidationError"
+                    },
+                    "429": {
+                        "$ref": "#/components/responses/TooManyRequests"
+                    }
+                },
+                "security": [
+                    {
+                        "bearerAuth": []
+                    }
+                ]
+            }
+        },
+        "/audit-logs/{audit_log}": {
+            "get": {
+                "tags": [
+                    "Auditoria"
+                ],
+                "summary": "Detalha um evento do audit trail",
+                "description": "Permissão: audit.view (A). Inexistente → 404.",
+                "operationId": "auditLogsShow",
+                "parameters": [
+                    {
+                        "name": "audit_log",
+                        "in": "path",
+                        "required": true,
+                        "schema": {
+                            "type": "integer"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Evento.",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/AuditLogEnvelope"
+                                }
+                            }
+                        }
+                    },
+                    "401": {
+                        "$ref": "#/components/responses/Unauthenticated"
+                    },
+                    "403": {
+                        "$ref": "#/components/responses/Forbidden"
+                    },
+                    "404": {
+                        "$ref": "#/components/responses/NotFound"
+                    },
+                    "429": {
+                        "$ref": "#/components/responses/TooManyRequests"
+                    }
+                },
+                "security": [
+                    {
+                        "bearerAuth": []
+                    }
+                ]
+            }
+        },
         "/auth/login": {
             "post": {
                 "tags": [
@@ -1159,7 +1345,8 @@
                                                     "properties": {
                                                         "enums": {
                                                             "required": [
-                                                                "branch_types"
+                                                                "branch_types",
+                                                                "roles"
                                                             ],
                                                             "properties": {
                                                                 "branch_types": {
@@ -1170,6 +1357,18 @@
                                                                             "filial",
                                                                             "garagem",
                                                                             "oficina"
+                                                                        ]
+                                                                    }
+                                                                },
+                                                                "roles": {
+                                                                    "type": "array",
+                                                                    "items": {
+                                                                        "type": "string",
+                                                                        "enum": [
+                                                                            "operator",
+                                                                            "mechanic",
+                                                                            "leader",
+                                                                            "admin"
                                                                         ]
                                                                     }
                                                                 }
@@ -1203,10 +1402,450 @@
                     }
                 ]
             }
+        },
+        "/users": {
+            "get": {
+                "tags": [
+                    "Usuários"
+                ],
+                "summary": "Lista usuários",
+                "description": "Permissão: users.view (A). Sem escopo de filial. Busca `q` em name e email. Ordenação: name, email, role, created_at, last_login_at (`-` = desc; padrão name).",
+                "operationId": "usersIndex",
+                "parameters": [
+                    {
+                        "$ref": "#/components/parameters/Page"
+                    },
+                    {
+                        "$ref": "#/components/parameters/PerPage"
+                    },
+                    {
+                        "$ref": "#/components/parameters/Search"
+                    },
+                    {
+                        "name": "sort",
+                        "in": "query",
+                        "schema": {
+                            "type": "string",
+                            "example": "-last_login_at,name"
+                        }
+                    },
+                    {
+                        "name": "role",
+                        "in": "query",
+                        "schema": {
+                            "type": "string",
+                            "enum": [
+                                "operator",
+                                "mechanic",
+                                "leader",
+                                "admin"
+                            ]
+                        }
+                    },
+                    {
+                        "name": "branch_id",
+                        "in": "query",
+                        "schema": {
+                            "type": "integer"
+                        }
+                    },
+                    {
+                        "$ref": "#/components/parameters/IsActive"
+                    },
+                    {
+                        "$ref": "#/components/parameters/WithTrashed"
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Lista paginada.",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "allOf": [
+                                        {
+                                            "$ref": "#/components/schemas/Envelope"
+                                        },
+                                        {
+                                            "required": [
+                                                "meta"
+                                            ],
+                                            "properties": {
+                                                "data": {
+                                                    "type": "array",
+                                                    "items": {
+                                                        "$ref": "#/components/schemas/User"
+                                                    }
+                                                }
+                                            },
+                                            "type": "object"
+                                        }
+                                    ]
+                                }
+                            }
+                        }
+                    },
+                    "401": {
+                        "$ref": "#/components/responses/Unauthenticated"
+                    },
+                    "403": {
+                        "$ref": "#/components/responses/Forbidden"
+                    },
+                    "422": {
+                        "$ref": "#/components/responses/ValidationError"
+                    },
+                    "429": {
+                        "$ref": "#/components/responses/TooManyRequests"
+                    }
+                },
+                "security": [
+                    {
+                        "bearerAuth": []
+                    }
+                ]
+            },
+            "post": {
+                "tags": [
+                    "Usuários"
+                ],
+                "summary": "Cria usuário",
+                "description": "Permissão: users.manage. E-mail duplicado entre usuários ativos → 422; perfil não-admin sem `branch_id` → 422; filial inexistente ou excluída → 422.",
+                "operationId": "usersStore",
+                "requestBody": {
+                    "required": true,
+                    "content": {
+                        "application/json": {
+                            "schema": {
+                                "$ref": "#/components/schemas/UserInput"
+                            }
+                        }
+                    }
+                },
+                "responses": {
+                    "201": {
+                        "description": "Criado.",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/UserEnvelope"
+                                }
+                            }
+                        }
+                    },
+                    "401": {
+                        "$ref": "#/components/responses/Unauthenticated"
+                    },
+                    "403": {
+                        "$ref": "#/components/responses/Forbidden"
+                    },
+                    "422": {
+                        "$ref": "#/components/responses/ValidationError"
+                    },
+                    "429": {
+                        "$ref": "#/components/responses/TooManyRequests"
+                    }
+                },
+                "security": [
+                    {
+                        "bearerAuth": []
+                    }
+                ]
+            }
+        },
+        "/users/{user}": {
+            "get": {
+                "tags": [
+                    "Usuários"
+                ],
+                "summary": "Detalha usuário",
+                "description": "Permissão: users.view. Usuário excluído → 404.",
+                "operationId": "usersShow",
+                "parameters": [
+                    {
+                        "name": "user",
+                        "in": "path",
+                        "required": true,
+                        "schema": {
+                            "type": "integer"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Usuário.",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/UserEnvelope"
+                                }
+                            }
+                        }
+                    },
+                    "401": {
+                        "$ref": "#/components/responses/Unauthenticated"
+                    },
+                    "403": {
+                        "$ref": "#/components/responses/Forbidden"
+                    },
+                    "404": {
+                        "$ref": "#/components/responses/NotFound"
+                    },
+                    "429": {
+                        "$ref": "#/components/responses/TooManyRequests"
+                    }
+                },
+                "security": [
+                    {
+                        "bearerAuth": []
+                    }
+                ]
+            },
+            "put": {
+                "tags": [
+                    "Usuários"
+                ],
+                "summary": "Atualiza usuário (parcial; PUT = PATCH)",
+                "description": "Permissão: users.manage. Só os campos enviados são validados e gravados. Revoga todos os tokens do usuário ao trocar a senha de outro usuário ou ao desativá-lo (na própria senha, revoga os demais tokens). 409: alterar o próprio perfil, desativar a si mesmo, rebaixar ou desativar o último admin ativo.",
+                "operationId": "usersUpdate",
+                "parameters": [
+                    {
+                        "name": "user",
+                        "in": "path",
+                        "required": true,
+                        "schema": {
+                            "type": "integer"
+                        }
+                    }
+                ],
+                "requestBody": {
+                    "required": true,
+                    "content": {
+                        "application/json": {
+                            "schema": {
+                                "$ref": "#/components/schemas/UserInput"
+                            }
+                        }
+                    }
+                },
+                "responses": {
+                    "200": {
+                        "description": "Atualizado.",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/UserEnvelope"
+                                }
+                            }
+                        }
+                    },
+                    "401": {
+                        "$ref": "#/components/responses/Unauthenticated"
+                    },
+                    "403": {
+                        "$ref": "#/components/responses/Forbidden"
+                    },
+                    "404": {
+                        "$ref": "#/components/responses/NotFound"
+                    },
+                    "409": {
+                        "$ref": "#/components/responses/Conflict"
+                    },
+                    "422": {
+                        "$ref": "#/components/responses/ValidationError"
+                    },
+                    "429": {
+                        "$ref": "#/components/responses/TooManyRequests"
+                    }
+                },
+                "security": [
+                    {
+                        "bearerAuth": []
+                    }
+                ]
+            },
+            "delete": {
+                "tags": [
+                    "Usuários"
+                ],
+                "summary": "Exclui usuário (soft delete)",
+                "description": "Permissão: users.manage. Revoga todos os tokens do usuário. 409: excluir a si mesmo ou o último admin ativo (o vínculo com colaborador entra na F1-14).",
+                "operationId": "usersDestroy",
+                "parameters": [
+                    {
+                        "name": "user",
+                        "in": "path",
+                        "required": true,
+                        "schema": {
+                            "type": "integer"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Excluído (`data` null).",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/Envelope"
+                                }
+                            }
+                        }
+                    },
+                    "401": {
+                        "$ref": "#/components/responses/Unauthenticated"
+                    },
+                    "403": {
+                        "$ref": "#/components/responses/Forbidden"
+                    },
+                    "404": {
+                        "$ref": "#/components/responses/NotFound"
+                    },
+                    "409": {
+                        "$ref": "#/components/responses/Conflict"
+                    },
+                    "429": {
+                        "$ref": "#/components/responses/TooManyRequests"
+                    }
+                },
+                "security": [
+                    {
+                        "bearerAuth": []
+                    }
+                ]
+            },
+            "patch": {
+                "tags": [
+                    "Usuários"
+                ],
+                "summary": "Atualiza usuário (parcial; igual ao PUT)",
+                "operationId": "usersPatch",
+                "parameters": [
+                    {
+                        "name": "user",
+                        "in": "path",
+                        "required": true,
+                        "schema": {
+                            "type": "integer"
+                        }
+                    }
+                ],
+                "requestBody": {
+                    "required": true,
+                    "content": {
+                        "application/json": {
+                            "schema": {
+                                "$ref": "#/components/schemas/UserInput"
+                            }
+                        }
+                    }
+                },
+                "responses": {
+                    "200": {
+                        "description": "Atualizado.",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/UserEnvelope"
+                                }
+                            }
+                        }
+                    },
+                    "401": {
+                        "$ref": "#/components/responses/Unauthenticated"
+                    },
+                    "403": {
+                        "$ref": "#/components/responses/Forbidden"
+                    },
+                    "404": {
+                        "$ref": "#/components/responses/NotFound"
+                    },
+                    "409": {
+                        "$ref": "#/components/responses/Conflict"
+                    },
+                    "422": {
+                        "$ref": "#/components/responses/ValidationError"
+                    },
+                    "429": {
+                        "$ref": "#/components/responses/TooManyRequests"
+                    }
+                },
+                "security": [
+                    {
+                        "bearerAuth": []
+                    }
+                ]
+            }
+        },
+        "/users/{user}/restore": {
+            "post": {
+                "tags": [
+                    "Usuários"
+                ],
+                "summary": "Restaura usuário excluído",
+                "description": "Permissão: users.manage. 409 se não estiver excluído, se o e-mail já estiver em uso por um usuário ativo ou se a filial vinculada estiver excluída. Os tokens revogados na exclusão não voltam.",
+                "operationId": "usersRestore",
+                "parameters": [
+                    {
+                        "name": "user",
+                        "in": "path",
+                        "required": true,
+                        "schema": {
+                            "type": "integer"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Restaurado.",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/UserEnvelope"
+                                }
+                            }
+                        }
+                    },
+                    "401": {
+                        "$ref": "#/components/responses/Unauthenticated"
+                    },
+                    "403": {
+                        "$ref": "#/components/responses/Forbidden"
+                    },
+                    "404": {
+                        "$ref": "#/components/responses/NotFound"
+                    },
+                    "409": {
+                        "$ref": "#/components/responses/Conflict"
+                    },
+                    "429": {
+                        "$ref": "#/components/responses/TooManyRequests"
+                    }
+                },
+                "security": [
+                    {
+                        "bearerAuth": []
+                    }
+                ]
+            }
         }
     },
     "components": {
         "schemas": {
+            "AuditLogEnvelope": {
+                "allOf": [
+                    {
+                        "$ref": "#/components/schemas/Envelope"
+                    },
+                    {
+                        "properties": {
+                            "data": {
+                                "$ref": "#/components/schemas/AuditLog"
+                            }
+                        },
+                        "type": "object"
+                    }
+                ]
+            },
             "LoginData": {
                 "required": [
                     "token",
@@ -1422,6 +2061,188 @@
                 },
                 "type": "object"
             },
+            "UserInput": {
+                "description": "Create: name, email, password e role obrigatórios. Update (PUT = PATCH): parcial. `email` é gravado em minúsculas e é único entre usuários não excluídos. `password`: mín. 10 caracteres, com maiúscula, minúscula e número. `branch_id` é obrigatório quando o perfil (enviado ou atual) não é admin, inclusive ao trocar de admin para outro perfil; filial existente e não excluída (inativa é aceita).",
+                "properties": {
+                    "name": {
+                        "type": "string",
+                        "example": "Ana Souza",
+                        "maxLength": 120
+                    },
+                    "email": {
+                        "type": "string",
+                        "format": "email",
+                        "example": "ana@example.com",
+                        "maxLength": 190
+                    },
+                    "password": {
+                        "type": "string",
+                        "format": "password",
+                        "writeOnly": true,
+                        "maxLength": 255,
+                        "minLength": 10
+                    },
+                    "role": {
+                        "type": "string",
+                        "enum": [
+                            "operator",
+                            "mechanic",
+                            "leader",
+                            "admin"
+                        ]
+                    },
+                    "branch_id": {
+                        "type": "integer",
+                        "example": 1,
+                        "nullable": true
+                    },
+                    "is_active": {
+                        "type": "boolean",
+                        "default": true
+                    }
+                },
+                "type": "object"
+            },
+            "UserEnvelope": {
+                "allOf": [
+                    {
+                        "$ref": "#/components/schemas/Envelope"
+                    },
+                    {
+                        "properties": {
+                            "data": {
+                                "$ref": "#/components/schemas/User"
+                            }
+                        },
+                        "type": "object"
+                    }
+                ]
+            },
+            "AuditLog": {
+                "required": [
+                    "id",
+                    "uuid",
+                    "event_at",
+                    "actor",
+                    "action",
+                    "auditable",
+                    "old_values",
+                    "new_values",
+                    "metadata",
+                    "ip",
+                    "request_id"
+                ],
+                "properties": {
+                    "id": {
+                        "description": "Item de /audit-logs no formato da F.1. `actor` vem do snapshot gravado no evento (nome/perfil na\népoca), null em ações do sistema; `auditable.type` é o alias curto (AuditLog::AUDITABLE_TYPES).",
+                        "type": "integer",
+                        "example": 1
+                    },
+                    "uuid": {
+                        "type": "string",
+                        "format": "uuid"
+                    },
+                    "event_at": {
+                        "description": "UTC com microssegundos.",
+                        "type": "string",
+                        "format": "date-time",
+                        "example": "2026-10-08T14:03:22.123456Z"
+                    },
+                    "actor": {
+                        "description": "Quem executou (snapshot da época); null = sistema ou login_failed.",
+                        "required": [
+                            "id",
+                            "name",
+                            "role"
+                        ],
+                        "properties": {
+                            "id": {
+                                "type": "integer",
+                                "example": 1
+                            },
+                            "name": {
+                                "type": "string",
+                                "example": "Ana Souza",
+                                "nullable": true
+                            },
+                            "role": {
+                                "type": "string",
+                                "nullable": true,
+                                "enum": [
+                                    "operator",
+                                    "mechanic",
+                                    "leader",
+                                    "admin"
+                                ]
+                            }
+                        },
+                        "type": "object",
+                        "nullable": true
+                    },
+                    "action": {
+                        "type": "string",
+                        "enum": [
+                            "created",
+                            "updated",
+                            "deleted",
+                            "restored",
+                            "login_succeeded",
+                            "login_failed",
+                            "logout",
+                            "password_changed",
+                            "setting_changed",
+                            "setting_removed"
+                        ]
+                    },
+                    "auditable": {
+                        "description": "Registro afetado; null em eventos sem alvo (ex.: login_failed).",
+                        "required": [
+                            "type",
+                            "id"
+                        ],
+                        "properties": {
+                            "type": {
+                                "type": "string",
+                                "example": "cost_center"
+                            },
+                            "id": {
+                                "type": "integer",
+                                "example": 1,
+                                "nullable": true
+                            }
+                        },
+                        "type": "object",
+                        "nullable": true
+                    },
+                    "old_values": {
+                        "description": "Valores anteriores (só campos alterados em updated); sem dados sensíveis.",
+                        "type": "object",
+                        "nullable": true,
+                        "additionalProperties": true
+                    },
+                    "new_values": {
+                        "type": "object",
+                        "nullable": true,
+                        "additionalProperties": true
+                    },
+                    "metadata": {
+                        "type": "object",
+                        "nullable": true,
+                        "additionalProperties": true
+                    },
+                    "ip": {
+                        "type": "string",
+                        "example": "172.18.0.1",
+                        "nullable": true
+                    },
+                    "request_id": {
+                        "type": "string",
+                        "format": "uuid",
+                        "nullable": true
+                    }
+                },
+                "type": "object"
+            },
             "Branch": {
                 "required": [
                     "id",
@@ -1572,6 +2393,96 @@
                     },
                     "is_active": {
                         "type": "boolean"
+                    },
+                    "created_at": {
+                        "type": "string",
+                        "format": "date-time",
+                        "nullable": true
+                    },
+                    "updated_at": {
+                        "type": "string",
+                        "format": "date-time",
+                        "nullable": true
+                    },
+                    "deleted_at": {
+                        "description": "Sempre presente; null quando ativo.",
+                        "type": "string",
+                        "format": "date-time",
+                        "nullable": true
+                    }
+                },
+                "type": "object"
+            },
+            "User": {
+                "required": [
+                    "id",
+                    "name",
+                    "email",
+                    "role",
+                    "branch",
+                    "is_active",
+                    "last_login_at",
+                    "created_at",
+                    "updated_at",
+                    "deleted_at"
+                ],
+                "properties": {
+                    "id": {
+                        "description": "Usuário no CRUD /users (contrato v1.3). Nunca inclui `password` nem `remember_token`.\nO usuário de /auth/* usa UserResource (schema AuthUser).",
+                        "type": "integer",
+                        "example": 1
+                    },
+                    "name": {
+                        "type": "string",
+                        "example": "Ana Souza",
+                        "maxLength": 120
+                    },
+                    "email": {
+                        "type": "string",
+                        "format": "email",
+                        "example": "ana@example.com",
+                        "maxLength": 190
+                    },
+                    "role": {
+                        "type": "string",
+                        "enum": [
+                            "operator",
+                            "mechanic",
+                            "leader",
+                            "admin"
+                        ]
+                    },
+                    "branch": {
+                        "description": "Filial `{id, code, name}`; null = todas (somente admin).",
+                        "required": [
+                            "id",
+                            "code",
+                            "name"
+                        ],
+                        "properties": {
+                            "id": {
+                                "type": "integer",
+                                "example": 1
+                            },
+                            "code": {
+                                "type": "string",
+                                "example": "FIL-001"
+                            },
+                            "name": {
+                                "type": "string",
+                                "example": "Matriz"
+                            }
+                        },
+                        "type": "object",
+                        "nullable": true
+                    },
+                    "is_active": {
+                        "type": "boolean"
+                    },
+                    "last_login_at": {
+                        "type": "string",
+                        "format": "date-time",
+                        "nullable": true
                     },
                     "created_at": {
                         "type": "string",
@@ -1977,6 +2888,10 @@
     },
     "tags": [
         {
+            "name": "Auditoria",
+            "description": "Auditoria"
+        },
+        {
             "name": "Auth",
             "description": "Auth"
         },
@@ -1991,6 +2906,10 @@
         {
             "name": "Infra",
             "description": "Infra"
+        },
+        {
+            "name": "Usuários",
+            "description": "Usuários"
         }
     ]
 }

@@ -1,10 +1,12 @@
 <?php
 
+use App\Http\Controllers\Api\V1\AuditLogController;
 use App\Http\Controllers\Api\V1\AuthController;
 use App\Http\Controllers\Api\V1\BranchController;
 use App\Http\Controllers\Api\V1\CostCenterController;
 use App\Http\Controllers\Api\V1\HealthController;
 use App\Http\Controllers\Api\V1\MetaController;
+use App\Http\Controllers\Api\V1\UserController;
 use Illuminate\Support\Facades\Route;
 
 // Prefixo /api/v1 aplicado em bootstrap/app.php.
@@ -30,6 +32,7 @@ Route::middleware('auth:sanctum')->group(function () {
     foreach ([
         'branches' => [BranchController::class, 'branch', 'branches'],
         'cost-centers' => [CostCenterController::class, 'cost_center', 'cost_centers'],
+        'users' => [UserController::class, 'user', 'users'],
     ] as $uri => [$controller, $param, $permission]) {
         $name = 'api.'.str_replace('-', '_', $uri);
         Route::get($uri, [$controller, 'index'])->middleware("can:{$permission}.view")->name("{$name}.index");
@@ -39,4 +42,8 @@ Route::middleware('auth:sanctum')->group(function () {
         Route::delete("{$uri}/{{$param}}", [$controller, 'destroy'])->middleware("can:{$permission}.manage")->name("{$name}.destroy");
         Route::post("{$uri}/{{$param}}/restore", [$controller, 'restore'])->middleware("can:{$permission}.manage")->withTrashed()->name("{$name}.restore");
     }
+
+    // Auditoria (F.1): somente leitura. Sem POST/PUT/PATCH/DELETE (→ 405), nem para admin.
+    Route::get('audit-logs', [AuditLogController::class, 'index'])->middleware('can:audit.view')->name('api.audit_logs.index');
+    Route::get('audit-logs/{audit_log}', [AuditLogController::class, 'show'])->middleware('can:audit.view')->name('api.audit_logs.show');
 });

@@ -21,7 +21,12 @@ return [
     'delete_has_dependents' => 'Não é possível excluir: existem registros ativos vinculados (:list).',
     'restore_not_deleted' => 'O registro não está excluído.',
     'restore_code_taken' => 'Não é possível restaurar: o código já está em uso por outro registro ativo.',
+    'restore_email_taken' => 'Não é possível restaurar: o e-mail já está em uso por outro usuário ativo.',
     'restore_branch_deleted' => 'Não é possível restaurar: a filial vinculada está excluída.',
+    'user_self_delete' => 'Você não pode excluir o próprio usuário.',
+    'user_self_deactivate' => 'Você não pode desativar o próprio usuário.',
+    'user_self_role' => 'Você não pode alterar o próprio perfil.',
+    'user_last_admin' => 'Não é possível excluir, desativar ou rebaixar o último administrador ativo.',
     'dependents' => [
         'cost_centers' => 'centros de custo',
         'users' => 'usuários',

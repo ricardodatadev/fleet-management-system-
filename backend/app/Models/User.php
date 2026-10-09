@@ -15,6 +15,10 @@ use Illuminate\Foundation\Auth\User as Authenticatable;
 use Illuminate\Notifications\Notifiable;
 use Laravel\Sanctum\HasApiTokens;
 
+/**
+ * Usuário (spec C.1). NUNCA usa BranchScoped (alerta da F1-10): o BranchScope chama Auth::user() e o
+ * Sanctum carrega o User durante a própria autenticação. Filtro por filial em /users é explícito.
+ */
 #[Fillable(['name', 'email', 'password', 'role', 'branch_id', 'is_active'])]
 #[Hidden(['password', 'remember_token'])]
 class User extends Authenticatable
@@ -69,5 +73,15 @@ class User extends Authenticatable
     public function isAdmin(): bool
     {
         return $this->role === Role::Admin;
+    }
+
+    /**
+     * Dependentes ativos que impedem a exclusão (409). O colaborador vinculado entra na F1-14.
+     *
+     * @return list<string> chaves de tradução em api.dependents.*
+     */
+    public function activeDependents(): array
+    {
+        return [];
     }
 }

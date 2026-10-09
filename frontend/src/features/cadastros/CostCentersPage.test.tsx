@@ -38,6 +38,7 @@ const BRANCHES: BranchRecord[] = [
 function mockApis() {
   const branches = mockCrudApi<BranchRecord>('/branches', BRANCHES, {
     filters: ['is_active'],
+    sortable: ['code', 'name', 'type', 'is_active', 'created_at', 'updated_at'],
     build: (body, id) => ({ ...branch(id, '', ''), ...body }) as BranchRecord,
   });
   const refs = [MATRIZ, NORTE, ANTIGA];
@@ -51,6 +52,7 @@ function mockApis() {
     ],
     {
       filters: ['branch_id', 'is_active'],
+      sortable: ['code', 'name', 'is_active', 'created_at', 'updated_at'],
       build: (body, id, current) => {
         const merged = {
           ...(current ?? costCenter(id, '', '', null)),

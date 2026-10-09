@@ -41,12 +41,18 @@ function mockFamilies() {
     ],
     {
       filters: ['category', 'criticality', 'is_active'],
+      sortable: ['code', 'name', 'category', 'criticality'],
       build: (body, id, current) =>
         ({ ...(current ?? family(id, '', '')), ...body }) as EquipmentFamily,
+      // Regras da F1-13: (0, 100] e no máximo 2 casas decimais (numeric(5,2)).
       validate: (body) => {
         const pct = body.preventive_lead_pct;
-        return typeof pct === 'number' && (pct <= 0 || pct > 100)
-          ? { preventive_lead_pct: ['O pré-alerta deve ser maior que 0 e no máximo 100.'] }
+        if (typeof pct !== 'number') return null;
+        if (pct <= 0 || pct > 100) {
+          return { preventive_lead_pct: ['O pré-alerta deve ser maior que 0 e no máximo 100.'] };
+        }
+        return Math.round(pct * 100) !== pct * 100
+          ? { preventive_lead_pct: ['O pré-alerta aceita no máximo 2 casas decimais.'] }
           : null;
       },
     },
@@ -71,6 +77,30 @@ describe('Famílias/Classes (F1-30, contrato C.4 via MSW)', () => {
     expect(screen.getByText('Trator').closest('tr')).toHaveTextContent(
       'Máquina agrícolaCrítica90%—',
     );
+  });
+
+  it('ordena só pela whitelist da API (code, name, category, criticality)', async () => {
+    const fake = mockFamilies();
+    const user = userEvent.setup();
+    await renderPage();
+    await screen.findByText('Trator');
+    const headers = within(screen.getByRole('table')).getAllByRole('columnheader');
+    const sortable = headers.filter((th) => th.hasAttribute('aria-sort'));
+    expect(sortable.map((th) => th.textContent)).toEqual([
+      'Código',
+      'Nome',
+      'Categoria',
+      'Criticidade',
+    ]);
+    expect(
+      within(screen.getByRole('columnheader', { name: 'Situação' })).queryByRole('button'),
+    ).toBeNull();
+
+    await user.click(screen.getByRole('button', { name: 'Criticidade' }));
+    await waitFor(() => expect(fake.lastListParams().get('sort')).toBe('criticality'));
+    // A whitelist do MSW devolveria 422 (estado de erro) para um campo fora dela.
+    expect(await screen.findByText('Trator')).toBeInTheDocument();
+    expect(screen.queryByRole('alert')).not.toBeInTheDocument();
   });
 
   it('filtros de categoria e criticidade vêm do /meta/enums e vão para a API', async () => {
@@ -144,6 +174,13 @@ describe('Famílias/Classes (F1-30, contrato C.4 via MSW)', () => {
     await user.click(within(dialog).getByRole('button', { name: 'Salvar' }));
     await waitFor(() => expect(pct).toHaveAttribute('aria-invalid', 'true'));
     expect(pct).toHaveAccessibleDescription(/maior que 0 e no máximo 100/);
+
+    // numeric(5,2): o campo sugere passo de 0,01 e o servidor recusa a 3ª casa decimal.
+    expect(pct).toHaveAttribute('step', '0.01');
+    await user.clear(pct);
+    await user.type(pct, '92.555');
+    await user.click(within(dialog).getByRole('button', { name: 'Salvar' }));
+    await waitFor(() => expect(pct).toHaveAccessibleDescription(/no máximo 2 casas decimais/));
   });
 
   it('excluir família com equipamentos: 409 com a mensagem do envelope', async () => {

@@ -16,6 +16,8 @@ export interface MockCrudOptions<T extends FakeRecord> {
   searchFields?: (keyof T)[];
   /** Filtros planos aceitos (igualdade; `is_active` aceita 1/0). */
   filters?: string[];
+  /** Whitelist de `sort` do recurso; campo fora dela → 422, como na API. */
+  sortable: string[];
   /** Monta o registro a partir do payload (create) ou do registro atual + payload (update). */
   build: (body: Record<string, unknown>, id: number, current?: T) => T;
   /** Validação extra (422) além de código duplicado. */
@@ -117,6 +119,11 @@ export function mockCrudApi<T extends FakeRecord>(
         });
       }
       const sort = params.get('sort') ?? 'code';
+      if (!options.sortable.includes(sort.replace(/^-/, ''))) {
+        return fail(422, 'Os dados informados são inválidos.', {
+          sort: ['A ordenação informada é inválida.'],
+        });
+      }
       const desc = sort.startsWith('-');
       const key = (desc ? sort.slice(1) : sort) as keyof T;
       rows = [...rows].sort((a, b) => {

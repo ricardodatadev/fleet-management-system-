@@ -16,6 +16,7 @@ const SEED: BranchRecord[] = [
 function mockBranches(seed: BranchRecord[] = SEED) {
   return mockCrudApi<BranchRecord>('/branches', seed, {
     filters: ['type', 'is_active'],
+    sortable: ['code', 'name', 'type', 'is_active', 'created_at', 'updated_at'],
     build: (body, id, current) => ({ ...(current ?? branch(id, '', '')), ...body }) as BranchRecord,
   });
 }

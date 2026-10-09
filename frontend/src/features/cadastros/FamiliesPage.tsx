@@ -59,7 +59,8 @@ export function FamiliesPage() {
         cell: (row) => `${percent.format(row.preventive_lead_pct)}%`,
       },
       { key: 'tolerance', header: 'Tolerância', cell: tolerance },
-      activeColumn(),
+      // Sort de famílias: só code, name, category e criticality (spec v1.4).
+      activeColumn({ sortable: false }),
     ],
     filters: [
       { name: 'category', label: 'Categoria', options: categoryOptions, loading: enums.isPending },

@@ -72,6 +72,17 @@ use OpenApi\Attributes as OA;
         new OA\Property(property: 'data', description: 'Sempre null em erros.', example: null),
     ],
 )]
+#[OA\Schema(
+    schema: 'DeleteConflictEnvelope',
+    description: 'Exclusão bloqueada por dependentes ativos (409): `errors.dependents` lista os tipos.',
+    required: ['status', 'message', 'errors', 'data'],
+    properties: [
+        new OA\Property(property: 'status', type: 'string', enum: ['error']),
+        new OA\Property(property: 'message', type: 'string', example: 'Não é possível excluir: existem registros ativos vinculados (centros de custo).'),
+        new OA\Property(property: 'errors', type: 'object', nullable: true, example: ['dependents' => ['cost_centers']], additionalProperties: new OA\AdditionalProperties(type: 'array', items: new OA\Items(type: 'string'))),
+        new OA\Property(property: 'data', example: null),
+    ],
+)]
 #[OA\Response(response: 'Unauthenticated', description: 'Não autenticado (401).', content: new OA\JsonContent(ref: '#/components/schemas/ErrorEnvelope'))]
 #[OA\Response(response: 'Forbidden', description: 'Acesso negado (403).', content: new OA\JsonContent(ref: '#/components/schemas/ErrorEnvelope'))]
 #[OA\Response(response: 'NotFound', description: 'Recurso não encontrado (404).', content: new OA\JsonContent(ref: '#/components/schemas/ErrorEnvelope'))]

@@ -4,6 +4,226 @@
  */
 
 export interface paths {
+    "/auth/login": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Login (emite token Bearer)
+         * @description Público. Credenciais inválidas → 422 com mensagem genérica (não revela se o e-mail existe). Usuário inativo → 403 (somente com a senha correta). Rate limit: 5/min por e-mail+IP e 20/min por IP (toda tentativa conta). Token expira em SANCTUM_EXPIRATION minutos (padrão 720).
+         */
+        post: operations["authLogin"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/auth/logout": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Logout (revoga o token atual) */
+        post: operations["authLogout"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/auth/me": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Usuário autenticado, colaborador vinculado e permissões */
+        get: operations["authMe"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/auth/password": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        /**
+         * Troca a própria senha (revoga os demais tokens)
+         * @description Política: mín. 10 caracteres, com maiúscula, minúscula e número. O token usado na requisição continua válido; todos os outros do usuário são revogados.
+         */
+        put: operations["authChangePassword"];
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/branches": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Lista filiais
+         * @description Permissão: branches.view (todos os perfis; sem escopo de filial). Ordenação: code, name, type, is_active, created_at, updated_at (`-` = desc; padrão code).
+         */
+        get: operations["branchesIndex"];
+        put?: never;
+        /**
+         * Cria filial
+         * @description Permissão: branches.manage. `code` duplicado entre registros ativos → 422.
+         */
+        post: operations["branchesStore"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/branches/{branch}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Detalha filial
+         * @description Permissão: branches.view. Filial excluída → 404.
+         */
+        get: operations["branchesShow"];
+        /**
+         * Atualiza filial (parcial; PUT = PATCH)
+         * @description Permissão: branches.manage. Só os campos enviados são validados e gravados.
+         */
+        put: operations["branchesUpdate"];
+        post?: never;
+        /**
+         * Exclui filial (soft delete)
+         * @description Permissão: branches.manage. 409 se houver centros de custo ou usuários ativos (não excluídos) vinculados; equipamentos e colaboradores entram nas F1-14/15.
+         */
+        delete: operations["branchesDestroy"];
+        options?: never;
+        head?: never;
+        /** Atualiza filial (parcial; igual ao PUT) */
+        patch: operations["branchesPatch"];
+        trace?: never;
+    };
+    "/branches/{branch}/restore": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Restaura filial excluída
+         * @description Permissão: branches.manage. 409 se não estiver excluída ou se o código já estiver em uso por uma filial ativa.
+         */
+        post: operations["branchesRestore"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/cost-centers": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Lista centros de custo
+         * @description Permissão: cost_centers.view (L e A). Escopo: não-admin vê os da própria filial + os sem filial. Ordenação: code, name, is_active, created_at, updated_at (`-` = desc; padrão code).
+         */
+        get: operations["costCentersIndex"];
+        put?: never;
+        /**
+         * Cria centro de custo
+         * @description Permissão: cost_centers.manage. `code` duplicado entre registros ativos → 422; filial inexistente ou excluída → 422.
+         */
+        post: operations["costCentersStore"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/cost-centers/{cost_center}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Detalha centro de custo
+         * @description Permissão: cost_centers.view. Excluído ou fora do escopo de filial → 404.
+         */
+        get: operations["costCentersShow"];
+        /**
+         * Atualiza centro de custo (parcial; PUT = PATCH)
+         * @description Permissão: cost_centers.manage. Só os campos enviados são validados e gravados.
+         */
+        put: operations["costCentersUpdate"];
+        post?: never;
+        /**
+         * Exclui centro de custo (soft delete)
+         * @description Permissão: cost_centers.manage. 409 se houver equipamentos ou colaboradores ativos vinculados (regras ativadas nas F1-14/15).
+         */
+        delete: operations["costCentersDestroy"];
+        options?: never;
+        head?: never;
+        /** Atualiza centro de custo (parcial; igual ao PUT) */
+        patch: operations["costCentersPatch"];
+        trace?: never;
+    };
+    "/cost-centers/{cost_center}/restore": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Restaura centro de custo excluído
+         * @description Permissão: cost_centers.manage. 409 se não estiver excluído, se o código já estiver em uso por um centro de custo ativo ou se a filial vinculada estiver excluída.
+         */
+        post: operations["costCentersRestore"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/health": {
         parameters: {
             query?: never;
@@ -32,8 +252,8 @@ export interface paths {
             cookie?: never;
         };
         /**
-         * Enums e metadados para selects (esqueleto)
-         * @description Esqueleto vazio na F1-06. Será protegido por bearerAuth na F1-10 (perfil: qualquer autenticado).
+         * Enums e metadados para selects
+         * @description Enums para selects; cresce com os cadastros. Perfil: qualquer autenticado.
          */
         get: operations["metaEnums"];
         put?: never;
@@ -48,6 +268,65 @@ export interface paths {
 export type webhooks = Record<string, never>;
 export interface components {
     schemas: {
+        LoginData: {
+            /** @example 1|9fQk... */
+            token: string;
+            /** @enum {string} */
+            token_type: "Bearer";
+            /**
+             * Format: date-time
+             * @example 2026-10-09T02:03:22.123456Z
+             */
+            expires_at: string;
+            user: components["schemas"]["AuthUser"];
+        };
+        MeData: {
+            user: components["schemas"]["AuthUser"];
+            /**
+             * @description Colaborador vinculado (preenchido a partir da F1-14).
+             * @example null
+             */
+            employee: Record<string, never> | null;
+            /**
+             * @description Permissões do perfil (config/rbac.php). auth.* é implícito e não aparece.
+             * @example [
+             *       "branches.view",
+             *       "equipments.view"
+             *     ]
+             */
+            permissions: string[];
+        };
+        /** @description Create: code, name e type obrigatórios. Update (PUT = PATCH): parcial, só os campos enviados. `code` é gravado sem espaços nas pontas e em maiúsculas; `state` em maiúsculas. */
+        BranchInput: {
+            /** @example FIL-001 */
+            code?: string;
+            /** @example Matriz */
+            name?: string;
+            /** @enum {string} */
+            type?: "filial" | "garagem" | "oficina";
+            city?: string | null;
+            /** @enum {string|null} */
+            state?: "AC" | "AL" | "AP" | "AM" | "BA" | "CE" | "DF" | "ES" | "GO" | "MA" | "MT" | "MS" | "MG" | "PA" | "PB" | "PR" | "PE" | "PI" | "RJ" | "RN" | "RS" | "RO" | "RR" | "SC" | "SP" | "SE" | "TO" | null;
+            /** @default true */
+            is_active: boolean;
+        };
+        BranchEnvelope: components["schemas"]["Envelope"] & {
+            data?: components["schemas"]["Branch"];
+        };
+        /** @description Create: code e name obrigatórios. Update (PUT = PATCH): parcial. `code` é gravado sem espaços nas pontas e em maiúsculas. `branch_id` deve ser filial existente e não excluída (inativa é aceita); null = sem filial. */
+        CostCenterInput: {
+            /** @example CC-0101 */
+            code?: string;
+            /** @example Manutenção pesada */
+            name?: string;
+            /** @example 1 */
+            branch_id?: number | null;
+            /** @default true */
+            is_active: boolean;
+        };
+        CostCenterEnvelope: components["schemas"]["Envelope"] & {
+            data?: components["schemas"]["CostCenter"];
+        };
         HealthData: {
             /** @enum {string} */
             app: "up";
@@ -58,11 +337,89 @@ export interface components {
             /** @example 0.1.0 */
             version: string;
         };
+        Branch: {
+            /** @example 1 */
+            id: number;
+            /** @example FIL-001 */
+            code: string;
+            /** @example Matriz */
+            name: string;
+            /** @enum {string} */
+            type: "filial" | "garagem" | "oficina";
+            /** @example Goiânia */
+            city: string | null;
+            /**
+             * @example GO
+             * @enum {string|null}
+             */
+            state: "AC" | "AL" | "AP" | "AM" | "BA" | "CE" | "DF" | "ES" | "GO" | "MA" | "MT" | "MS" | "MG" | "PA" | "PB" | "PR" | "PE" | "PI" | "RJ" | "RN" | "RS" | "RO" | "RR" | "SC" | "SP" | "SE" | "TO" | null;
+            is_active: boolean;
+            /** Format: date-time */
+            created_at: string | null;
+            /** Format: date-time */
+            updated_at: string | null;
+            /**
+             * Format: date-time
+             * @description Sempre presente; null quando ativo.
+             */
+            deleted_at: string | null;
+        };
+        CostCenter: {
+            /** @example 1 */
+            id: number;
+            /** @example CC-0101 */
+            code: string;
+            /** @example Manutenção pesada */
+            name: string;
+            /** @description Filial `{id, code, name}`; null = sem filial (visível a todas). */
+            branch: {
+                /** @example 1 */
+                id: number;
+                /** @example FIL-001 */
+                code: string;
+                /** @example Matriz */
+                name: string;
+            } | null;
+            is_active: boolean;
+            /** Format: date-time */
+            created_at: string | null;
+            /** Format: date-time */
+            updated_at: string | null;
+            /**
+             * Format: date-time
+             * @description Sempre presente; null quando ativo.
+             */
+            deleted_at: string | null;
+        };
+        AuthUser: {
+            /** @example 1 */
+            id: number;
+            /** @example Ana Souza */
+            name: string;
+            /**
+             * Format: email
+             * @example ana@example.com
+             */
+            email: string;
+            /** @enum {string} */
+            role: "operator" | "mechanic" | "leader" | "admin";
+            /** @description Filial do usuário; null = todas (somente admin). */
+            branch: {
+                /** @example 1 */
+                id: number;
+                /** @example FIL-001 */
+                code: string;
+                /** @example Matriz */
+                name: string;
+            } | null;
+        };
         /** @description Envelope padrão de toda resposta. */
         Envelope: {
             /**
              * @description Definições globais da OpenAPI (info, servidor, segurança, schemas e respostas reutilizáveis).
-             *     Os endpoints são anotados nos próprios controllers.
+             *     Os endpoints são anotados nos próprios controllers. O atributo não aceita expressão, então
+             *     título e descrição usam os marcadores de OpenApiBuilder::BRAND_TOKENS, preenchidos com a
+             *     marca do config (app.name / app.full_name) na geração.
              * @enum {string}
              */
             status: "success" | "error";
@@ -120,6 +477,25 @@ export interface components {
              * @description Sempre null em erros.
              * @example null
              */
+            data: unknown;
+        };
+        /** @description Exclusão bloqueada por dependentes ativos (409): `errors.dependents` lista os tipos. */
+        DeleteConflictEnvelope: {
+            /** @enum {string} */
+            status: "error";
+            /** @example Não é possível excluir: existem registros ativos vinculados (centros de custo). */
+            message: string;
+            /**
+             * @example {
+             *       "dependents": [
+             *         "cost_centers"
+             *       ]
+             *     }
+             */
+            errors: {
+                [key: string]: string[];
+            } | null;
+            /** @example null */
             data: unknown;
         };
     };
@@ -190,13 +566,581 @@ export interface components {
             };
         };
     };
-    parameters: never;
+    parameters: {
+        /** @description Página (1..n). */
+        Page: number;
+        /** @description Itens por página: máx. 100; até 200 com `is_active=1` (selects). */
+        PerPage: number;
+        /** @description Busca textual (contém, sem diferenciar maiúsculas; `%` e `_` são literais). */
+        Search: string;
+        /** @description Inclui registros excluídos (soft delete). Exige `*.manage` do recurso; sem ela → 403. */
+        WithTrashed: 0 | 1;
+        /** @description Filtra por ativo (1) / inativo (0). */
+        IsActive: 0 | 1;
+    };
     requestBodies: never;
     headers: never;
     pathItems: never;
 }
 export type $defs = Record<string, never>;
 export interface operations {
+    authLogin: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": {
+                    /**
+                     * Format: email
+                     * @example admin@example.com
+                     */
+                    email: string;
+                    /** Format: password */
+                    password: string;
+                    /** @example web */
+                    device_name: string;
+                };
+            };
+        };
+        responses: {
+            /** @description Autenticado. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Envelope"] & {
+                        data?: components["schemas"]["LoginData"];
+                    };
+                };
+            };
+            403: components["responses"]["Forbidden"];
+            422: components["responses"]["ValidationError"];
+            429: components["responses"]["TooManyRequests"];
+            500: components["responses"]["ServerError"];
+        };
+    };
+    authLogout: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Token revogado (`data` null). */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Envelope"];
+                };
+            };
+            401: components["responses"]["Unauthenticated"];
+            429: components["responses"]["TooManyRequests"];
+            500: components["responses"]["ServerError"];
+        };
+    };
+    authMe: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Dados da sessão. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Envelope"] & {
+                        data?: components["schemas"]["MeData"];
+                    };
+                };
+            };
+            401: components["responses"]["Unauthenticated"];
+            429: components["responses"]["TooManyRequests"];
+            500: components["responses"]["ServerError"];
+        };
+    };
+    authChangePassword: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": {
+                    /** Format: password */
+                    current_password: string;
+                    /** Format: password */
+                    password: string;
+                    /** Format: password */
+                    password_confirmation: string;
+                };
+            };
+        };
+        responses: {
+            /** @description Senha alterada (`data` null). */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Envelope"];
+                };
+            };
+            401: components["responses"]["Unauthenticated"];
+            422: components["responses"]["ValidationError"];
+            429: components["responses"]["TooManyRequests"];
+            500: components["responses"]["ServerError"];
+        };
+    };
+    branchesIndex: {
+        parameters: {
+            query?: {
+                /** @description Página (1..n). */
+                page?: components["parameters"]["Page"];
+                /** @description Itens por página: máx. 100; até 200 com `is_active=1` (selects). */
+                per_page?: components["parameters"]["PerPage"];
+                /** @description Busca textual (contém, sem diferenciar maiúsculas; `%` e `_` são literais). */
+                q?: components["parameters"]["Search"];
+                sort?: string;
+                type?: "filial" | "garagem" | "oficina";
+                /** @description Filtra por ativo (1) / inativo (0). */
+                is_active?: components["parameters"]["IsActive"];
+                /** @description Inclui registros excluídos (soft delete). Exige `*.manage` do recurso; sem ela → 403. */
+                with_trashed?: components["parameters"]["WithTrashed"];
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Lista paginada. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Envelope"] & {
+                        data?: components["schemas"]["Branch"][];
+                    };
+                };
+            };
+            401: components["responses"]["Unauthenticated"];
+            403: components["responses"]["Forbidden"];
+            422: components["responses"]["ValidationError"];
+            429: components["responses"]["TooManyRequests"];
+        };
+    };
+    branchesStore: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["BranchInput"];
+            };
+        };
+        responses: {
+            /** @description Criada. */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["BranchEnvelope"];
+                };
+            };
+            401: components["responses"]["Unauthenticated"];
+            403: components["responses"]["Forbidden"];
+            422: components["responses"]["ValidationError"];
+            429: components["responses"]["TooManyRequests"];
+        };
+    };
+    branchesShow: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                branch: number;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Filial. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["BranchEnvelope"];
+                };
+            };
+            401: components["responses"]["Unauthenticated"];
+            403: components["responses"]["Forbidden"];
+            404: components["responses"]["NotFound"];
+            429: components["responses"]["TooManyRequests"];
+        };
+    };
+    branchesUpdate: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                branch: number;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["BranchInput"];
+            };
+        };
+        responses: {
+            /** @description Atualizada. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["BranchEnvelope"];
+                };
+            };
+            401: components["responses"]["Unauthenticated"];
+            403: components["responses"]["Forbidden"];
+            404: components["responses"]["NotFound"];
+            422: components["responses"]["ValidationError"];
+            429: components["responses"]["TooManyRequests"];
+        };
+    };
+    branchesDestroy: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                branch: number;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Excluída (`data` null). */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Envelope"];
+                };
+            };
+            401: components["responses"]["Unauthenticated"];
+            403: components["responses"]["Forbidden"];
+            404: components["responses"]["NotFound"];
+            /** @description Dependentes ativos. */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["DeleteConflictEnvelope"];
+                };
+            };
+            429: components["responses"]["TooManyRequests"];
+        };
+    };
+    branchesPatch: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                branch: number;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["BranchInput"];
+            };
+        };
+        responses: {
+            /** @description Atualizada. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["BranchEnvelope"];
+                };
+            };
+            401: components["responses"]["Unauthenticated"];
+            403: components["responses"]["Forbidden"];
+            404: components["responses"]["NotFound"];
+            422: components["responses"]["ValidationError"];
+            429: components["responses"]["TooManyRequests"];
+        };
+    };
+    branchesRestore: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                branch: number;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Restaurada. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["BranchEnvelope"];
+                };
+            };
+            401: components["responses"]["Unauthenticated"];
+            403: components["responses"]["Forbidden"];
+            404: components["responses"]["NotFound"];
+            409: components["responses"]["Conflict"];
+            429: components["responses"]["TooManyRequests"];
+        };
+    };
+    costCentersIndex: {
+        parameters: {
+            query?: {
+                /** @description Página (1..n). */
+                page?: components["parameters"]["Page"];
+                /** @description Itens por página: máx. 100; até 200 com `is_active=1` (selects). */
+                per_page?: components["parameters"]["PerPage"];
+                /** @description Busca textual (contém, sem diferenciar maiúsculas; `%` e `_` são literais). */
+                q?: components["parameters"]["Search"];
+                sort?: string;
+                branch_id?: number;
+                /** @description Filtra por ativo (1) / inativo (0). */
+                is_active?: components["parameters"]["IsActive"];
+                /** @description Inclui registros excluídos (soft delete). Exige `*.manage` do recurso; sem ela → 403. */
+                with_trashed?: components["parameters"]["WithTrashed"];
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Lista paginada. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Envelope"] & {
+                        data?: components["schemas"]["CostCenter"][];
+                    };
+                };
+            };
+            401: components["responses"]["Unauthenticated"];
+            403: components["responses"]["Forbidden"];
+            422: components["responses"]["ValidationError"];
+            429: components["responses"]["TooManyRequests"];
+        };
+    };
+    costCentersStore: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["CostCenterInput"];
+            };
+        };
+        responses: {
+            /** @description Criada. */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["CostCenterEnvelope"];
+                };
+            };
+            401: components["responses"]["Unauthenticated"];
+            403: components["responses"]["Forbidden"];
+            422: components["responses"]["ValidationError"];
+            429: components["responses"]["TooManyRequests"];
+        };
+    };
+    costCentersShow: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                cost_center: number;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Filial. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["CostCenterEnvelope"];
+                };
+            };
+            401: components["responses"]["Unauthenticated"];
+            403: components["responses"]["Forbidden"];
+            404: components["responses"]["NotFound"];
+            429: components["responses"]["TooManyRequests"];
+        };
+    };
+    costCentersUpdate: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                cost_center: number;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["CostCenterInput"];
+            };
+        };
+        responses: {
+            /** @description Atualizada. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["CostCenterEnvelope"];
+                };
+            };
+            401: components["responses"]["Unauthenticated"];
+            403: components["responses"]["Forbidden"];
+            404: components["responses"]["NotFound"];
+            422: components["responses"]["ValidationError"];
+            429: components["responses"]["TooManyRequests"];
+        };
+    };
+    costCentersDestroy: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                cost_center: number;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Excluída (`data` null). */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Envelope"];
+                };
+            };
+            401: components["responses"]["Unauthenticated"];
+            403: components["responses"]["Forbidden"];
+            404: components["responses"]["NotFound"];
+            /** @description Dependentes ativos. */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["DeleteConflictEnvelope"];
+                };
+            };
+            429: components["responses"]["TooManyRequests"];
+        };
+    };
+    costCentersPatch: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                cost_center: number;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["CostCenterInput"];
+            };
+        };
+        responses: {
+            /** @description Atualizada. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["CostCenterEnvelope"];
+                };
+            };
+            401: components["responses"]["Unauthenticated"];
+            403: components["responses"]["Forbidden"];
+            404: components["responses"]["NotFound"];
+            422: components["responses"]["ValidationError"];
+            429: components["responses"]["TooManyRequests"];
+        };
+    };
+    costCentersRestore: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                cost_center: number;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Restaurada. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["CostCenterEnvelope"];
+                };
+            };
+            401: components["responses"]["Unauthenticated"];
+            403: components["responses"]["Forbidden"];
+            404: components["responses"]["NotFound"];
+            409: components["responses"]["Conflict"];
+            429: components["responses"]["TooManyRequests"];
+        };
+    };
     health: {
         parameters: {
             query?: never;
@@ -239,7 +1183,7 @@ export interface operations {
         };
         requestBody?: never;
         responses: {
-            /** @description Enums disponíveis (vazio por enquanto). */
+            /** @description Enums disponíveis. */
             200: {
                 headers: {
                     [name: string]: unknown;
@@ -247,11 +1191,14 @@ export interface operations {
                 content: {
                     "application/json": components["schemas"]["Envelope"] & {
                         data?: {
-                            enums?: Record<string, never>;
+                            enums?: {
+                                branch_types: ("filial" | "garagem" | "oficina")[];
+                            };
                         };
                     };
                 };
             };
+            401: components["responses"]["Unauthenticated"];
             429: components["responses"]["TooManyRequests"];
             500: components["responses"]["ServerError"];
         };

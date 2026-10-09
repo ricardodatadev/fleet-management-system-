@@ -10,6 +10,8 @@ export interface AuthBranch {
 export interface AuthUser {
   id: number;
   name: string;
+  /** Minúsculo, `[a-z0-9]{3,30}` (C.1, v1.7). */
+  username: string;
   email: string;
   role: Role;
   /** null = todas as filiais (somente admin). */
@@ -33,7 +35,16 @@ export interface MeData {
   permissions: string[];
 }
 
+/** POST /auth/login (v1.7): `login` com `@` é e-mail, sem `@` é username. */
 export interface LoginCredentials {
-  email: string;
+  login: string;
   password: string;
+}
+
+/** POST /auth/reset-password (v1.7). */
+export interface ResetPasswordPayload {
+  email: string;
+  token: string;
+  password: string;
+  password_confirmation: string;
 }

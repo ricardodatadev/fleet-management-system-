@@ -17,7 +17,7 @@ describe('useCan', () => {
       wrapper: wrapper({
         ...actions,
         status: 'authenticated',
-        user: { id: 1, name: 'A', email: 'a@x', role: 'leader', branch: null },
+        user: { id: 1, name: 'A', username: 'aaa', email: 'a@x', role: 'leader', branch: null },
         permissions: ['settings.view'],
         expiresAt: '2099-01-01T00:00:00Z',
       }),

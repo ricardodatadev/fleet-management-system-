@@ -5,6 +5,7 @@ import { http } from 'msw';
 import { api } from '@/api';
 import {
   API,
+  INVALID_CREDENTIALS,
   fail,
   futureIso,
   mockAuthApi,
@@ -18,19 +19,26 @@ import { DEVICE_NAME } from './api';
 import { SESSION_STORAGE_KEY } from './session';
 import type { Role } from './types';
 
-async function fillAndSubmit(email: string, password: string) {
+const loginField = () => screen.findByLabelText('E-mail ou usuário');
+
+async function fillAndSubmit(login: string, password: string) {
   const user = userEvent.setup();
-  await user.type(await screen.findByLabelText(/E-mail/), email);
+  await user.type(await loginField(), login);
   await user.type(screen.getByLabelText(/^Senha/), password);
   await user.click(screen.getByRole('button', { name: 'Entrar' }));
   return user;
 }
 
 describe('Login', () => {
-  it('foco automático no e-mail', async () => {
+  it('campo "E-mail ou usuário" com foco automático e autocomplete=username; sem cadastro', async () => {
     mockAuthApi();
     renderApp('/login');
-    expect(await screen.findByLabelText(/E-mail/)).toHaveFocus();
+    const field = await loginField();
+    expect(field).toHaveFocus();
+    expect(field).toHaveAttribute('autocomplete', 'username');
+    expect(field).toHaveAttribute('type', 'text');
+    expect(screen.queryByRole('link', { name: /cadastr|criar conta|registr/i })).toBeNull();
+    expect(screen.queryByRole('button', { name: /cadastr|criar conta|registr/i })).toBeNull();
   });
 
   it('login ok → /ativos/equipamentos, token salvo e device_name enviado', async () => {
@@ -46,9 +54,28 @@ describe('Login', () => {
     ).toBeInTheDocument();
     expect(location()).toBe('/ativos/equipamentos');
     expect(storedSession()).toMatchObject({ token: 'tok-novo' });
-    expect(body).toMatchObject({ email: 'ana@example.com', device_name: DEVICE_NAME });
+    expect(body).toEqual({
+      login: 'ana@example.com',
+      password: 'senha-correta',
+      device_name: DEVICE_NAME,
+    });
     expect(screen.getByText('Ana Souza')).toBeInTheDocument();
     expect(screen.getByText('PCM/Gestor/Admin')).toBeInTheDocument();
+    server.events.removeAllListeners();
+  });
+
+  it('login por username envia `login` (trim) e entra', async () => {
+    mockAuthApi('admin');
+    let body: Record<string, unknown> | undefined;
+    server.events.on('request:start', async ({ request }) => {
+      if (request.url.endsWith('/auth/login')) body = await request.clone().json();
+    });
+    const { location } = renderApp('/login');
+    await fillAndSubmit('  AnaSouza ', 'senha-correta');
+    await screen.findByRole('heading', { name: 'Frotas & Equipamentos' });
+    expect(location()).toBe('/ativos/equipamentos');
+    expect(body).toMatchObject({ login: 'AnaSouza' });
+    expect(body).not.toHaveProperty('email');
     server.events.removeAllListeners();
   });
 
@@ -71,11 +98,17 @@ describe('Login', () => {
     },
   );
 
-  it('credenciais inválidas mostram a mensagem do envelope e não salvam sessão', async () => {
+  it.each([
+    ['e-mail', 'ana@example.com'],
+    ['username', 'anasouza'],
+    ['login inexistente', 'ninguem'],
+  ])('422 genérico (%s): mensagem no topo, sem acusar campo e sem sessão', async (_case, login) => {
     mockAuthApi();
     const { location } = renderApp('/login');
-    await fillAndSubmit('ana@example.com', 'errada');
-    expect(await screen.findByRole('alert')).toHaveTextContent('Credenciais inválidas.');
+    await fillAndSubmit(login, 'errada');
+    expect(await screen.findByRole('alert')).toHaveTextContent(INVALID_CREDENTIALS);
+    expect(await loginField()).not.toHaveAttribute('aria-invalid');
+    expect(screen.getByLabelText(/^Senha/)).not.toHaveAttribute('aria-invalid');
     expect(location()).toBe('/login');
     expect(storedSession()).toBeNull();
   });
@@ -121,7 +154,7 @@ describe('Login', () => {
     );
     renderApp('/login');
     const user = userEvent.setup({ advanceTimers: vi.advanceTimersByTime });
-    await user.type(await screen.findByLabelText(/E-mail/), 'a@x.com');
+    await user.type(await loginField(), 'a@x.com');
     await user.type(screen.getByLabelText(/^Senha/), 'x');
     await user.click(screen.getByRole('button', { name: 'Entrar' }));
     expect(await screen.findByText('Tente novamente em 2 segundos.')).toBeInTheDocument();
@@ -136,20 +169,30 @@ describe('Login', () => {
     vi.useRealTimers();
   });
 
-  it('validação local: campos vazios não chamam a API', async () => {
+  it('campos vazios não bloqueiam o envio: o 422 por campo do backend aparece em cada campo', async () => {
+    mockAuthApi();
     let calls = 0;
-    server.use(
-      http.post(API('/auth/login'), () => {
-        calls += 1;
-        return ok(null);
-      }),
-    );
+    server.events.on('request:start', ({ request }) => {
+      if (request.url.endsWith('/auth/login')) calls += 1;
+    });
     renderApp('/login');
     const user = userEvent.setup();
     await user.click(await screen.findByRole('button', { name: 'Entrar' }));
-    expect(screen.getByLabelText(/E-mail/)).toHaveAccessibleDescription('Informe o e-mail.');
-    expect(screen.getByLabelText(/^Senha/)).toHaveAccessibleDescription('Informe a senha.');
-    expect(calls).toBe(0);
+    const login = await loginField();
+    await waitFor(() => expect(login).toHaveAttribute('aria-invalid', 'true'));
+    expect(calls).toBe(1);
+    expect(login).toHaveAccessibleDescription('O campo e-mail ou usuário é obrigatório.');
+    expect(screen.getByLabelText(/^Senha/)).toHaveAccessibleDescription(
+      'O campo senha é obrigatório.',
+    );
+    expect(screen.queryByRole('alert')).not.toBeInTheDocument();
+
+    // Só a senha vazia: o erro fica só nela.
+    await user.type(login, 'anasouza');
+    await user.click(screen.getByRole('button', { name: 'Entrar' }));
+    await waitFor(() => expect(login).not.toHaveAttribute('aria-invalid'));
+    expect(screen.getByLabelText(/^Senha/)).toHaveAttribute('aria-invalid', 'true');
+    server.events.removeAllListeners();
   });
 
   it('mostrar/ocultar senha', async () => {
@@ -186,7 +229,7 @@ describe('Login', () => {
   it('não tem violações de acessibilidade (inicial e com erro)', async () => {
     mockAuthApi();
     const { container } = renderApp('/login');
-    await screen.findByLabelText(/E-mail/);
+    await loginField();
     expect(await axe(container)).toHaveNoViolations();
     await fillAndSubmit('ana@example.com', 'errada');
     await screen.findByRole('alert');
@@ -245,7 +288,14 @@ describe('Guardas de rota', () => {
         fails
           ? fail(500, 'Erro interno do servidor.')
           : ok({
-              user: { id: 1, name: 'Ana Souza', email: 'a@x', role: 'admin', branch: null },
+              user: {
+                id: 1,
+                name: 'Ana Souza',
+                username: 'anasouza',
+                email: 'a@x',
+                role: 'admin',
+                branch: null,
+              },
               employee: null,
               permissions: ['equipments.view'],
             }),

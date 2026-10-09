@@ -47,6 +47,7 @@ export function makeUser(role: Role = 'admin'): AuthUser {
   return {
     id: 1,
     name: 'Ana Souza',
+    username: 'anasouza',
     email: 'ana@example.com',
     role,
     branch: role === 'admin' ? null : MATRIZ,
@@ -67,16 +68,27 @@ export const fail = (
 
 export const futureIso = (ms = 12 * 3600_000) => new Date(Date.now() + ms).toISOString();
 
-/** Handlers de auth: login aceita `senha-correta`, /me responde conforme o perfil. */
+export const INVALID_DATA = 'Os dados informados são inválidos.';
+export const INVALID_CREDENTIALS = 'Credenciais inválidas.';
+
+/**
+ * Handlers de auth (contrato v1.7 da D.2): `login` aceita o e-mail ou o username (trim +
+ * minúsculas) com `senha-correta`; vazio → 422 por campo; credencial errada → 422 genérico em
+ * `errors.login`. /me responde conforme o perfil.
+ */
 export function mockAuthApi(role: Role = 'admin', opts: { expiresAt?: string } = {}) {
   const user = makeUser(role);
   server.use(
     http.post(API('/auth/login'), async ({ request }) => {
-      const body = (await request.json()) as { password?: string };
-      if (body.password !== 'senha-correta') {
-        return fail(422, 'Os dados informados são inválidos.', {
-          email: ['Credenciais inválidas.'],
-        });
+      const body = (await request.json()) as { login?: string; password?: string };
+      const login = (body.login ?? '').trim().toLowerCase();
+      const required: Record<string, string[]> = {};
+      if (!login) required.login = ['O campo e-mail ou usuário é obrigatório.'];
+      if (!body.password) required.password = ['O campo senha é obrigatório.'];
+      if (Object.keys(required).length > 0) return fail(422, INVALID_DATA, required);
+      const known = login === user.email || login === user.username;
+      if (!known || body.password !== 'senha-correta') {
+        return fail(422, INVALID_DATA, { login: [INVALID_CREDENTIALS] });
       }
       return ok({
         token: 'tok-novo',

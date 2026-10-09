@@ -247,6 +247,837 @@
                 ]
             }
         },
+        "/branches": {
+            "get": {
+                "tags": [
+                    "Filiais"
+                ],
+                "summary": "Lista filiais",
+                "description": "Permissão: branches.view (todos os perfis; sem escopo de filial). Ordenação: code, name, type, is_active, created_at, updated_at (`-` = desc; padrão code).",
+                "operationId": "branchesIndex",
+                "parameters": [
+                    {
+                        "$ref": "#/components/parameters/Page"
+                    },
+                    {
+                        "$ref": "#/components/parameters/PerPage"
+                    },
+                    {
+                        "$ref": "#/components/parameters/Search"
+                    },
+                    {
+                        "name": "sort",
+                        "in": "query",
+                        "schema": {
+                            "type": "string",
+                            "example": "-created_at,name"
+                        }
+                    },
+                    {
+                        "name": "type",
+                        "in": "query",
+                        "schema": {
+                            "type": "string",
+                            "enum": [
+                                "filial",
+                                "garagem",
+                                "oficina"
+                            ]
+                        }
+                    },
+                    {
+                        "$ref": "#/components/parameters/IsActive"
+                    },
+                    {
+                        "$ref": "#/components/parameters/WithTrashed"
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Lista paginada.",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "allOf": [
+                                        {
+                                            "$ref": "#/components/schemas/Envelope"
+                                        },
+                                        {
+                                            "required": [
+                                                "meta"
+                                            ],
+                                            "properties": {
+                                                "data": {
+                                                    "type": "array",
+                                                    "items": {
+                                                        "$ref": "#/components/schemas/Branch"
+                                                    }
+                                                }
+                                            },
+                                            "type": "object"
+                                        }
+                                    ]
+                                }
+                            }
+                        }
+                    },
+                    "401": {
+                        "$ref": "#/components/responses/Unauthenticated"
+                    },
+                    "403": {
+                        "$ref": "#/components/responses/Forbidden"
+                    },
+                    "422": {
+                        "$ref": "#/components/responses/ValidationError"
+                    },
+                    "429": {
+                        "$ref": "#/components/responses/TooManyRequests"
+                    }
+                },
+                "security": [
+                    {
+                        "bearerAuth": []
+                    }
+                ]
+            },
+            "post": {
+                "tags": [
+                    "Filiais"
+                ],
+                "summary": "Cria filial",
+                "description": "Permissão: branches.manage. `code` duplicado entre registros ativos → 422.",
+                "operationId": "branchesStore",
+                "requestBody": {
+                    "required": true,
+                    "content": {
+                        "application/json": {
+                            "schema": {
+                                "$ref": "#/components/schemas/BranchInput"
+                            }
+                        }
+                    }
+                },
+                "responses": {
+                    "201": {
+                        "description": "Criada.",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/BranchEnvelope"
+                                }
+                            }
+                        }
+                    },
+                    "401": {
+                        "$ref": "#/components/responses/Unauthenticated"
+                    },
+                    "403": {
+                        "$ref": "#/components/responses/Forbidden"
+                    },
+                    "422": {
+                        "$ref": "#/components/responses/ValidationError"
+                    },
+                    "429": {
+                        "$ref": "#/components/responses/TooManyRequests"
+                    }
+                },
+                "security": [
+                    {
+                        "bearerAuth": []
+                    }
+                ]
+            }
+        },
+        "/branches/{branch}": {
+            "get": {
+                "tags": [
+                    "Filiais"
+                ],
+                "summary": "Detalha filial",
+                "description": "Permissão: branches.view. Filial excluída → 404.",
+                "operationId": "branchesShow",
+                "parameters": [
+                    {
+                        "name": "branch",
+                        "in": "path",
+                        "required": true,
+                        "schema": {
+                            "type": "integer"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Filial.",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/BranchEnvelope"
+                                }
+                            }
+                        }
+                    },
+                    "401": {
+                        "$ref": "#/components/responses/Unauthenticated"
+                    },
+                    "403": {
+                        "$ref": "#/components/responses/Forbidden"
+                    },
+                    "404": {
+                        "$ref": "#/components/responses/NotFound"
+                    },
+                    "429": {
+                        "$ref": "#/components/responses/TooManyRequests"
+                    }
+                },
+                "security": [
+                    {
+                        "bearerAuth": []
+                    }
+                ]
+            },
+            "put": {
+                "tags": [
+                    "Filiais"
+                ],
+                "summary": "Atualiza filial (parcial; PUT = PATCH)",
+                "description": "Permissão: branches.manage. Só os campos enviados são validados e gravados.",
+                "operationId": "branchesUpdate",
+                "parameters": [
+                    {
+                        "name": "branch",
+                        "in": "path",
+                        "required": true,
+                        "schema": {
+                            "type": "integer"
+                        }
+                    }
+                ],
+                "requestBody": {
+                    "required": true,
+                    "content": {
+                        "application/json": {
+                            "schema": {
+                                "$ref": "#/components/schemas/BranchInput"
+                            }
+                        }
+                    }
+                },
+                "responses": {
+                    "200": {
+                        "description": "Atualizada.",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/BranchEnvelope"
+                                }
+                            }
+                        }
+                    },
+                    "401": {
+                        "$ref": "#/components/responses/Unauthenticated"
+                    },
+                    "403": {
+                        "$ref": "#/components/responses/Forbidden"
+                    },
+                    "404": {
+                        "$ref": "#/components/responses/NotFound"
+                    },
+                    "422": {
+                        "$ref": "#/components/responses/ValidationError"
+                    },
+                    "429": {
+                        "$ref": "#/components/responses/TooManyRequests"
+                    }
+                },
+                "security": [
+                    {
+                        "bearerAuth": []
+                    }
+                ]
+            },
+            "delete": {
+                "tags": [
+                    "Filiais"
+                ],
+                "summary": "Exclui filial (soft delete)",
+                "description": "Permissão: branches.manage. 409 se houver centros de custo ou usuários ativos (não excluídos) vinculados; equipamentos e colaboradores entram nas F1-14/15.",
+                "operationId": "branchesDestroy",
+                "parameters": [
+                    {
+                        "name": "branch",
+                        "in": "path",
+                        "required": true,
+                        "schema": {
+                            "type": "integer"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Excluída (`data` null).",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/Envelope"
+                                }
+                            }
+                        }
+                    },
+                    "401": {
+                        "$ref": "#/components/responses/Unauthenticated"
+                    },
+                    "403": {
+                        "$ref": "#/components/responses/Forbidden"
+                    },
+                    "404": {
+                        "$ref": "#/components/responses/NotFound"
+                    },
+                    "409": {
+                        "description": "Dependentes ativos.",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/DeleteConflictEnvelope"
+                                }
+                            }
+                        }
+                    },
+                    "429": {
+                        "$ref": "#/components/responses/TooManyRequests"
+                    }
+                },
+                "security": [
+                    {
+                        "bearerAuth": []
+                    }
+                ]
+            },
+            "patch": {
+                "tags": [
+                    "Filiais"
+                ],
+                "summary": "Atualiza filial (parcial; igual ao PUT)",
+                "operationId": "branchesPatch",
+                "parameters": [
+                    {
+                        "name": "branch",
+                        "in": "path",
+                        "required": true,
+                        "schema": {
+                            "type": "integer"
+                        }
+                    }
+                ],
+                "requestBody": {
+                    "required": true,
+                    "content": {
+                        "application/json": {
+                            "schema": {
+                                "$ref": "#/components/schemas/BranchInput"
+                            }
+                        }
+                    }
+                },
+                "responses": {
+                    "200": {
+                        "description": "Atualizada.",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/BranchEnvelope"
+                                }
+                            }
+                        }
+                    },
+                    "401": {
+                        "$ref": "#/components/responses/Unauthenticated"
+                    },
+                    "403": {
+                        "$ref": "#/components/responses/Forbidden"
+                    },
+                    "404": {
+                        "$ref": "#/components/responses/NotFound"
+                    },
+                    "422": {
+                        "$ref": "#/components/responses/ValidationError"
+                    },
+                    "429": {
+                        "$ref": "#/components/responses/TooManyRequests"
+                    }
+                },
+                "security": [
+                    {
+                        "bearerAuth": []
+                    }
+                ]
+            }
+        },
+        "/branches/{branch}/restore": {
+            "post": {
+                "tags": [
+                    "Filiais"
+                ],
+                "summary": "Restaura filial excluída",
+                "description": "Permissão: branches.manage. 409 se não estiver excluída ou se o código já estiver em uso por uma filial ativa.",
+                "operationId": "branchesRestore",
+                "parameters": [
+                    {
+                        "name": "branch",
+                        "in": "path",
+                        "required": true,
+                        "schema": {
+                            "type": "integer"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Restaurada.",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/BranchEnvelope"
+                                }
+                            }
+                        }
+                    },
+                    "401": {
+                        "$ref": "#/components/responses/Unauthenticated"
+                    },
+                    "403": {
+                        "$ref": "#/components/responses/Forbidden"
+                    },
+                    "404": {
+                        "$ref": "#/components/responses/NotFound"
+                    },
+                    "409": {
+                        "$ref": "#/components/responses/Conflict"
+                    },
+                    "429": {
+                        "$ref": "#/components/responses/TooManyRequests"
+                    }
+                },
+                "security": [
+                    {
+                        "bearerAuth": []
+                    }
+                ]
+            }
+        },
+        "/cost-centers": {
+            "get": {
+                "tags": [
+                    "Centros de custo"
+                ],
+                "summary": "Lista centros de custo",
+                "description": "Permissão: cost_centers.view (L e A). Escopo: não-admin vê os da própria filial + os sem filial. Ordenação: code, name, is_active, created_at, updated_at (`-` = desc; padrão code).",
+                "operationId": "costCentersIndex",
+                "parameters": [
+                    {
+                        "$ref": "#/components/parameters/Page"
+                    },
+                    {
+                        "$ref": "#/components/parameters/PerPage"
+                    },
+                    {
+                        "$ref": "#/components/parameters/Search"
+                    },
+                    {
+                        "name": "sort",
+                        "in": "query",
+                        "schema": {
+                            "type": "string",
+                            "example": "-created_at,name"
+                        }
+                    },
+                    {
+                        "name": "branch_id",
+                        "in": "query",
+                        "schema": {
+                            "type": "integer"
+                        }
+                    },
+                    {
+                        "$ref": "#/components/parameters/IsActive"
+                    },
+                    {
+                        "$ref": "#/components/parameters/WithTrashed"
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Lista paginada.",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "allOf": [
+                                        {
+                                            "$ref": "#/components/schemas/Envelope"
+                                        },
+                                        {
+                                            "required": [
+                                                "meta"
+                                            ],
+                                            "properties": {
+                                                "data": {
+                                                    "type": "array",
+                                                    "items": {
+                                                        "$ref": "#/components/schemas/CostCenter"
+                                                    }
+                                                }
+                                            },
+                                            "type": "object"
+                                        }
+                                    ]
+                                }
+                            }
+                        }
+                    },
+                    "401": {
+                        "$ref": "#/components/responses/Unauthenticated"
+                    },
+                    "403": {
+                        "$ref": "#/components/responses/Forbidden"
+                    },
+                    "422": {
+                        "$ref": "#/components/responses/ValidationError"
+                    },
+                    "429": {
+                        "$ref": "#/components/responses/TooManyRequests"
+                    }
+                },
+                "security": [
+                    {
+                        "bearerAuth": []
+                    }
+                ]
+            },
+            "post": {
+                "tags": [
+                    "Centros de custo"
+                ],
+                "summary": "Cria centro de custo",
+                "description": "Permissão: cost_centers.manage. `code` duplicado entre registros ativos → 422; filial inexistente ou excluída → 422.",
+                "operationId": "costCentersStore",
+                "requestBody": {
+                    "required": true,
+                    "content": {
+                        "application/json": {
+                            "schema": {
+                                "$ref": "#/components/schemas/CostCenterInput"
+                            }
+                        }
+                    }
+                },
+                "responses": {
+                    "201": {
+                        "description": "Criada.",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/CostCenterEnvelope"
+                                }
+                            }
+                        }
+                    },
+                    "401": {
+                        "$ref": "#/components/responses/Unauthenticated"
+                    },
+                    "403": {
+                        "$ref": "#/components/responses/Forbidden"
+                    },
+                    "422": {
+                        "$ref": "#/components/responses/ValidationError"
+                    },
+                    "429": {
+                        "$ref": "#/components/responses/TooManyRequests"
+                    }
+                },
+                "security": [
+                    {
+                        "bearerAuth": []
+                    }
+                ]
+            }
+        },
+        "/cost-centers/{cost_center}": {
+            "get": {
+                "tags": [
+                    "Centros de custo"
+                ],
+                "summary": "Detalha centro de custo",
+                "description": "Permissão: cost_centers.view. Excluído ou fora do escopo de filial → 404.",
+                "operationId": "costCentersShow",
+                "parameters": [
+                    {
+                        "name": "cost_center",
+                        "in": "path",
+                        "required": true,
+                        "schema": {
+                            "type": "integer"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Filial.",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/CostCenterEnvelope"
+                                }
+                            }
+                        }
+                    },
+                    "401": {
+                        "$ref": "#/components/responses/Unauthenticated"
+                    },
+                    "403": {
+                        "$ref": "#/components/responses/Forbidden"
+                    },
+                    "404": {
+                        "$ref": "#/components/responses/NotFound"
+                    },
+                    "429": {
+                        "$ref": "#/components/responses/TooManyRequests"
+                    }
+                },
+                "security": [
+                    {
+                        "bearerAuth": []
+                    }
+                ]
+            },
+            "put": {
+                "tags": [
+                    "Centros de custo"
+                ],
+                "summary": "Atualiza centro de custo (parcial; PUT = PATCH)",
+                "description": "Permissão: cost_centers.manage. Só os campos enviados são validados e gravados.",
+                "operationId": "costCentersUpdate",
+                "parameters": [
+                    {
+                        "name": "cost_center",
+                        "in": "path",
+                        "required": true,
+                        "schema": {
+                            "type": "integer"
+                        }
+                    }
+                ],
+                "requestBody": {
+                    "required": true,
+                    "content": {
+                        "application/json": {
+                            "schema": {
+                                "$ref": "#/components/schemas/CostCenterInput"
+                            }
+                        }
+                    }
+                },
+                "responses": {
+                    "200": {
+                        "description": "Atualizada.",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/CostCenterEnvelope"
+                                }
+                            }
+                        }
+                    },
+                    "401": {
+                        "$ref": "#/components/responses/Unauthenticated"
+                    },
+                    "403": {
+                        "$ref": "#/components/responses/Forbidden"
+                    },
+                    "404": {
+                        "$ref": "#/components/responses/NotFound"
+                    },
+                    "422": {
+                        "$ref": "#/components/responses/ValidationError"
+                    },
+                    "429": {
+                        "$ref": "#/components/responses/TooManyRequests"
+                    }
+                },
+                "security": [
+                    {
+                        "bearerAuth": []
+                    }
+                ]
+            },
+            "delete": {
+                "tags": [
+                    "Centros de custo"
+                ],
+                "summary": "Exclui centro de custo (soft delete)",
+                "description": "Permissão: cost_centers.manage. 409 se houver equipamentos ou colaboradores ativos vinculados (regras ativadas nas F1-14/15).",
+                "operationId": "costCentersDestroy",
+                "parameters": [
+                    {
+                        "name": "cost_center",
+                        "in": "path",
+                        "required": true,
+                        "schema": {
+                            "type": "integer"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Excluída (`data` null).",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/Envelope"
+                                }
+                            }
+                        }
+                    },
+                    "401": {
+                        "$ref": "#/components/responses/Unauthenticated"
+                    },
+                    "403": {
+                        "$ref": "#/components/responses/Forbidden"
+                    },
+                    "404": {
+                        "$ref": "#/components/responses/NotFound"
+                    },
+                    "409": {
+                        "description": "Dependentes ativos.",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/DeleteConflictEnvelope"
+                                }
+                            }
+                        }
+                    },
+                    "429": {
+                        "$ref": "#/components/responses/TooManyRequests"
+                    }
+                },
+                "security": [
+                    {
+                        "bearerAuth": []
+                    }
+                ]
+            },
+            "patch": {
+                "tags": [
+                    "Centros de custo"
+                ],
+                "summary": "Atualiza centro de custo (parcial; igual ao PUT)",
+                "operationId": "costCentersPatch",
+                "parameters": [
+                    {
+                        "name": "cost_center",
+                        "in": "path",
+                        "required": true,
+                        "schema": {
+                            "type": "integer"
+                        }
+                    }
+                ],
+                "requestBody": {
+                    "required": true,
+                    "content": {
+                        "application/json": {
+                            "schema": {
+                                "$ref": "#/components/schemas/CostCenterInput"
+                            }
+                        }
+                    }
+                },
+                "responses": {
+                    "200": {
+                        "description": "Atualizada.",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/CostCenterEnvelope"
+                                }
+                            }
+                        }
+                    },
+                    "401": {
+                        "$ref": "#/components/responses/Unauthenticated"
+                    },
+                    "403": {
+                        "$ref": "#/components/responses/Forbidden"
+                    },
+                    "404": {
+                        "$ref": "#/components/responses/NotFound"
+                    },
+                    "422": {
+                        "$ref": "#/components/responses/ValidationError"
+                    },
+                    "429": {
+                        "$ref": "#/components/responses/TooManyRequests"
+                    }
+                },
+                "security": [
+                    {
+                        "bearerAuth": []
+                    }
+                ]
+            }
+        },
+        "/cost-centers/{cost_center}/restore": {
+            "post": {
+                "tags": [
+                    "Centros de custo"
+                ],
+                "summary": "Restaura centro de custo excluído",
+                "description": "Permissão: cost_centers.manage. 409 se não estiver excluído, se o código já estiver em uso por um centro de custo ativo ou se a filial vinculada estiver excluída.",
+                "operationId": "costCentersRestore",
+                "parameters": [
+                    {
+                        "name": "cost_center",
+                        "in": "path",
+                        "required": true,
+                        "schema": {
+                            "type": "integer"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Restaurada.",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/CostCenterEnvelope"
+                                }
+                            }
+                        }
+                    },
+                    "401": {
+                        "$ref": "#/components/responses/Unauthenticated"
+                    },
+                    "403": {
+                        "$ref": "#/components/responses/Forbidden"
+                    },
+                    "404": {
+                        "$ref": "#/components/responses/NotFound"
+                    },
+                    "409": {
+                        "$ref": "#/components/responses/Conflict"
+                    },
+                    "429": {
+                        "$ref": "#/components/responses/TooManyRequests"
+                    }
+                },
+                "security": [
+                    {
+                        "bearerAuth": []
+                    }
+                ]
+            }
+        },
         "/health": {
             "get": {
                 "tags": [
@@ -309,12 +1140,12 @@
                 "tags": [
                     "Infra"
                 ],
-                "summary": "Enums e metadados para selects (esqueleto)",
-                "description": "Esqueleto (vazio até os cadastros). Perfil: qualquer autenticado.",
+                "summary": "Enums e metadados para selects",
+                "description": "Enums para selects; cresce com os cadastros. Perfil: qualquer autenticado.",
                 "operationId": "metaEnums",
                 "responses": {
                     "200": {
-                        "description": "Enums disponíveis (vazio por enquanto).",
+                        "description": "Enums disponíveis.",
                         "content": {
                             "application/json": {
                                 "schema": {
@@ -327,6 +1158,22 @@
                                                 "data": {
                                                     "properties": {
                                                         "enums": {
+                                                            "required": [
+                                                                "branch_types"
+                                                            ],
+                                                            "properties": {
+                                                                "branch_types": {
+                                                                    "type": "array",
+                                                                    "items": {
+                                                                        "type": "string",
+                                                                        "enum": [
+                                                                            "filial",
+                                                                            "garagem",
+                                                                            "oficina"
+                                                                        ]
+                                                                    }
+                                                                }
+                                                            },
                                                             "type": "object"
                                                         }
                                                     },
@@ -419,6 +1266,127 @@
                 },
                 "type": "object"
             },
+            "BranchInput": {
+                "description": "Create: code, name e type obrigatórios. Update (PUT = PATCH): parcial, só os campos enviados. `code` é gravado sem espaços nas pontas e em maiúsculas; `state` em maiúsculas.",
+                "properties": {
+                    "code": {
+                        "type": "string",
+                        "example": "FIL-001",
+                        "maxLength": 20
+                    },
+                    "name": {
+                        "type": "string",
+                        "example": "Matriz",
+                        "maxLength": 120
+                    },
+                    "type": {
+                        "type": "string",
+                        "enum": [
+                            "filial",
+                            "garagem",
+                            "oficina"
+                        ]
+                    },
+                    "city": {
+                        "type": "string",
+                        "nullable": true,
+                        "maxLength": 80
+                    },
+                    "state": {
+                        "type": "string",
+                        "nullable": true,
+                        "enum": [
+                            "AC",
+                            "AL",
+                            "AP",
+                            "AM",
+                            "BA",
+                            "CE",
+                            "DF",
+                            "ES",
+                            "GO",
+                            "MA",
+                            "MT",
+                            "MS",
+                            "MG",
+                            "PA",
+                            "PB",
+                            "PR",
+                            "PE",
+                            "PI",
+                            "RJ",
+                            "RN",
+                            "RS",
+                            "RO",
+                            "RR",
+                            "SC",
+                            "SP",
+                            "SE",
+                            "TO"
+                        ]
+                    },
+                    "is_active": {
+                        "type": "boolean",
+                        "default": true
+                    }
+                },
+                "type": "object"
+            },
+            "BranchEnvelope": {
+                "allOf": [
+                    {
+                        "$ref": "#/components/schemas/Envelope"
+                    },
+                    {
+                        "properties": {
+                            "data": {
+                                "$ref": "#/components/schemas/Branch"
+                            }
+                        },
+                        "type": "object"
+                    }
+                ]
+            },
+            "CostCenterInput": {
+                "description": "Create: code e name obrigatórios. Update (PUT = PATCH): parcial. `code` é gravado sem espaços nas pontas e em maiúsculas. `branch_id` deve ser filial existente e não excluída (inativa é aceita); null = sem filial.",
+                "properties": {
+                    "code": {
+                        "type": "string",
+                        "example": "CC-0101",
+                        "maxLength": 30
+                    },
+                    "name": {
+                        "type": "string",
+                        "example": "Manutenção pesada",
+                        "maxLength": 120
+                    },
+                    "branch_id": {
+                        "type": "integer",
+                        "example": 1,
+                        "nullable": true
+                    },
+                    "is_active": {
+                        "type": "boolean",
+                        "default": true
+                    }
+                },
+                "type": "object"
+            },
+            "CostCenterEnvelope": {
+                "allOf": [
+                    {
+                        "$ref": "#/components/schemas/Envelope"
+                    },
+                    {
+                        "properties": {
+                            "data": {
+                                "$ref": "#/components/schemas/CostCenter"
+                            }
+                        },
+                        "type": "object"
+                    }
+                ]
+            },
             "HealthData": {
                 "required": [
                     "app",
@@ -450,6 +1418,176 @@
                     "version": {
                         "type": "string",
                         "example": "0.1.0"
+                    }
+                },
+                "type": "object"
+            },
+            "Branch": {
+                "required": [
+                    "id",
+                    "code",
+                    "name",
+                    "type",
+                    "city",
+                    "state",
+                    "is_active",
+                    "created_at",
+                    "updated_at",
+                    "deleted_at"
+                ],
+                "properties": {
+                    "id": {
+                        "type": "integer",
+                        "example": 1
+                    },
+                    "code": {
+                        "type": "string",
+                        "example": "FIL-001",
+                        "maxLength": 20
+                    },
+                    "name": {
+                        "type": "string",
+                        "example": "Matriz",
+                        "maxLength": 120
+                    },
+                    "type": {
+                        "type": "string",
+                        "enum": [
+                            "filial",
+                            "garagem",
+                            "oficina"
+                        ]
+                    },
+                    "city": {
+                        "type": "string",
+                        "example": "Goiânia",
+                        "nullable": true,
+                        "maxLength": 80
+                    },
+                    "state": {
+                        "type": "string",
+                        "example": "GO",
+                        "nullable": true,
+                        "enum": [
+                            "AC",
+                            "AL",
+                            "AP",
+                            "AM",
+                            "BA",
+                            "CE",
+                            "DF",
+                            "ES",
+                            "GO",
+                            "MA",
+                            "MT",
+                            "MS",
+                            "MG",
+                            "PA",
+                            "PB",
+                            "PR",
+                            "PE",
+                            "PI",
+                            "RJ",
+                            "RN",
+                            "RS",
+                            "RO",
+                            "RR",
+                            "SC",
+                            "SP",
+                            "SE",
+                            "TO"
+                        ]
+                    },
+                    "is_active": {
+                        "type": "boolean"
+                    },
+                    "created_at": {
+                        "type": "string",
+                        "format": "date-time",
+                        "nullable": true
+                    },
+                    "updated_at": {
+                        "type": "string",
+                        "format": "date-time",
+                        "nullable": true
+                    },
+                    "deleted_at": {
+                        "description": "Sempre presente; null quando ativo.",
+                        "type": "string",
+                        "format": "date-time",
+                        "nullable": true
+                    }
+                },
+                "type": "object"
+            },
+            "CostCenter": {
+                "required": [
+                    "id",
+                    "code",
+                    "name",
+                    "branch",
+                    "is_active",
+                    "created_at",
+                    "updated_at",
+                    "deleted_at"
+                ],
+                "properties": {
+                    "id": {
+                        "type": "integer",
+                        "example": 1
+                    },
+                    "code": {
+                        "type": "string",
+                        "example": "CC-0101",
+                        "maxLength": 30
+                    },
+                    "name": {
+                        "type": "string",
+                        "example": "Manutenção pesada",
+                        "maxLength": 120
+                    },
+                    "branch": {
+                        "description": "Filial `{id, code, name}`; null = sem filial (visível a todas).",
+                        "required": [
+                            "id",
+                            "code",
+                            "name"
+                        ],
+                        "properties": {
+                            "id": {
+                                "type": "integer",
+                                "example": 1
+                            },
+                            "code": {
+                                "type": "string",
+                                "example": "FIL-001"
+                            },
+                            "name": {
+                                "type": "string",
+                                "example": "Matriz"
+                            }
+                        },
+                        "type": "object",
+                        "nullable": true
+                    },
+                    "is_active": {
+                        "type": "boolean"
+                    },
+                    "created_at": {
+                        "type": "string",
+                        "format": "date-time",
+                        "nullable": true
+                    },
+                    "updated_at": {
+                        "type": "string",
+                        "format": "date-time",
+                        "nullable": true
+                    },
+                    "deleted_at": {
+                        "description": "Sempre presente; null quando ativo.",
+                        "type": "string",
+                        "format": "date-time",
+                        "nullable": true
                     }
                 },
                 "type": "object"
@@ -650,6 +1788,46 @@
                     }
                 },
                 "type": "object"
+            },
+            "DeleteConflictEnvelope": {
+                "description": "Exclusão bloqueada por dependentes ativos (409): `errors.dependents` lista os tipos.",
+                "required": [
+                    "status",
+                    "message",
+                    "errors",
+                    "data"
+                ],
+                "properties": {
+                    "status": {
+                        "type": "string",
+                        "enum": [
+                            "error"
+                        ]
+                    },
+                    "message": {
+                        "type": "string",
+                        "example": "Não é possível excluir: existem registros ativos vinculados (centros de custo)."
+                    },
+                    "errors": {
+                        "type": "object",
+                        "example": {
+                            "dependents": [
+                                "cost_centers"
+                            ]
+                        },
+                        "nullable": true,
+                        "additionalProperties": {
+                            "type": "array",
+                            "items": {
+                                "type": "string"
+                            }
+                        }
+                    },
+                    "data": {
+                        "example": null
+                    }
+                },
+                "type": "object"
             }
         },
         "responses": {
@@ -732,6 +1910,62 @@
                 }
             }
         },
+        "parameters": {
+            "Page": {
+                "name": "page",
+                "in": "query",
+                "description": "Página (1..n).",
+                "schema": {
+                    "type": "integer",
+                    "default": 1,
+                    "minimum": 1
+                }
+            },
+            "PerPage": {
+                "name": "per_page",
+                "in": "query",
+                "description": "Itens por página: máx. 100; até 200 com `is_active=1` (selects).",
+                "schema": {
+                    "type": "integer",
+                    "default": 15,
+                    "maximum": 200,
+                    "minimum": 1
+                }
+            },
+            "Search": {
+                "name": "q",
+                "in": "query",
+                "description": "Busca textual (contém, sem diferenciar maiúsculas; `%` e `_` são literais).",
+                "schema": {
+                    "type": "string",
+                    "maxLength": 100
+                }
+            },
+            "WithTrashed": {
+                "name": "with_trashed",
+                "in": "query",
+                "description": "Inclui registros excluídos (soft delete). Exige `*.manage` do recurso; sem ela → 403.",
+                "schema": {
+                    "type": "integer",
+                    "enum": [
+                        0,
+                        1
+                    ]
+                }
+            },
+            "IsActive": {
+                "name": "is_active",
+                "in": "query",
+                "description": "Filtra por ativo (1) / inativo (0).",
+                "schema": {
+                    "type": "integer",
+                    "enum": [
+                        0,
+                        1
+                    ]
+                }
+            }
+        },
         "securitySchemes": {
             "bearerAuth": {
                 "type": "http",
@@ -745,6 +1979,14 @@
         {
             "name": "Auth",
             "description": "Auth"
+        },
+        {
+            "name": "Filiais",
+            "description": "Filiais"
+        },
+        {
+            "name": "Centros de custo",
+            "description": "Centros de custo"
         },
         {
             "name": "Infra",

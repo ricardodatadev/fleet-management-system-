@@ -15,4 +15,17 @@ return [
     '503' => 'Serviço indisponível.',
     'health_down' => 'Um ou mais componentes estão indisponíveis.',
     'generic' => 'Não foi possível processar a requisição.',
+    'deleted' => 'Registro excluído.',
+    'restored' => 'Registro restaurado.',
+    'updated' => 'Registro atualizado.',
+    'delete_has_dependents' => 'Não é possível excluir: existem registros ativos vinculados (:list).',
+    'restore_not_deleted' => 'O registro não está excluído.',
+    'restore_code_taken' => 'Não é possível restaurar: o código já está em uso por outro registro ativo.',
+    'restore_branch_deleted' => 'Não é possível restaurar: a filial vinculada está excluída.',
+    'dependents' => [
+        'cost_centers' => 'centros de custo',
+        'users' => 'usuários',
+        'employees' => 'colaboradores',
+        'equipments' => 'equipamentos',
+    ],
 ];

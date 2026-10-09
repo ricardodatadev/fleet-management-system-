@@ -3,6 +3,7 @@
 use App\Enums\Role;
 use App\Models\AuditLog;
 use App\Models\Branch;
+use App\Models\CostCenter;
 use App\Models\User;
 use App\Support\Rbac\Rbac;
 use Database\Factories\UserFactory;
@@ -127,33 +128,72 @@ it('AuditLog: leitura só com audit.view e nenhuma escrita, nem para admin', fun
 /*
  * Camada 2 — perfil × rota × HTTP esperado, para as rotas existentes.
  * Regra da H ("RBAC em cada cadastro"): cada F1-11..16 acrescenta aqui as linhas das suas rotas.
+ * A URI é a da rota; os parâmetros {x} são trocados pelas fixtures de routeFixtures() (5º item: mapa
+ * parâmetro → fixture, quando a rota precisa de outra, ex.: restore usa o registro excluído).
  */
 function routeMatrix(): array
 {
     $all = array_fill_keys(MATRIX_ROLES, 200);
+    $adminOnly = fn (int $ok) => ['operator' => 403, 'mechanic' => 403, 'leader' => 403, 'admin' => $ok];
+    $leaderAndAdmin = ['operator' => 403, 'mechanic' => 403, 'leader' => 200, 'admin' => 200];
 
     return [
         ['GET', 'auth/me', [], $all],
         ['GET', 'meta/enums', [], $all],
         ['PUT', 'auth/password', ['current_password' => UserFactory::PASSWORD, 'password' => 'NovaSenha2026', 'password_confirmation' => 'NovaSenha2026'], $all],
         ['POST', 'auth/logout', [], $all],
+        // F1-12 — filiais (branches.view: todos; branches.manage: A)
+        ['GET', 'branches', [], $all],
+        ['POST', 'branches', ['code' => 'NOVA', 'name' => 'Nova', 'type' => 'filial'], $adminOnly(201)],
+        ['GET', 'branches/{branch}', [], $all],
+        ['PUT', 'branches/{branch}', ['name' => 'Renomeada'], $adminOnly(200)],
+        ['PATCH', 'branches/{branch}', ['name' => 'Renomeada'], $adminOnly(200)],
+        ['DELETE', 'branches/{branch}', [], $adminOnly(200)],
+        ['POST', 'branches/{branch}/restore', [], $adminOnly(200), ['branch' => 'trashed_branch']],
+        // F1-12 — centros de custo (cost_centers.view: L, A; manage: A). Fixture sem filial: visível ao L.
+        ['GET', 'cost-centers', [], $leaderAndAdmin],
+        ['POST', 'cost-centers', ['code' => 'CC-NOVO', 'name' => 'Novo'], $adminOnly(201)],
+        ['GET', 'cost-centers/{cost_center}', [], $leaderAndAdmin],
+        ['PUT', 'cost-centers/{cost_center}', ['name' => 'Renomeado'], $adminOnly(200)],
+        ['PATCH', 'cost-centers/{cost_center}', ['name' => 'Renomeado'], $adminOnly(200)],
+        ['DELETE', 'cost-centers/{cost_center}', [], $adminOnly(200)],
+        ['POST', 'cost-centers/{cost_center}/restore', [], $adminOnly(200), ['cost_center' => 'trashed_cost_center']],
+    ];
+}
+
+/** Registros usados nas rotas com {parâmetro}; criados por caso (banco limpo a cada teste). */
+function routeFixtures(): array
+{
+    $trashedBranch = Branch::factory()->create();
+    $trashedBranch->delete();
+    $trashedCostCenter = CostCenter::factory()->global()->create();
+    $trashedCostCenter->delete();
+
+    return [
+        'branch' => Branch::factory()->create()->id, // sem dependentes: pode ser excluída
+        'trashed_branch' => $trashedBranch->id,
+        'cost_center' => CostCenter::factory()->global()->create()->id,
+        'trashed_cost_center' => $trashedCostCenter->id,
     ];
 }
 
 function routeMatrixCases(): array
 {
     $cases = [];
-    foreach (routeMatrix() as [$method, $uri, $payload, $expected]) {
+    foreach (routeMatrix() as $row) {
+        [$method, $uri, $payload, $expected] = $row;
         foreach ($expected as $role => $status) {
-            $cases["{$role} {$method} /{$uri} → {$status}"] = [$role, $method, $uri, $payload, $status];
+            $cases["{$role} {$method} /{$uri} → {$status}"] = [$role, $method, $uri, $payload, $status, $row[4] ?? []];
         }
     }
 
     return $cases;
 }
 
-it('rotas: perfil × rota × HTTP esperado', function (string $role, string $method, string $uri, array $payload, int $status) {
+it('rotas: perfil × rota × HTTP esperado', function (string $role, string $method, string $uri, array $payload, int $status, array $params) {
     $user = userWithRole(Role::from($role), $role === 'admin' ? null : Branch::factory()->create());
+    $fixtures = routeFixtures();
+    $uri = preg_replace_callback('/\{(\w+)\}/', fn ($m) => (string) $fixtures[$params[$m[1]] ?? $m[1]], $uri);
 
     api($method, $uri, $payload, bearer($user))->assertStatus($status);
 })->with(routeMatrixCases());

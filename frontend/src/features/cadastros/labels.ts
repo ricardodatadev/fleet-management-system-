@@ -1,5 +1,5 @@
 import type { SelectOption } from '@/components/ui';
-import type { BranchType, Criticality, EquipmentCategory } from './types';
+import type { BranchType, Criticality, EquipmentCategory, JobType } from './types';
 
 /** Rótulos pt-BR dos enums de cadastro (a API devolve só os valores). */
 export const BRANCH_TYPE_LABELS: Record<BranchType, string> = {
@@ -21,6 +21,13 @@ export const CRITICALITY_LABELS: Record<Criticality, string> = {
   medium: 'Média',
   high: 'Alta',
   critical: 'Crítica',
+};
+
+export const JOB_TYPE_LABELS: Record<JobType, string> = {
+  driver: 'Motorista',
+  mechanic: 'Mecânico',
+  leader: 'Líder',
+  admin_staff: 'Equipe administrativa',
 };
 
 /** As 27 UFs (mesma lista validada pelo backend). */

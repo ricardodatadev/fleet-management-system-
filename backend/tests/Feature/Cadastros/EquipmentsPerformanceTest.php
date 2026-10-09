@@ -80,12 +80,17 @@ it('lista de 15 itens com 1.000 registros responde em < 300 ms (admin e líder c
 
     // sem N+1: o número de queries não cresce com per_page (as duas páginas têm itens com responsável;
     // com 1 item sem responsável o Laravel pula o eager load de colaboradores e faz uma query a menos)
-    $count = function (int $perPage) use ($admin): int {
+    $queries = function (int $perPage) use ($admin): array {
         DB::flushQueryLog();
         DB::enableQueryLog();
         api('GET', "equipments?per_page={$perPage}", token: $admin)->assertOk();
 
-        return count(DB::getQueryLog());
+        return collect(DB::getQueryLog())->pluck('query')->all();
     };
-    expect($count(60))->toBe($count(30));
+    // Relógio parado: o Sanctum só regrava last_used_at do token quando o segundo muda (query aleatória).
+    $this->freezeSecond();
+    $queries(1); // aquecimento
+    $small = $queries(30);
+    $large = $queries(60);
+    expect(count($large))->toBe(count($small), "queries a mais:\n".implode("\n", array_diff($large, $small)));
 });

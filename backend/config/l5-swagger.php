@@ -13,7 +13,8 @@ return [
     'documentations' => [
         'default' => [
             'api' => [
-                'title' => 'SIGOF-M API v1',
+                // Título da página do Swagger UI (marca vem do .env; ver docs/renaming.md).
+                'title' => env('APP_NAME', 'Laravel').' API v1',
             ],
 
             'routes' => [

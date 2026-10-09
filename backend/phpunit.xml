@@ -35,8 +35,8 @@
         <server name="CACHE_STORE" value="array" force="true"/>
         <env name="DB_CONNECTION" value="pgsql" force="true"/>
         <server name="DB_CONNECTION" value="pgsql" force="true"/>
-        <env name="DB_DATABASE" value="sigof_test" force="true"/>
-        <server name="DB_DATABASE" value="sigof_test" force="true"/>
+        <env name="DB_DATABASE" value="gof_test" force="true"/>
+        <server name="DB_DATABASE" value="gof_test" force="true"/>
         <env name="DB_URL" value=""/>
         <env name="MAIL_MAILER" value="array"/>
         <env name="QUEUE_CONNECTION" value="sync" force="true"/>

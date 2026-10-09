@@ -6,13 +6,15 @@ use OpenApi\Attributes as OA;
 
 /**
  * Definições globais da OpenAPI (info, servidor, segurança, schemas e respostas reutilizáveis).
- * Os endpoints são anotados nos próprios controllers.
+ * Os endpoints são anotados nos próprios controllers. O atributo não aceita expressão, então
+ * título e descrição usam os marcadores de OpenApiBuilder::BRAND_TOKENS, preenchidos com a
+ * marca do config (app.name / app.full_name) na geração.
  */
 #[OA\Info(
     version: '0.1.0',
-    title: 'SIGOF-M API',
+    title: '{app_name} API',
     license: new OA\License(name: 'Proprietary'),
-    description: 'API REST do SIGOF-M (Sistema Integrado de Gestão e Otimização de Frota e Manutenção). Todas as respostas, inclusive erros, usam o envelope {status, message, errors, data[, meta]}.',
+    description: 'API REST do {app_name} ({app_full_name}). Todas as respostas, inclusive erros, usam o envelope {status, message, errors, data[, meta]}.',
 )]
 #[OA\Server(url: '/api/v1', description: 'API v1 (mesma origem, via nginx)')]
 #[OA\SecurityScheme(

@@ -80,6 +80,18 @@ it('o openapi.json versionado é igual ao gerado (spec atualizada)', function ()
     expect($versioned)->toBe($generated, 'docs/api/openapi.json está desatualizado: rode `composer openapi` (make openapi).');
 });
 
+it('título e descrição da OpenAPI vêm da marca do config, sem marcador cru', function () {
+    $info = openApiSpec()['info'];
+    expect($info['title'])->toBe(config('app.name').' API');
+    expect($info['description'])->toContain(config('app.name'))->toContain(config('app.full_name'));
+    expect($info['title'].$info['description'])->not->toContain('{app_');
+
+    config(['app.name' => 'Frota X', 'app.full_name' => 'Frota X Operações']);
+    $rebranded = json_decode(app(OpenApiBuilder::class)->build(), true, 512, JSON_THROW_ON_ERROR)['info'];
+    expect($rebranded['title'])->toBe('Frota X API');
+    expect($rebranded['description'])->toStartWith('API REST do Frota X (Frota X Operações).');
+});
+
 it('Swagger UI não existe com L5_SWAGGER_ENABLED=false (404 no envelope)', function () {
     $this->getJson('/api/documentation')->assertNotFound()->assertJsonPath('status', 'error');
     $this->getJson('/api/documentation/spec')->assertNotFound();

@@ -1,8 +1,8 @@
 {
     "$schema": "https://getcomposer.org/schema.json",
-    "name": "sigof/backend",
+    "name": "gof/backend",
     "type": "project",
-    "description": "SIGOF-M backend (Laravel)",
+    "description": "Backend da API (Laravel)",
     "keywords": [
         "laravel",
         "framework"

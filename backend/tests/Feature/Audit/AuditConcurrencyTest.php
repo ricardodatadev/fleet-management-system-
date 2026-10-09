@@ -35,7 +35,7 @@ afterEach(fn () => wipeAuditLogs());
 it('2 processos concorrentes mantêm a cadeia de hash válida e sem forks', function () {
     $perWorker = 25;
     $env = [
-        'APP_ENV' => 'testing', 'DB_CONNECTION' => 'pgsql', 'DB_DATABASE' => 'sigof_test',
+        'APP_ENV' => 'testing', 'DB_CONNECTION' => 'pgsql', 'DB_DATABASE' => config('database.connections.pgsql.database'),
         'CACHE_STORE' => 'array', 'QUEUE_CONNECTION' => 'sync', 'SESSION_DRIVER' => 'array',
     ];
 

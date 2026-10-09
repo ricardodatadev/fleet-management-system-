@@ -1,8 +1,8 @@
 {
     "openapi": "3.0.0",
     "info": {
-        "title": "SIGOF-M API",
-        "description": "API REST do SIGOF-M (Sistema Integrado de Gestão e Otimização de Frota e Manutenção). Todas as respostas, inclusive erros, usam o envelope {status, message, errors, data[, meta]}.",
+        "title": "GOF API",
+        "description": "API REST do GOF (Gestão Operacional de Frotas). Todas as respostas, inclusive erros, usam o envelope {status, message, errors, data[, meta]}.",
         "license": {
             "name": "Proprietary"
         },
@@ -1660,7 +1660,7 @@
                 ],
                 "properties": {
                     "status": {
-                        "description": "Definições globais da OpenAPI (info, servidor, segurança, schemas e respostas reutilizáveis).\nOs endpoints são anotados nos próprios controllers.",
+                        "description": "Definições globais da OpenAPI (info, servidor, segurança, schemas e respostas reutilizáveis).\nOs endpoints são anotados nos próprios controllers. O atributo não aceita expressão, então\ntítulo e descrição usam os marcadores de OpenApiBuilder::BRAND_TOKENS, preenchidos com a\nmarca do config (app.name / app.full_name) na geração.",
                         "type": "string",
                         "enum": [
                             "success",

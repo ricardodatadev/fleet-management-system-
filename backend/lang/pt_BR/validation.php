@@ -228,6 +228,7 @@ return [
         'q' => 'busca',
         'sort' => 'ordenação',
         'with_trashed' => 'incluir excluídos',
+        'has_employee' => 'com colaborador vinculado',
         'auditable_type' => 'tipo de registro',
         'auditable_id' => 'registro',
         'actor_id' => 'autor',

@@ -15,7 +15,7 @@ use OpenApi\Attributes as OA;
  */
 #[OA\Schema(
     schema: 'User',
-    required: ['id', 'name', 'username', 'email', 'role', 'branch', 'is_active', 'last_login_at', 'created_at', 'updated_at', 'deleted_at'],
+    required: ['id', 'name', 'username', 'email', 'role', 'branch', 'employee', 'is_active', 'last_login_at', 'created_at', 'updated_at', 'deleted_at'],
     properties: [
         new OA\Property(property: 'id', type: 'integer', example: 1),
         new OA\Property(property: 'name', type: 'string', maxLength: 120, example: 'Ana Souza'),
@@ -32,6 +32,18 @@ use OpenApi\Attributes as OA;
                 new OA\Property(property: 'id', type: 'integer', example: 1),
                 new OA\Property(property: 'code', type: 'string', example: 'FIL-001'),
                 new OA\Property(property: 'name', type: 'string', example: 'Matriz'),
+            ],
+        ),
+        new OA\Property(
+            property: 'employee',
+            description: 'Colaborador vinculado (não excluído); null quando não há.',
+            type: 'object',
+            nullable: true,
+            required: ['id', 'registration', 'name'],
+            properties: [
+                new OA\Property(property: 'id', type: 'integer', example: 1),
+                new OA\Property(property: 'registration', type: 'string', example: 'MAT-00123'),
+                new OA\Property(property: 'name', type: 'string', example: 'João Pereira'),
             ],
         ),
         new OA\Property(property: 'is_active', type: 'boolean'),
@@ -52,6 +64,11 @@ class ManagedUserResource extends ApiResource
             'email' => $this->email,
             'role' => $this->role->value,
             'branch' => BranchResource::ref($this->branch),
+            'employee' => $this->employee === null ? null : [
+                'id' => $this->employee->id,
+                'registration' => $this->employee->registration,
+                'name' => $this->employee->name,
+            ],
             'is_active' => $this->is_active,
             'last_login_at' => $this->last_login_at?->toJSON(),
             'created_at' => $this->created_at?->toJSON(),

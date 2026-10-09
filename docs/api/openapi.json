@@ -1421,14 +1421,10 @@
                     {
                         "name": "job_type",
                         "in": "query",
+                        "description": "Um ou mais, separados por vírgula (ex.: `leader,admin_staff`); valor fora de driver, mechanic, leader e admin_staff em qualquer posição → 422.",
                         "schema": {
                             "type": "string",
-                            "enum": [
-                                "driver",
-                                "mechanic",
-                                "leader",
-                                "admin_staff"
-                            ]
+                            "example": "leader,admin_staff"
                         }
                     },
                     {
@@ -2937,6 +2933,18 @@
                         "in": "query",
                         "schema": {
                             "type": "integer"
+                        }
+                    },
+                    {
+                        "name": "has_employee",
+                        "in": "query",
+                        "description": "1 = com colaborador vinculado (não excluído); 0 = sem. Outro valor → 422.",
+                        "schema": {
+                            "type": "integer",
+                            "enum": [
+                                0,
+                                1
+                            ]
                         }
                     },
                     {
@@ -4752,6 +4760,7 @@
                     "email",
                     "role",
                     "branch",
+                    "employee",
                     "is_active",
                     "last_login_at",
                     "created_at",
@@ -4811,6 +4820,30 @@
                             "name": {
                                 "type": "string",
                                 "example": "Matriz"
+                            }
+                        },
+                        "type": "object",
+                        "nullable": true
+                    },
+                    "employee": {
+                        "description": "Colaborador vinculado (não excluído); null quando não há.",
+                        "required": [
+                            "id",
+                            "registration",
+                            "name"
+                        ],
+                        "properties": {
+                            "id": {
+                                "type": "integer",
+                                "example": 1
+                            },
+                            "registration": {
+                                "type": "string",
+                                "example": "MAT-00123"
+                            },
+                            "name": {
+                                "type": "string",
+                                "example": "João Pereira"
                             }
                         },
                         "type": "object",

@@ -15,11 +15,11 @@ use App\Models\User;
 use App\Support\Api\ApiResponse;
 use App\Support\Api\FieldMessage;
 use App\Support\Api\ListQuery;
+use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Gate;
-use Illuminate\Validation\Rule;
 use Illuminate\Validation\ValidationException;
 use OpenApi\Attributes as OA;
 
@@ -69,7 +69,7 @@ class EmployeeController extends Controller
             new OA\Parameter(ref: '#/components/parameters/PerPage'),
             new OA\Parameter(ref: '#/components/parameters/Search'),
             new OA\Parameter(name: 'sort', in: 'query', schema: new OA\Schema(type: 'string', example: '-created_at,name')),
-            new OA\Parameter(name: 'job_type', in: 'query', schema: new OA\Schema(type: 'string', enum: Employee::JOB_TYPES)),
+            new OA\Parameter(name: 'job_type', in: 'query', description: 'Um ou mais, separados por vírgula (ex.: `leader,admin_staff`); valor fora de driver, mechanic, leader e admin_staff em qualquer posição → 422.', schema: new OA\Schema(type: 'string', example: 'leader,admin_staff')),
             new OA\Parameter(name: 'branch_id', in: 'query', schema: new OA\Schema(type: 'integer')),
             new OA\Parameter(ref: '#/components/parameters/IsActive'),
             new OA\Parameter(ref: '#/components/parameters/WithTrashed'),
@@ -89,7 +89,13 @@ class EmployeeController extends Controller
     {
         $paginator = ListQuery::for($request, Employee::query()->with(['branch', 'costCenter', 'user']))
             ->search(['name', 'registration'])
-            ->filters(['job_type' => ['string', Rule::in(Employee::JOB_TYPES)], 'branch_id' => ['integer'], 'is_active' => ['boolean']])
+            ->filters(
+                ['job_type' => ['string', 'regex:'.self::jobTypeListPattern()], 'branch_id' => ['integer'], 'is_active' => ['boolean']],
+                // lista separada por vírgula (aba Equipe Adm = leader + admin_staff)
+                ['job_type' => function (Builder $q, string $value): void {
+                    $q->whereIn($q->getModel()->qualifyColumn('job_type'), array_unique(explode(',', $value)));
+                }],
+            )
             ->sortable(['name', 'registration', 'job_type', 'hired_at'], 'name')
             ->paginate();
 
@@ -240,6 +246,14 @@ class EmployeeController extends Controller
         $restored = $this->restoreGuarded($employee, fn (Model $locked) => $locked instanceof Employee ? $this->restoreConflict($locked) : null, 'registration');
 
         return ApiResponse::item(new EmployeeResource($restored->load(['branch', 'costCenter', 'user'])), __('api.restored'));
+    }
+
+    /** Um ou mais job_types válidos separados por vírgula, sem espaço nem vazio entre eles. */
+    private static function jobTypeListPattern(): string
+    {
+        $one = '('.implode('|', Employee::JOB_TYPES).')';
+
+        return "/^{$one}(,{$one})*$/";
     }
 
     /**

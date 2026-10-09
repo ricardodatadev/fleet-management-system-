@@ -47,7 +47,7 @@ it('cria (201) com branch embutido, e-mail em minúsculas, sem password/remember
         'branch' => ['id' => $this->x->id, 'code' => 'X', 'name' => 'Filial X'],
         'last_login_at' => null, 'deleted_at' => null,
     ]);
-    expect(array_keys($res->json('data')))->toBe(['id', 'name', 'username', 'email', 'role', 'branch', 'is_active', 'last_login_at', 'created_at', 'updated_at', 'deleted_at']);
+    expect(array_keys($res->json('data')))->toBe(['id', 'name', 'username', 'email', 'role', 'branch', 'employee', 'is_active', 'last_login_at', 'created_at', 'updated_at', 'deleted_at']);
 
     $log = AuditLog::query()->where('auditable_type', (new User)->getMorphClass())->where('auditable_id', $res->json('data.id'))->sole();
     expect($log->action)->toBe('created')->and($log->actor_id)->toBe($this->admin->id)

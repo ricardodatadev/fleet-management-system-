@@ -4,6 +4,46 @@
  */
 
 export interface paths {
+    "/audit-logs": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Lista o audit trail (somente leitura)
+         * @description Permissão: audit.view (A). Ordenação fixa: event_at desc, id desc (`sort` é ignorado). `from`/`to` em ISO 8601 sobre event_at, inclusivos; data sem hora = dia inteiro em UTC (`from` às 00:00, `to` até 23:59:59.999999); `from` > `to` → 422. Não há escrita: POST/PUT/PATCH/DELETE → 405.
+         */
+        get: operations["auditLogsIndex"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/audit-logs/{audit_log}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Detalha um evento do audit trail
+         * @description Permissão: audit.view (A). Inexistente → 404.
+         */
+        get: operations["auditLogsShow"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/auth/login": {
         parameters: {
             query?: never;
@@ -224,6 +264,79 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/equipment-families": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Lista famílias de equipamento
+         * @description Permissão: equipment_families.view (M, L e A; sem escopo de filial). Busca `q` em code e name. Ordenação: code, name, category, criticality (`-` = desc; padrão code); outro campo → 422.
+         */
+        get: operations["equipmentFamiliesIndex"];
+        put?: never;
+        /**
+         * Cria família de equipamento
+         * @description Permissão: equipment_families.manage. `code` duplicado entre registros ativos → 422; preventive_lead_pct fora de (0, 100] ou tolerância negativa → 422.
+         */
+        post: operations["equipmentFamiliesStore"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/equipment-families/{equipment_family}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Detalha família de equipamento
+         * @description Permissão: equipment_families.view. Família excluída → 404.
+         */
+        get: operations["equipmentFamiliesShow"];
+        /**
+         * Atualiza família de equipamento (parcial; PUT = PATCH)
+         * @description Permissão: equipment_families.manage. Só os campos enviados são validados e gravados.
+         */
+        put: operations["equipmentFamiliesUpdate"];
+        post?: never;
+        /**
+         * Exclui família de equipamento (soft delete)
+         * @description Permissão: equipment_families.manage. 409 (`errors.dependents=["equipments"]`) se houver equipamentos ativos, regra ativada na F1-15. Exclusão concorrente de família já excluída → 404.
+         */
+        delete: operations["equipmentFamiliesDestroy"];
+        options?: never;
+        head?: never;
+        /** Atualiza família de equipamento (parcial; igual ao PUT) */
+        patch: operations["equipmentFamiliesPatch"];
+        trace?: never;
+    };
+    "/equipment-families/{equipment_family}/restore": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Restaura família de equipamento excluída
+         * @description Permissão: equipment_families.manage. 409 se não estiver excluída ou se o código já estiver em uso por uma família ativa.
+         */
+        post: operations["equipmentFamiliesRestore"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/health": {
         parameters: {
             query?: never;
@@ -264,10 +377,86 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/users": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Lista usuários
+         * @description Permissão: users.view (A). Sem escopo de filial. Busca `q` em name e email. Ordenação: name, email, role, created_at, last_login_at (`-` = desc; padrão name).
+         */
+        get: operations["usersIndex"];
+        put?: never;
+        /**
+         * Cria usuário
+         * @description Permissão: users.manage. E-mail duplicado entre usuários ativos → 422; perfil não-admin sem `branch_id` → 422; filial inexistente ou excluída → 422.
+         */
+        post: operations["usersStore"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/users/{user}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Detalha usuário
+         * @description Permissão: users.view. Usuário excluído → 404.
+         */
+        get: operations["usersShow"];
+        /**
+         * Atualiza usuário (parcial; PUT = PATCH)
+         * @description Permissão: users.manage. Só os campos enviados são validados e gravados. Revoga todos os tokens do usuário ao trocar a senha de outro usuário ou ao desativá-lo (na própria senha, revoga os demais tokens). 409: alterar o próprio perfil, desativar a si mesmo, rebaixar ou desativar o último admin ativo.
+         */
+        put: operations["usersUpdate"];
+        post?: never;
+        /**
+         * Exclui usuário (soft delete)
+         * @description Permissão: users.manage. Revoga todos os tokens do usuário. 409: excluir a si mesmo ou o último admin ativo (o vínculo com colaborador entra na F1-14).
+         */
+        delete: operations["usersDestroy"];
+        options?: never;
+        head?: never;
+        /** Atualiza usuário (parcial; igual ao PUT) */
+        patch: operations["usersPatch"];
+        trace?: never;
+    };
+    "/users/{user}/restore": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Restaura usuário excluído
+         * @description Permissão: users.manage. 409 se não estiver excluído, se o e-mail já estiver em uso por um usuário ativo ou se a filial vinculada estiver excluída. Os tokens revogados na exclusão não voltam.
+         */
+        post: operations["usersRestore"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
 }
 export type webhooks = Record<string, never>;
 export interface components {
     schemas: {
+        AuditLogEnvelope: components["schemas"]["Envelope"] & {
+            data?: components["schemas"]["AuditLog"];
+        };
         LoginData: {
             /** @example 1|9fQk... */
             token: string;
@@ -327,6 +516,37 @@ export interface components {
         CostCenterEnvelope: components["schemas"]["Envelope"] & {
             data?: components["schemas"]["CostCenter"];
         };
+        /** @description Create: code, name e category obrigatórios; criticality (padrão medium) e preventive_lead_pct (padrão 90) opcionais. Update (PUT = PATCH): parcial. `code` é gravado sem espaços nas pontas e em maiúsculas. `preventive_lead_pct` em (0, 100] com até 2 casas; tolerâncias inteiras ≥ 0 ou null. */
+        EquipmentFamilyInput: {
+            /** @example CAM-PESADO */
+            code?: string;
+            /** @example Caminhões pesados */
+            name?: string;
+            /** @enum {string} */
+            category?: "light_vehicle" | "truck" | "agri_machine" | "implement" | "support";
+            /**
+             * @default medium
+             * @enum {string}
+             */
+            criticality: "low" | "medium" | "high" | "critical";
+            /**
+             * Format: float
+             * @default 90
+             * @example 87.5
+             */
+            preventive_lead_pct: number;
+            /** @example 500 */
+            tolerance_km?: number | null;
+            /** @example 20 */
+            tolerance_hours?: number | null;
+            /** @example 7 */
+            tolerance_days?: number | null;
+            /** @default true */
+            is_active: boolean;
+        };
+        EquipmentFamilyEnvelope: components["schemas"]["Envelope"] & {
+            data?: components["schemas"]["EquipmentFamily"];
+        };
         HealthData: {
             /** @enum {string} */
             app: "up";
@@ -336,6 +556,75 @@ export interface components {
             redis: "up" | "down";
             /** @example 0.1.0 */
             version: string;
+        };
+        /** @description Create: name, email, password e role obrigatórios. Update (PUT = PATCH): parcial. `email` é gravado em minúsculas e é único entre usuários não excluídos. `password`: mín. 10 caracteres, com maiúscula, minúscula e número. `branch_id` é obrigatório quando o perfil (enviado ou atual) não é admin, inclusive ao trocar de admin para outro perfil; filial existente e não excluída (inativa é aceita). */
+        UserInput: {
+            /** @example Ana Souza */
+            name?: string;
+            /**
+             * Format: email
+             * @example ana@example.com
+             */
+            email?: string;
+            /** Format: password */
+            password?: string;
+            /** @enum {string} */
+            role?: "operator" | "mechanic" | "leader" | "admin";
+            /** @example 1 */
+            branch_id?: number | null;
+            /** @default true */
+            is_active: boolean;
+        };
+        UserEnvelope: components["schemas"]["Envelope"] & {
+            data?: components["schemas"]["User"];
+        };
+        AuditLog: {
+            /**
+             * @description Item de /audit-logs no formato da F.1. `actor` vem do snapshot gravado no evento (nome/perfil na
+             *     época), null em ações do sistema; `auditable.type` é o alias curto (AuditLog::AUDITABLE_TYPES).
+             * @example 1
+             */
+            id: number;
+            /** Format: uuid */
+            uuid: string;
+            /**
+             * Format: date-time
+             * @description UTC com microssegundos.
+             * @example 2026-10-08T14:03:22.123456Z
+             */
+            event_at: string;
+            /** @description Quem executou (snapshot da época); null = sistema ou login_failed. */
+            actor: {
+                /** @example 1 */
+                id: number;
+                /** @example Ana Souza */
+                name: string | null;
+                /** @enum {string|null} */
+                role: "operator" | "mechanic" | "leader" | "admin" | null;
+            } | null;
+            /** @enum {string} */
+            action: "created" | "updated" | "deleted" | "restored" | "login_succeeded" | "login_failed" | "logout" | "password_changed" | "setting_changed" | "setting_removed";
+            /** @description Registro afetado; null em eventos sem alvo (ex.: login_failed). */
+            auditable: {
+                /** @example cost_center */
+                type: string;
+                /** @example 1 */
+                id: number | null;
+            } | null;
+            /** @description Valores anteriores (só campos alterados em updated); sem dados sensíveis. */
+            old_values: {
+                [key: string]: unknown;
+            } | null;
+            new_values: {
+                [key: string]: unknown;
+            } | null;
+            metadata: {
+                [key: string]: unknown;
+            } | null;
+            /** @example 172.18.0.1 */
+            ip: string | null;
+            /** Format: uuid */
+            request_id: string | null;
         };
         Branch: {
             /** @example 1 */
@@ -381,6 +670,75 @@ export interface components {
                 name: string;
             } | null;
             is_active: boolean;
+            /** Format: date-time */
+            created_at: string | null;
+            /** Format: date-time */
+            updated_at: string | null;
+            /**
+             * Format: date-time
+             * @description Sempre presente; null quando ativo.
+             */
+            deleted_at: string | null;
+        };
+        EquipmentFamily: {
+            /** @example 1 */
+            id: number;
+            /** @example CAM-PESADO */
+            code: string;
+            /** @example Caminhões pesados */
+            name: string;
+            /** @enum {string} */
+            category: "light_vehicle" | "truck" | "agri_machine" | "implement" | "support";
+            /** @enum {string} */
+            criticality: "low" | "medium" | "high" | "critical";
+            /**
+             * Format: float
+             * @description Margem de antecedência do pré-alerta (RN-001), em %. Número JSON, até 2 casas.
+             * @example 87.5
+             */
+            preventive_lead_pct: number;
+            tolerance_km: number | null;
+            tolerance_hours: number | null;
+            tolerance_days: number | null;
+            is_active: boolean;
+            /** Format: date-time */
+            created_at: string | null;
+            /** Format: date-time */
+            updated_at: string | null;
+            /**
+             * Format: date-time
+             * @description Sempre presente; null quando ativo.
+             */
+            deleted_at: string | null;
+        };
+        User: {
+            /**
+             * @description Usuário no CRUD /users (contrato v1.3). Nunca inclui `password` nem `remember_token`.
+             *     O usuário de /auth/* usa UserResource (schema AuthUser).
+             * @example 1
+             */
+            id: number;
+            /** @example Ana Souza */
+            name: string;
+            /**
+             * Format: email
+             * @example ana@example.com
+             */
+            email: string;
+            /** @enum {string} */
+            role: "operator" | "mechanic" | "leader" | "admin";
+            /** @description Filial `{id, code, name}`; null = todas (somente admin). */
+            branch: {
+                /** @example 1 */
+                id: number;
+                /** @example FIL-001 */
+                code: string;
+                /** @example Matriz */
+                name: string;
+            } | null;
+            is_active: boolean;
+            /** Format: date-time */
+            last_login_at: string | null;
             /** Format: date-time */
             created_at: string | null;
             /** Format: date-time */
@@ -584,6 +942,73 @@ export interface components {
 }
 export type $defs = Record<string, never>;
 export interface operations {
+    auditLogsIndex: {
+        parameters: {
+            query?: {
+                /** @description Página (1..n). */
+                page?: components["parameters"]["Page"];
+                /** @description Itens por página: máx. 100; até 200 com `is_active=1` (selects). */
+                per_page?: components["parameters"]["PerPage"];
+                /** @description Alias curto do registro auditado; desconhecido → 422. */
+                auditable_type?: "branch" | "cost_center" | "equipment_family" | "user";
+                auditable_id?: number;
+                actor_id?: number;
+                action?: "created" | "updated" | "deleted" | "restored" | "login_succeeded" | "login_failed" | "logout" | "password_changed" | "setting_changed" | "setting_removed";
+                /** @description ISO 8601 (date-time ou só a data, dia inteiro em UTC); inclusivo. */
+                from?: string;
+                /** @description ISO 8601 (date-time ou só a data, até 23:59:59.999999 UTC); inclusivo; menor que `from` → 422. */
+                to?: string;
+                request_id?: string;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Lista paginada. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Envelope"] & {
+                        data?: components["schemas"]["AuditLog"][];
+                    };
+                };
+            };
+            401: components["responses"]["Unauthenticated"];
+            403: components["responses"]["Forbidden"];
+            422: components["responses"]["ValidationError"];
+            429: components["responses"]["TooManyRequests"];
+        };
+    };
+    auditLogsShow: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                audit_log: number;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Evento. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["AuditLogEnvelope"];
+                };
+            };
+            401: components["responses"]["Unauthenticated"];
+            403: components["responses"]["Forbidden"];
+            404: components["responses"]["NotFound"];
+            429: components["responses"]["TooManyRequests"];
+        };
+    };
     authLogin: {
         parameters: {
             query?: never;
@@ -1141,6 +1566,224 @@ export interface operations {
             429: components["responses"]["TooManyRequests"];
         };
     };
+    equipmentFamiliesIndex: {
+        parameters: {
+            query?: {
+                /** @description Página (1..n). */
+                page?: components["parameters"]["Page"];
+                /** @description Itens por página: máx. 100; até 200 com `is_active=1` (selects). */
+                per_page?: components["parameters"]["PerPage"];
+                /** @description Busca textual (contém, sem diferenciar maiúsculas; `%` e `_` são literais). */
+                q?: components["parameters"]["Search"];
+                sort?: string;
+                category?: "light_vehicle" | "truck" | "agri_machine" | "implement" | "support";
+                criticality?: "low" | "medium" | "high" | "critical";
+                /** @description Filtra por ativo (1) / inativo (0). */
+                is_active?: components["parameters"]["IsActive"];
+                /** @description Inclui registros excluídos (soft delete). Exige `*.manage` do recurso; sem ela → 403. */
+                with_trashed?: components["parameters"]["WithTrashed"];
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Lista paginada. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Envelope"] & {
+                        data?: components["schemas"]["EquipmentFamily"][];
+                    };
+                };
+            };
+            401: components["responses"]["Unauthenticated"];
+            403: components["responses"]["Forbidden"];
+            422: components["responses"]["ValidationError"];
+            429: components["responses"]["TooManyRequests"];
+        };
+    };
+    equipmentFamiliesStore: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["EquipmentFamilyInput"];
+            };
+        };
+        responses: {
+            /** @description Criada (criticality=medium e preventive_lead_pct=90 quando omitidos). */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["EquipmentFamilyEnvelope"];
+                };
+            };
+            401: components["responses"]["Unauthenticated"];
+            403: components["responses"]["Forbidden"];
+            422: components["responses"]["ValidationError"];
+            429: components["responses"]["TooManyRequests"];
+        };
+    };
+    equipmentFamiliesShow: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                equipment_family: number;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Família. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["EquipmentFamilyEnvelope"];
+                };
+            };
+            401: components["responses"]["Unauthenticated"];
+            403: components["responses"]["Forbidden"];
+            404: components["responses"]["NotFound"];
+            429: components["responses"]["TooManyRequests"];
+        };
+    };
+    equipmentFamiliesUpdate: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                equipment_family: number;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["EquipmentFamilyInput"];
+            };
+        };
+        responses: {
+            /** @description Atualizada. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["EquipmentFamilyEnvelope"];
+                };
+            };
+            401: components["responses"]["Unauthenticated"];
+            403: components["responses"]["Forbidden"];
+            404: components["responses"]["NotFound"];
+            422: components["responses"]["ValidationError"];
+            429: components["responses"]["TooManyRequests"];
+        };
+    };
+    equipmentFamiliesDestroy: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                equipment_family: number;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Excluída (`data` null). */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Envelope"];
+                };
+            };
+            401: components["responses"]["Unauthenticated"];
+            403: components["responses"]["Forbidden"];
+            404: components["responses"]["NotFound"];
+            /** @description Dependentes ativos. */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["DeleteConflictEnvelope"];
+                };
+            };
+            429: components["responses"]["TooManyRequests"];
+        };
+    };
+    equipmentFamiliesPatch: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                equipment_family: number;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["EquipmentFamilyInput"];
+            };
+        };
+        responses: {
+            /** @description Atualizada. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["EquipmentFamilyEnvelope"];
+                };
+            };
+            401: components["responses"]["Unauthenticated"];
+            403: components["responses"]["Forbidden"];
+            404: components["responses"]["NotFound"];
+            422: components["responses"]["ValidationError"];
+            429: components["responses"]["TooManyRequests"];
+        };
+    };
+    equipmentFamiliesRestore: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                equipment_family: number;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Restaurada. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["EquipmentFamilyEnvelope"];
+                };
+            };
+            401: components["responses"]["Unauthenticated"];
+            403: components["responses"]["Forbidden"];
+            404: components["responses"]["NotFound"];
+            409: components["responses"]["Conflict"];
+            429: components["responses"]["TooManyRequests"];
+        };
+    };
     health: {
         parameters: {
             query?: never;
@@ -1193,6 +1836,9 @@ export interface operations {
                         data?: {
                             enums?: {
                                 branch_types: ("filial" | "garagem" | "oficina")[];
+                                roles: ("operator" | "mechanic" | "leader" | "admin")[];
+                                equipment_categories: ("light_vehicle" | "truck" | "agri_machine" | "implement" | "support")[];
+                                criticalities: ("low" | "medium" | "high" | "critical")[];
                             };
                         };
                     };
@@ -1201,6 +1847,218 @@ export interface operations {
             401: components["responses"]["Unauthenticated"];
             429: components["responses"]["TooManyRequests"];
             500: components["responses"]["ServerError"];
+        };
+    };
+    usersIndex: {
+        parameters: {
+            query?: {
+                /** @description Página (1..n). */
+                page?: components["parameters"]["Page"];
+                /** @description Itens por página: máx. 100; até 200 com `is_active=1` (selects). */
+                per_page?: components["parameters"]["PerPage"];
+                /** @description Busca textual (contém, sem diferenciar maiúsculas; `%` e `_` são literais). */
+                q?: components["parameters"]["Search"];
+                sort?: string;
+                role?: "operator" | "mechanic" | "leader" | "admin";
+                branch_id?: number;
+                /** @description Filtra por ativo (1) / inativo (0). */
+                is_active?: components["parameters"]["IsActive"];
+                /** @description Inclui registros excluídos (soft delete). Exige `*.manage` do recurso; sem ela → 403. */
+                with_trashed?: components["parameters"]["WithTrashed"];
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Lista paginada. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Envelope"] & {
+                        data?: components["schemas"]["User"][];
+                    };
+                };
+            };
+            401: components["responses"]["Unauthenticated"];
+            403: components["responses"]["Forbidden"];
+            422: components["responses"]["ValidationError"];
+            429: components["responses"]["TooManyRequests"];
+        };
+    };
+    usersStore: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["UserInput"];
+            };
+        };
+        responses: {
+            /** @description Criado. */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["UserEnvelope"];
+                };
+            };
+            401: components["responses"]["Unauthenticated"];
+            403: components["responses"]["Forbidden"];
+            422: components["responses"]["ValidationError"];
+            429: components["responses"]["TooManyRequests"];
+        };
+    };
+    usersShow: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                user: number;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Usuário. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["UserEnvelope"];
+                };
+            };
+            401: components["responses"]["Unauthenticated"];
+            403: components["responses"]["Forbidden"];
+            404: components["responses"]["NotFound"];
+            429: components["responses"]["TooManyRequests"];
+        };
+    };
+    usersUpdate: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                user: number;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["UserInput"];
+            };
+        };
+        responses: {
+            /** @description Atualizado. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["UserEnvelope"];
+                };
+            };
+            401: components["responses"]["Unauthenticated"];
+            403: components["responses"]["Forbidden"];
+            404: components["responses"]["NotFound"];
+            409: components["responses"]["Conflict"];
+            422: components["responses"]["ValidationError"];
+            429: components["responses"]["TooManyRequests"];
+        };
+    };
+    usersDestroy: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                user: number;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Excluído (`data` null). */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Envelope"];
+                };
+            };
+            401: components["responses"]["Unauthenticated"];
+            403: components["responses"]["Forbidden"];
+            404: components["responses"]["NotFound"];
+            409: components["responses"]["Conflict"];
+            429: components["responses"]["TooManyRequests"];
+        };
+    };
+    usersPatch: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                user: number;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["UserInput"];
+            };
+        };
+        responses: {
+            /** @description Atualizado. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["UserEnvelope"];
+                };
+            };
+            401: components["responses"]["Unauthenticated"];
+            403: components["responses"]["Forbidden"];
+            404: components["responses"]["NotFound"];
+            409: components["responses"]["Conflict"];
+            422: components["responses"]["ValidationError"];
+            429: components["responses"]["TooManyRequests"];
+        };
+    };
+    usersRestore: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                user: number;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Restaurado. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["UserEnvelope"];
+                };
+            };
+            401: components["responses"]["Unauthenticated"];
+            403: components["responses"]["Forbidden"];
+            404: components["responses"]["NotFound"];
+            409: components["responses"]["Conflict"];
+            429: components["responses"]["TooManyRequests"];
         };
     };
 }

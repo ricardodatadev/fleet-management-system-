@@ -6,7 +6,7 @@ import { mockCrudApi, mockMetaEnums } from '@/test/crud';
 import type { Role } from '@/features/auth';
 import type { EquipmentFamily } from './types';
 
-/** Contrato C.4/D.2 combinado com a F1-13 (API ainda não está no develop). */
+/** Registro no formato do schema `EquipmentFamily` da OpenAPI (F1-13). */
 function family(id: number, code: string, name: string, over: Partial<EquipmentFamily> = {}) {
   return {
     id,

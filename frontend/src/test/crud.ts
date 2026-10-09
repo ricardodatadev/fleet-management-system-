@@ -180,7 +180,7 @@ export function mockCrudApi<T extends FakeRecord>(
   return fake;
 }
 
-/** `/meta/enums` com os enums de cadastro (contrato combinado com a F1-13). */
+/** `/meta/enums` com os enums de cadastro (schema da operação `metaEnums`). */
 export function mockMetaEnums() {
   server.use(
     http.get(API('/meta/enums'), () =>

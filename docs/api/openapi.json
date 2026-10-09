@@ -39,6 +39,7 @@
                             "enum": [
                                 "branch",
                                 "cost_center",
+                                "equipment_family",
                                 "user"
                             ]
                         }
@@ -1264,6 +1265,439 @@
                 ]
             }
         },
+        "/equipment-families": {
+            "get": {
+                "tags": [
+                    "Famílias de equipamento"
+                ],
+                "summary": "Lista famílias de equipamento",
+                "description": "Permissão: equipment_families.view (M, L e A; sem escopo de filial). Busca `q` em code e name. Ordenação: code, name, category, criticality (`-` = desc; padrão code); outro campo → 422.",
+                "operationId": "equipmentFamiliesIndex",
+                "parameters": [
+                    {
+                        "$ref": "#/components/parameters/Page"
+                    },
+                    {
+                        "$ref": "#/components/parameters/PerPage"
+                    },
+                    {
+                        "$ref": "#/components/parameters/Search"
+                    },
+                    {
+                        "name": "sort",
+                        "in": "query",
+                        "schema": {
+                            "type": "string",
+                            "example": "-created_at,name"
+                        }
+                    },
+                    {
+                        "name": "category",
+                        "in": "query",
+                        "schema": {
+                            "type": "string",
+                            "enum": [
+                                "light_vehicle",
+                                "truck",
+                                "agri_machine",
+                                "implement",
+                                "support"
+                            ]
+                        }
+                    },
+                    {
+                        "name": "criticality",
+                        "in": "query",
+                        "schema": {
+                            "type": "string",
+                            "enum": [
+                                "low",
+                                "medium",
+                                "high",
+                                "critical"
+                            ]
+                        }
+                    },
+                    {
+                        "$ref": "#/components/parameters/IsActive"
+                    },
+                    {
+                        "$ref": "#/components/parameters/WithTrashed"
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Lista paginada.",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "allOf": [
+                                        {
+                                            "$ref": "#/components/schemas/Envelope"
+                                        },
+                                        {
+                                            "required": [
+                                                "meta"
+                                            ],
+                                            "properties": {
+                                                "data": {
+                                                    "type": "array",
+                                                    "items": {
+                                                        "$ref": "#/components/schemas/EquipmentFamily"
+                                                    }
+                                                }
+                                            },
+                                            "type": "object"
+                                        }
+                                    ]
+                                }
+                            }
+                        }
+                    },
+                    "401": {
+                        "$ref": "#/components/responses/Unauthenticated"
+                    },
+                    "403": {
+                        "$ref": "#/components/responses/Forbidden"
+                    },
+                    "422": {
+                        "$ref": "#/components/responses/ValidationError"
+                    },
+                    "429": {
+                        "$ref": "#/components/responses/TooManyRequests"
+                    }
+                },
+                "security": [
+                    {
+                        "bearerAuth": []
+                    }
+                ]
+            },
+            "post": {
+                "tags": [
+                    "Famílias de equipamento"
+                ],
+                "summary": "Cria família de equipamento",
+                "description": "Permissão: equipment_families.manage. `code` duplicado entre registros ativos → 422; preventive_lead_pct fora de (0, 100] ou tolerância negativa → 422.",
+                "operationId": "equipmentFamiliesStore",
+                "requestBody": {
+                    "required": true,
+                    "content": {
+                        "application/json": {
+                            "schema": {
+                                "$ref": "#/components/schemas/EquipmentFamilyInput"
+                            }
+                        }
+                    }
+                },
+                "responses": {
+                    "201": {
+                        "description": "Criada (criticality=medium e preventive_lead_pct=90 quando omitidos).",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/EquipmentFamilyEnvelope"
+                                }
+                            }
+                        }
+                    },
+                    "401": {
+                        "$ref": "#/components/responses/Unauthenticated"
+                    },
+                    "403": {
+                        "$ref": "#/components/responses/Forbidden"
+                    },
+                    "422": {
+                        "$ref": "#/components/responses/ValidationError"
+                    },
+                    "429": {
+                        "$ref": "#/components/responses/TooManyRequests"
+                    }
+                },
+                "security": [
+                    {
+                        "bearerAuth": []
+                    }
+                ]
+            }
+        },
+        "/equipment-families/{equipment_family}": {
+            "get": {
+                "tags": [
+                    "Famílias de equipamento"
+                ],
+                "summary": "Detalha família de equipamento",
+                "description": "Permissão: equipment_families.view. Família excluída → 404.",
+                "operationId": "equipmentFamiliesShow",
+                "parameters": [
+                    {
+                        "name": "equipment_family",
+                        "in": "path",
+                        "required": true,
+                        "schema": {
+                            "type": "integer"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Família.",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/EquipmentFamilyEnvelope"
+                                }
+                            }
+                        }
+                    },
+                    "401": {
+                        "$ref": "#/components/responses/Unauthenticated"
+                    },
+                    "403": {
+                        "$ref": "#/components/responses/Forbidden"
+                    },
+                    "404": {
+                        "$ref": "#/components/responses/NotFound"
+                    },
+                    "429": {
+                        "$ref": "#/components/responses/TooManyRequests"
+                    }
+                },
+                "security": [
+                    {
+                        "bearerAuth": []
+                    }
+                ]
+            },
+            "put": {
+                "tags": [
+                    "Famílias de equipamento"
+                ],
+                "summary": "Atualiza família de equipamento (parcial; PUT = PATCH)",
+                "description": "Permissão: equipment_families.manage. Só os campos enviados são validados e gravados.",
+                "operationId": "equipmentFamiliesUpdate",
+                "parameters": [
+                    {
+                        "name": "equipment_family",
+                        "in": "path",
+                        "required": true,
+                        "schema": {
+                            "type": "integer"
+                        }
+                    }
+                ],
+                "requestBody": {
+                    "required": true,
+                    "content": {
+                        "application/json": {
+                            "schema": {
+                                "$ref": "#/components/schemas/EquipmentFamilyInput"
+                            }
+                        }
+                    }
+                },
+                "responses": {
+                    "200": {
+                        "description": "Atualizada.",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/EquipmentFamilyEnvelope"
+                                }
+                            }
+                        }
+                    },
+                    "401": {
+                        "$ref": "#/components/responses/Unauthenticated"
+                    },
+                    "403": {
+                        "$ref": "#/components/responses/Forbidden"
+                    },
+                    "404": {
+                        "$ref": "#/components/responses/NotFound"
+                    },
+                    "422": {
+                        "$ref": "#/components/responses/ValidationError"
+                    },
+                    "429": {
+                        "$ref": "#/components/responses/TooManyRequests"
+                    }
+                },
+                "security": [
+                    {
+                        "bearerAuth": []
+                    }
+                ]
+            },
+            "delete": {
+                "tags": [
+                    "Famílias de equipamento"
+                ],
+                "summary": "Exclui família de equipamento (soft delete)",
+                "description": "Permissão: equipment_families.manage. 409 (`errors.dependents=[\"equipments\"]`) se houver equipamentos ativos, regra ativada na F1-15. Exclusão concorrente de família já excluída → 404.",
+                "operationId": "equipmentFamiliesDestroy",
+                "parameters": [
+                    {
+                        "name": "equipment_family",
+                        "in": "path",
+                        "required": true,
+                        "schema": {
+                            "type": "integer"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Excluída (`data` null).",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/Envelope"
+                                }
+                            }
+                        }
+                    },
+                    "401": {
+                        "$ref": "#/components/responses/Unauthenticated"
+                    },
+                    "403": {
+                        "$ref": "#/components/responses/Forbidden"
+                    },
+                    "404": {
+                        "$ref": "#/components/responses/NotFound"
+                    },
+                    "409": {
+                        "description": "Dependentes ativos.",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/DeleteConflictEnvelope"
+                                }
+                            }
+                        }
+                    },
+                    "429": {
+                        "$ref": "#/components/responses/TooManyRequests"
+                    }
+                },
+                "security": [
+                    {
+                        "bearerAuth": []
+                    }
+                ]
+            },
+            "patch": {
+                "tags": [
+                    "Famílias de equipamento"
+                ],
+                "summary": "Atualiza família de equipamento (parcial; igual ao PUT)",
+                "operationId": "equipmentFamiliesPatch",
+                "parameters": [
+                    {
+                        "name": "equipment_family",
+                        "in": "path",
+                        "required": true,
+                        "schema": {
+                            "type": "integer"
+                        }
+                    }
+                ],
+                "requestBody": {
+                    "required": true,
+                    "content": {
+                        "application/json": {
+                            "schema": {
+                                "$ref": "#/components/schemas/EquipmentFamilyInput"
+                            }
+                        }
+                    }
+                },
+                "responses": {
+                    "200": {
+                        "description": "Atualizada.",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/EquipmentFamilyEnvelope"
+                                }
+                            }
+                        }
+                    },
+                    "401": {
+                        "$ref": "#/components/responses/Unauthenticated"
+                    },
+                    "403": {
+                        "$ref": "#/components/responses/Forbidden"
+                    },
+                    "404": {
+                        "$ref": "#/components/responses/NotFound"
+                    },
+                    "422": {
+                        "$ref": "#/components/responses/ValidationError"
+                    },
+                    "429": {
+                        "$ref": "#/components/responses/TooManyRequests"
+                    }
+                },
+                "security": [
+                    {
+                        "bearerAuth": []
+                    }
+                ]
+            }
+        },
+        "/equipment-families/{equipment_family}/restore": {
+            "post": {
+                "tags": [
+                    "Famílias de equipamento"
+                ],
+                "summary": "Restaura família de equipamento excluída",
+                "description": "Permissão: equipment_families.manage. 409 se não estiver excluída ou se o código já estiver em uso por uma família ativa.",
+                "operationId": "equipmentFamiliesRestore",
+                "parameters": [
+                    {
+                        "name": "equipment_family",
+                        "in": "path",
+                        "required": true,
+                        "schema": {
+                            "type": "integer"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Restaurada.",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/EquipmentFamilyEnvelope"
+                                }
+                            }
+                        }
+                    },
+                    "401": {
+                        "$ref": "#/components/responses/Unauthenticated"
+                    },
+                    "403": {
+                        "$ref": "#/components/responses/Forbidden"
+                    },
+                    "404": {
+                        "$ref": "#/components/responses/NotFound"
+                    },
+                    "409": {
+                        "$ref": "#/components/responses/Conflict"
+                    },
+                    "429": {
+                        "$ref": "#/components/responses/TooManyRequests"
+                    }
+                },
+                "security": [
+                    {
+                        "bearerAuth": []
+                    }
+                ]
+            }
+        },
         "/health": {
             "get": {
                 "tags": [
@@ -1346,7 +1780,9 @@
                                                         "enums": {
                                                             "required": [
                                                                 "branch_types",
-                                                                "roles"
+                                                                "roles",
+                                                                "equipment_categories",
+                                                                "criticalities"
                                                             ],
                                                             "properties": {
                                                                 "branch_types": {
@@ -1369,6 +1805,31 @@
                                                                             "mechanic",
                                                                             "leader",
                                                                             "admin"
+                                                                        ]
+                                                                    }
+                                                                },
+                                                                "equipment_categories": {
+                                                                    "type": "array",
+                                                                    "items": {
+                                                                        "type": "string",
+                                                                        "enum": [
+                                                                            "light_vehicle",
+                                                                            "truck",
+                                                                            "agri_machine",
+                                                                            "implement",
+                                                                            "support"
+                                                                        ]
+                                                                    }
+                                                                },
+                                                                "criticalities": {
+                                                                    "type": "array",
+                                                                    "items": {
+                                                                        "type": "string",
+                                                                        "enum": [
+                                                                            "low",
+                                                                            "medium",
+                                                                            "high",
+                                                                            "critical"
                                                                         ]
                                                                     }
                                                                 }
@@ -2026,6 +2487,88 @@
                     }
                 ]
             },
+            "EquipmentFamilyInput": {
+                "description": "Create: code, name e category obrigatórios; criticality (padrão medium) e preventive_lead_pct (padrão 90) opcionais. Update (PUT = PATCH): parcial. `code` é gravado sem espaços nas pontas e em maiúsculas. `preventive_lead_pct` em (0, 100] com até 2 casas; tolerâncias inteiras ≥ 0 ou null.",
+                "properties": {
+                    "code": {
+                        "type": "string",
+                        "example": "CAM-PESADO",
+                        "maxLength": 30
+                    },
+                    "name": {
+                        "type": "string",
+                        "example": "Caminhões pesados",
+                        "maxLength": 120
+                    },
+                    "category": {
+                        "type": "string",
+                        "enum": [
+                            "light_vehicle",
+                            "truck",
+                            "agri_machine",
+                            "implement",
+                            "support"
+                        ]
+                    },
+                    "criticality": {
+                        "type": "string",
+                        "default": "medium",
+                        "enum": [
+                            "low",
+                            "medium",
+                            "high",
+                            "critical"
+                        ]
+                    },
+                    "preventive_lead_pct": {
+                        "type": "number",
+                        "format": "float",
+                        "example": 87.5,
+                        "default": 90,
+                        "maximum": 100,
+                        "minimum": 0,
+                        "exclusiveMinimum": true
+                    },
+                    "tolerance_km": {
+                        "type": "integer",
+                        "example": 500,
+                        "nullable": true,
+                        "minimum": 0
+                    },
+                    "tolerance_hours": {
+                        "type": "integer",
+                        "example": 20,
+                        "nullable": true,
+                        "minimum": 0
+                    },
+                    "tolerance_days": {
+                        "type": "integer",
+                        "example": 7,
+                        "nullable": true,
+                        "minimum": 0
+                    },
+                    "is_active": {
+                        "type": "boolean",
+                        "default": true
+                    }
+                },
+                "type": "object"
+            },
+            "EquipmentFamilyEnvelope": {
+                "allOf": [
+                    {
+                        "$ref": "#/components/schemas/Envelope"
+                    },
+                    {
+                        "properties": {
+                            "data": {
+                                "$ref": "#/components/schemas/EquipmentFamily"
+                            }
+                        },
+                        "type": "object"
+                    }
+                ]
+            },
             "HealthData": {
                 "required": [
                     "app",
@@ -2390,6 +2933,102 @@
                         },
                         "type": "object",
                         "nullable": true
+                    },
+                    "is_active": {
+                        "type": "boolean"
+                    },
+                    "created_at": {
+                        "type": "string",
+                        "format": "date-time",
+                        "nullable": true
+                    },
+                    "updated_at": {
+                        "type": "string",
+                        "format": "date-time",
+                        "nullable": true
+                    },
+                    "deleted_at": {
+                        "description": "Sempre presente; null quando ativo.",
+                        "type": "string",
+                        "format": "date-time",
+                        "nullable": true
+                    }
+                },
+                "type": "object"
+            },
+            "EquipmentFamily": {
+                "required": [
+                    "id",
+                    "code",
+                    "name",
+                    "category",
+                    "criticality",
+                    "preventive_lead_pct",
+                    "tolerance_km",
+                    "tolerance_hours",
+                    "tolerance_days",
+                    "is_active",
+                    "created_at",
+                    "updated_at",
+                    "deleted_at"
+                ],
+                "properties": {
+                    "id": {
+                        "type": "integer",
+                        "example": 1
+                    },
+                    "code": {
+                        "type": "string",
+                        "example": "CAM-PESADO",
+                        "maxLength": 30
+                    },
+                    "name": {
+                        "type": "string",
+                        "example": "Caminhões pesados",
+                        "maxLength": 120
+                    },
+                    "category": {
+                        "type": "string",
+                        "enum": [
+                            "light_vehicle",
+                            "truck",
+                            "agri_machine",
+                            "implement",
+                            "support"
+                        ]
+                    },
+                    "criticality": {
+                        "type": "string",
+                        "enum": [
+                            "low",
+                            "medium",
+                            "high",
+                            "critical"
+                        ]
+                    },
+                    "preventive_lead_pct": {
+                        "description": "Margem de antecedência do pré-alerta (RN-001), em %. Número JSON, até 2 casas.",
+                        "type": "number",
+                        "format": "float",
+                        "example": 87.5,
+                        "maximum": 100,
+                        "minimum": 0,
+                        "exclusiveMinimum": true
+                    },
+                    "tolerance_km": {
+                        "type": "integer",
+                        "nullable": true,
+                        "minimum": 0
+                    },
+                    "tolerance_hours": {
+                        "type": "integer",
+                        "nullable": true,
+                        "minimum": 0
+                    },
+                    "tolerance_days": {
+                        "type": "integer",
+                        "nullable": true,
+                        "minimum": 0
                     },
                     "is_active": {
                         "type": "boolean"
@@ -2902,6 +3541,10 @@
         {
             "name": "Centros de custo",
             "description": "Centros de custo"
+        },
+        {
+            "name": "Famílias de equipamento",
+            "description": "Famílias de equipamento"
         },
         {
             "name": "Infra",

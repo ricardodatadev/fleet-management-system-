@@ -135,6 +135,13 @@ Pesquisa de 2026-10-08. Versões do backend confirmadas no packagist/`composer s
 - **409 fora do log de erro:** `DomainConflictException` entrou em `dontReport`, porque um conflito de regra é resposta esperada, não falha do servidor.
 - `/meta/enums` devolve `roles`.
 
+## Notas de implementação (F1-13 — famílias de equipamento)
+
+- **Tabela** `equipment_families` conforme a C.4, com CHECKs no banco (category, criticality, `0 < preventive_lead_pct ≤ 100`, tolerâncias ≥ 0) e UQ parcial em `code`. A violação direta no SQL é rejeitada (teste).
+- **Contrato v1.4, combinado com a Íris:** `preventive_lead_pct` tem cast `float` no model, porque o `numeric(5,2)` chega do PDO como string; a API sempre devolve número JSON. A validação aceita até 2 casas, igual à coluna. `tolerance_*` são inteiros ou null. No create, `criticality=medium` e `preventive_lead_pct=90` (iguais aos DEFAULT do banco, também em `$attributes`). `sort` ∈ code, name, category, criticality. `/meta/enums` ganha `equipment_categories` e `criticalities`. Sem escopo de filial (cadastro global; leitura M, L e A).
+- **Dependentes:** `activeDependents()` já declara a chave `equipments`, mas a checagem fica desligada até a F1-15 criar a tabela.
+- **Base (pendência da F1-12):** `softDeleteGuarded` responde 404 quando a linha travada já está excluída (duas exclusões concorrentes), sem excluir de novo e sem um segundo `deleted` no audit. Vale para todos os cadastros (teste por model).
+
 ## Notas de implementação (F1-33 — nome do sistema em fonte única, D17)
 
 - **Fonte única:** `.env.example` define `APP_NAME` (nome curto), `APP_FULL_NAME` (nome completo) e `APP_SLUG` (identificador técnico); `POSTGRES_DB`/`POSTGRES_USER` usam o slug. Um rebrand é editar valores e os literais da allowlist, nunca caçar strings (passo a passo em `docs/renaming.md`).

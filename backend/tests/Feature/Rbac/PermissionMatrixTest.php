@@ -4,6 +4,7 @@ use App\Enums\Role;
 use App\Models\AuditLog;
 use App\Models\Branch;
 use App\Models\CostCenter;
+use App\Models\EquipmentFamily;
 use App\Models\User;
 use App\Support\Rbac\Rbac;
 use Database\Factories\UserFactory;
@@ -136,6 +137,7 @@ function routeMatrix(): array
     $all = array_fill_keys(MATRIX_ROLES, 200);
     $adminOnly = fn (int $ok) => ['operator' => 403, 'mechanic' => 403, 'leader' => 403, 'admin' => $ok];
     $leaderAndAdmin = ['operator' => 403, 'mechanic' => 403, 'leader' => 200, 'admin' => 200];
+    $mechanicLeaderAdmin = ['operator' => 403, 'mechanic' => 200, 'leader' => 200, 'admin' => 200];
 
     return [
         ['GET', 'auth/me', [], $all],
@@ -158,6 +160,14 @@ function routeMatrix(): array
         ['PATCH', 'cost-centers/{cost_center}', ['name' => 'Renomeado'], $adminOnly(200)],
         ['DELETE', 'cost-centers/{cost_center}', [], $adminOnly(200)],
         ['POST', 'cost-centers/{cost_center}/restore', [], $adminOnly(200), ['cost_center' => 'trashed_cost_center']],
+        // F1-13 — famílias de equipamento (equipment_families.view: M, L, A; manage: A)
+        ['GET', 'equipment-families', [], $mechanicLeaderAdmin],
+        ['POST', 'equipment-families', ['code' => 'FAM-NOVA', 'name' => 'Nova', 'category' => 'truck'], $adminOnly(201)],
+        ['GET', 'equipment-families/{equipment_family}', [], $mechanicLeaderAdmin],
+        ['PUT', 'equipment-families/{equipment_family}', ['name' => 'Renomeada'], $adminOnly(200)],
+        ['PATCH', 'equipment-families/{equipment_family}', ['name' => 'Renomeada'], $adminOnly(200)],
+        ['DELETE', 'equipment-families/{equipment_family}', [], $adminOnly(200)],
+        ['POST', 'equipment-families/{equipment_family}/restore', [], $adminOnly(200), ['equipment_family' => 'trashed_equipment_family']],
         // F1-11 — usuários (users.view/users.manage: A) e auditoria (audit.view: A, somente leitura)
         ['GET', 'users', [], $adminOnly(200)],
         ['POST', 'users', ['name' => 'Novo', 'email' => 'novo@example.com', 'password' => 'NovaSenha2026', 'role' => 'admin'], $adminOnly(201)],
@@ -178,6 +188,8 @@ function routeFixtures(): array
     $trashedBranch->delete();
     $trashedCostCenter = CostCenter::factory()->global()->create();
     $trashedCostCenter->delete();
+    $trashedFamily = EquipmentFamily::factory()->create();
+    $trashedFamily->delete();
     $trashedUser = User::factory()->create();
     $trashedUser->delete();
 
@@ -186,6 +198,8 @@ function routeFixtures(): array
         'trashed_branch' => $trashedBranch->id,
         'cost_center' => CostCenter::factory()->global()->create()->id,
         'trashed_cost_center' => $trashedCostCenter->id,
+        'equipment_family' => EquipmentFamily::factory()->create()->id,
+        'trashed_equipment_family' => $trashedFamily->id,
         'user' => User::factory()->create()->id, // operador: pode ser excluído
         'trashed_user' => $trashedUser->id,
         'audit_log' => AuditLog::query()->value('id'),

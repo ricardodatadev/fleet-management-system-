@@ -52,14 +52,16 @@ describe('navigation.ts (G.3)', () => {
     expect(shape(NAVIGATION)).toEqual(G3);
   });
 
-  it('habilitados: Equipamentos, Parâmetros e os cadastros da F1-30 (Colaboradores segue na F1-31)', () => {
+  it('habilitados: Equipamentos, cadastros (F1-30/F1-31), Parâmetros e Usuários; Auditoria não', () => {
     const enabled = NAVIGATION.flatMap((g) => g.items.filter((i) => i.enabled));
     expect(enabled.map((i) => [i.label, i.to, i.perm])).toEqual([
       ['Frotas & Equipamentos', '/ativos/equipamentos', 'equipments.view'],
+      ['Pessoas & Colaboradores', '/cadastros/colaboradores', 'employees.view'],
       ['Unidades/Filiais', '/cadastros/unidades', 'branches.view'],
       ['Centros de Custo', '/cadastros/centros-custo', 'cost_centers.view'],
       ['Famílias/Classes', '/cadastros/familias', 'equipment_families.view'],
       ['Painel de Parâmetros', '/parametros', 'settings.view'],
+      ['Usuários', '/admin/usuarios', 'users.view'],
     ]);
   });
 

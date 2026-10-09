@@ -70,8 +70,8 @@ const soon = (id: string, label: string, icon: LucideIcon, perm?: string): NavIt
 /**
  * Navegação principal (spec G.3), na ordem da nota de UI.
  * Grupo sem nenhum item visível para o usuário não é renderizado (ex.: ADMINISTRAÇÃO para quem
- * não tem settings/users/audit). Unidades, Centros de Custo e Famílias estão habilitados (F1-30);
- * Colaboradores, Usuários e Auditoria seguem desabilitados até as F1-31/F1-32.
+ * não tem settings/users/audit). Cadastros (F1-30/F1-31) e Usuários estão habilitados; Auditoria
+ * segue "Em breve" (F1-32, adiada para a Fase 2).
  */
 export const NAVIGATION: NavGroupConfig[] = [
   {
@@ -160,8 +160,12 @@ export const NAVIGATION: NavGroupConfig[] = [
     icon: Users,
     items: [
       {
-        ...soon('colaboradores', 'Pessoas & Colaboradores', Contact, 'employees.view'),
+        id: 'colaboradores',
+        label: 'Pessoas & Colaboradores',
+        icon: Contact,
         to: '/cadastros/colaboradores',
+        perm: 'employees.view',
+        enabled: true,
       },
       {
         id: 'unidades',
@@ -203,7 +207,14 @@ export const NAVIGATION: NavGroupConfig[] = [
         perm: 'settings.view',
         enabled: true,
       },
-      { ...soon('usuarios', 'Usuários', UserCog, 'users.view'), to: '/admin/usuarios' },
+      {
+        id: 'usuarios',
+        label: 'Usuários',
+        icon: UserCog,
+        to: '/admin/usuarios',
+        perm: 'users.view',
+        enabled: true,
+      },
       { ...soon('auditoria', 'Auditoria', ScrollText, 'audit.view'), to: '/admin/auditoria' },
     ],
   },

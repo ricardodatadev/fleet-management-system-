@@ -36,7 +36,9 @@ export function FormField({
   children,
 }: FormFieldProps) {
   const id = useId();
-  const helpId = help ? `${id}-help` : undefined;
+  // Erro igual à ajuda (ex.: 422 do username repete a regra): mostra só o erro, sem duplicar.
+  const shownHelp = help && help !== error ? help : undefined;
+  const helpId = shownHelp ? `${id}-help` : undefined;
   const errorId = error ? `${id}-error` : undefined;
   const describedBy = [helpId, errorId].filter(Boolean).join(' ') || undefined;
 
@@ -63,9 +65,9 @@ export function FormField({
         : isValidElement(children)
           ? cloneElement(children, control)
           : null}
-      {help && (
+      {shownHelp && (
         <p id={helpId} className="text-sm text-text-muted">
-          {help}
+          {shownHelp}
         </p>
       )}
       {error && (

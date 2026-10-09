@@ -3,7 +3,15 @@ import type { FormEvent } from 'react';
 import { ApiError, GENERIC_ERROR_MESSAGE } from '@/api';
 import { Button, FormField, Input, Modal, Select, Switch } from '@/components/ui';
 import type { SelectOption } from '@/components/ui';
-import { initialValues, splitFieldErrors, toPayload, validate } from './form';
+import { PasswordInput } from '@/features/auth/PasswordInput';
+import {
+  initialValues,
+  isRequired,
+  isVisible,
+  splitFieldErrors,
+  toPayload,
+  validate,
+} from './form';
 import type { CrudField, CrudResource, CrudRow, FormValues } from './types';
 
 export interface CrudFormModalProps<T extends CrudRow> {
@@ -16,11 +24,17 @@ export interface CrudFormModalProps<T extends CrudRow> {
   onSubmit: (payload: Record<string, unknown>) => Promise<unknown>;
 }
 
-function selectOptions<T extends CrudRow>(field: CrudField<T>, row: T | null, value: string) {
+function selectOptions<T extends CrudRow>(
+  field: CrudField<T>,
+  row: T | null,
+  values: FormValues,
+  value: string,
+) {
   if (field.kind !== 'select') return [];
+  const options = typeof field.options === 'function' ? field.options(values) : field.options;
   const current = row && field.currentOption?.(row);
-  const missing = current && value !== '' && !field.options.some((o) => o.value === value);
-  return missing ? [...field.options, current as SelectOption] : field.options;
+  const missing = current && value !== '' && !options.some((o) => o.value === value);
+  return missing ? [...options, current as SelectOption] : options;
 }
 
 /** Formulário de criar/editar em Modal, gerado dos `fields` do recurso. */
@@ -38,7 +52,14 @@ export function CrudFormModal<T extends CrudRow>({
   const formId = `crud-form-${resource.endpoint.replace(/\W/g, '')}`;
 
   function setValue(name: string, value: string | boolean) {
-    setValues((current) => ({ ...current, [name]: value }));
+    setValues((current) => {
+      const next = { ...current, [name]: value };
+      // Campos dependentes (ex.: centro de custo da filial) são limpos quando o pai muda.
+      for (const field of resource.fields) {
+        if (field.dependsOn?.includes(name)) next[field.name] = '';
+      }
+      return next;
+    });
     setFieldErrors((current) => {
       const next = { ...current };
       delete next[name];
@@ -49,14 +70,14 @@ export function CrudFormModal<T extends CrudRow>({
   async function handleSubmit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
     setFormError(null);
-    const clientErrors = splitFieldErrors(resource.fields, validate(resource.fields, values));
+    const clientErrors = splitFieldErrors(resource.fields, validate(resource.fields, values, row));
     if (Object.keys(clientErrors.byField).length > 0) {
       setFieldErrors(clientErrors.byField);
       return;
     }
     setSaving(true);
     try {
-      await onSubmit(toPayload(resource.fields, values));
+      await onSubmit(toPayload(resource.fields, values, row));
     } catch (error) {
       if (error instanceof ApiError && error.isValidation) {
         const { byField, other } = splitFieldErrors(resource.fields, error.errors);
@@ -95,16 +116,20 @@ export function CrudFormModal<T extends CrudRow>({
         )}
         <div className="grid gap-4 sm:grid-cols-2">
           {resource.fields.map((field) => {
+            if (!isVisible(field, values)) return null;
             const value = values[field.name];
             const error = fieldErrors[field.name];
+            const lockReason = field.locked?.(row) ?? null;
             if (field.kind === 'switch') {
               return (
                 <div key={field.name} className="flex flex-col justify-end gap-2">
                   <Switch
                     label={field.label}
                     checked={Boolean(value)}
+                    disabled={Boolean(lockReason)}
                     onCheckedChange={(checked) => setValue(field.name, checked)}
                   />
+                  {lockReason && <p className="text-sm text-text-muted">{lockReason}</p>}
                   {error && <p className="text-sm font-bold text-danger">{error}</p>}
                 </div>
               );
@@ -114,8 +139,8 @@ export function CrudFormModal<T extends CrudRow>({
               <FormField
                 key={field.name}
                 label={field.label}
-                required={field.required}
-                help={field.help}
+                required={isRequired(field, { row, values })}
+                help={lockReason ?? field.help}
                 error={error}
               >
                 {(control) =>
@@ -124,11 +149,19 @@ export function CrudFormModal<T extends CrudRow>({
                       {...control}
                       invalid={Boolean(error)}
                       value={text}
-                      disabled={field.loading}
+                      disabled={field.loading || Boolean(lockReason)}
                       placeholder={
                         field.loading ? 'Carregando…' : (field.placeholder ?? 'Selecione')
                       }
-                      options={selectOptions(field, row, text)}
+                      options={selectOptions(field, row, values, text)}
+                      onChange={(event) => setValue(field.name, event.target.value)}
+                    />
+                  ) : field.kind === 'password' ? (
+                    <PasswordInput
+                      {...control}
+                      invalid={Boolean(error)}
+                      value={text}
+                      autoComplete={field.autoComplete ?? 'new-password'}
                       onChange={(event) => setValue(field.name, event.target.value)}
                     />
                   ) : (
@@ -136,7 +169,15 @@ export function CrudFormModal<T extends CrudRow>({
                       {...control}
                       invalid={Boolean(error)}
                       value={text}
-                      type={field.kind === 'number' ? 'number' : 'text'}
+                      disabled={Boolean(lockReason)}
+                      autoComplete={
+                        field.kind === 'text' || field.kind === 'date'
+                          ? field.autoComplete
+                          : undefined
+                      }
+                      type={
+                        field.kind === 'number' ? 'number' : field.kind === 'date' ? 'date' : 'text'
+                      }
                       inputMode={field.kind === 'number' ? 'decimal' : undefined}
                       maxLength={field.kind === 'text' ? field.maxLength : undefined}
                       min={field.kind === 'number' ? field.min : undefined}

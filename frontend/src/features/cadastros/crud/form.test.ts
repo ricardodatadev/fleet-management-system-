@@ -1,4 +1,11 @@
-import { REQUIRED_MESSAGE, initialValues, splitFieldErrors, toPayload, validate } from './form';
+import {
+  REQUIRED_MESSAGE,
+  initialValues,
+  isRequired,
+  splitFieldErrors,
+  toPayload,
+  validate,
+} from './form';
 import type { CrudField, CrudRow } from './types';
 
 interface Row extends CrudRow {
@@ -78,5 +85,69 @@ describe('crud/form', () => {
       splitFieldErrors(FIELDS, { code: ['Duplicado.', 'Outro'], dependents: ['equipments'] }),
     ).toEqual({ byField: { code: 'Duplicado.' }, other: ['equipments'] });
     expect(splitFieldErrors(FIELDS, null)).toEqual({ byField: {}, other: [] });
+  });
+
+  describe('campos por contexto (F1-31)', () => {
+    const DYNAMIC: CrudField<Row>[] = [
+      { kind: 'select', name: 'job_type', label: 'Tipo', options: [], required: true },
+      {
+        kind: 'text',
+        name: 'cnh_number',
+        label: 'CNH',
+        nullable: true,
+        required: true,
+        visible: (values) => values.job_type === 'driver',
+      },
+      {
+        kind: 'password',
+        name: 'password',
+        label: 'Senha',
+        required: ({ row }) => row === null,
+      },
+      {
+        kind: 'select',
+        name: 'role',
+        label: 'Perfil',
+        options: [],
+        locked: (row) => (row?.id === 7 ? 'Travado.' : null),
+      },
+    ];
+
+    it('campo oculto e nullable vai null (limpa o tipo anterior) e não é validado', () => {
+      const values = { job_type: 'mechanic', cnh_number: '123', password: 'x', role: 'admin' };
+      expect(toPayload(DYNAMIC, values)).toEqual({
+        job_type: 'mechanic',
+        cnh_number: null,
+        password: 'x',
+        role: 'admin',
+      });
+      expect(validate(DYNAMIC, { ...values, cnh_number: '' })).toEqual({});
+      expect(validate(DYNAMIC, { ...values, job_type: 'driver', cnh_number: '' })).toEqual({
+        cnh_number: [REQUIRED_MESSAGE],
+      });
+    });
+
+    it('obrigatório por contexto: senha só no create; travado sai do payload e da validação', () => {
+      expect(isRequired(DYNAMIC[2] as CrudField<Row>, { row: null, values: {} })).toBe(true);
+      expect(isRequired(DYNAMIC[2] as CrudField<Row>, { row: ROW, values: {} })).toBe(false);
+      expect(validate(DYNAMIC, { job_type: 'x', password: '' }, ROW)).toEqual({});
+      expect(validate(DYNAMIC, { job_type: 'x', password: '' })).toEqual({
+        password: [REQUIRED_MESSAGE],
+      });
+      // role travado não vai; cnh_number oculto (e nullable) vai null; senha em branco não vai.
+      expect(toPayload(DYNAMIC, { job_type: 'x', password: '', role: 'admin' }, ROW)).toEqual({
+        job_type: 'x',
+        cnh_number: null,
+      });
+    });
+
+    it('senha não leva trim; em branco na edição não vai', () => {
+      expect(toPayload(DYNAMIC, { job_type: 'x', password: ' Senha 123 ' }).password).toBe(
+        ' Senha 123 ',
+      );
+      expect(toPayload(DYNAMIC, { job_type: 'x', password: '' }, ROW)).not.toHaveProperty(
+        'password',
+      );
+    });
   });
 });

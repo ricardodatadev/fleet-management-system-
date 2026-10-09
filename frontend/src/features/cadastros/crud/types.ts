@@ -26,11 +26,27 @@ export interface CrudFilter {
   loading?: boolean;
 }
 
+/** Contexto de um campo no formulário: registro em edição (`null` = criação) e valores atuais. */
+export interface FieldContext<T> {
+  row: T | null;
+  values: FormValues;
+}
+
 interface FieldBase<T> {
   name: string;
   label: string;
-  required?: boolean;
+  /** Obrigatório (asterisco + pré-checagem); função quando depende do contexto (ex.: só no create). */
+  required?: boolean | ((ctx: FieldContext<T>) => boolean);
   help?: string;
+  /**
+   * Mostra o campo conforme os valores (ex.: CNH só para motorista). Oculto: não é validado e, se
+   * for `nullable`, vai como `null` no payload (limpa o que sobrou de um tipo anterior).
+   */
+  visible?: (values: FormValues) => boolean;
+  /** Campo travado neste registro: devolve o motivo (exibido como ajuda) e o campo sai do payload. */
+  locked?: (row: T | null) => string | null;
+  /** Campos que, ao mudar, limpam este (ex.: centro de custo depende da filial). */
+  dependsOn?: string[];
   /** Valor inicial a partir do registro (padrão: `row[name]`). */
   get?: (row: T) => unknown;
   /** Valor no formulário de criação (padrão: vazio / `true` para switch). */
@@ -38,8 +54,10 @@ interface FieldBase<T> {
 }
 
 export interface TextField<T> extends FieldBase<T> {
-  kind: 'text';
+  /** `date` = input de data (yyyy-mm-dd); `password` = senha com mostrar/ocultar. */
+  kind: 'text' | 'date' | 'password';
   maxLength?: number;
+  autoComplete?: string;
   /** Vazio vira `null` no payload (coluna nullable); senão o campo é omitido. */
   nullable?: boolean;
 }
@@ -54,7 +72,8 @@ export interface NumberField<T> extends FieldBase<T> {
 
 export interface SelectField<T> extends FieldBase<T> {
   kind: 'select';
-  options: SelectOption[];
+  /** Opções fixas, ou calculadas pelos valores do form (ex.: centros de custo da filial escolhida). */
+  options: SelectOption[] | ((values: FormValues) => SelectOption[]);
   loading?: boolean;
   /** Valor enviado como número (ex.: FK `branch_id`). */
   numeric?: boolean;
@@ -89,4 +108,11 @@ export interface CrudResource<T extends CrudRow> {
   describe: (row: T) => string;
   /** Placeholder da busca `q` (campos pesquisados). */
   searchPlaceholder?: string;
+  /**
+   * Abas acima da lista, ligadas a um parâmetro da API/URL (ex.: `job_type`). O valor `''` é a aba
+   * "todos"; um valor pode listar vários, separados por vírgula, se a API aceitar.
+   */
+  tabs?: { param: string; label: string; items: { value: string; label: string }[] };
+  /** Esconde a ação de excluir numa linha (ex.: o próprio usuário). Padrão: todas podem. */
+  canDelete?: (row: T) => boolean;
 }

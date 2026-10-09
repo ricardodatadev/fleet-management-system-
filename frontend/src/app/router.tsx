@@ -11,7 +11,9 @@ import {
 import { DEFAULT_AUTHENTICATED_PATH } from '@/features/auth';
 import { BranchesPage } from '@/features/cadastros/BranchesPage';
 import { CostCentersPage } from '@/features/cadastros/CostCentersPage';
+import { EmployeesPage } from '@/features/cadastros/EmployeesPage';
 import { FamiliesPage } from '@/features/cadastros/FamiliesPage';
+import { UsersPage } from '@/features/cadastros/UsersPage';
 import { EquipmentsPage } from '@/features/equipments/EquipmentsPage';
 import { SettingsPage } from '@/features/settings/SettingsPage';
 import { AppLayout } from '@/layouts/AppLayout';
@@ -66,6 +68,14 @@ export const routes: RouteObject[] = [
             ),
           },
           {
+            path: '/cadastros/colaboradores',
+            element: (
+              <RequirePermission perm="employees.view">
+                <EmployeesPage />
+              </RequirePermission>
+            ),
+          },
+          {
             path: '/cadastros/unidades',
             element: (
               <RequirePermission perm="branches.view">
@@ -86,6 +96,14 @@ export const routes: RouteObject[] = [
             element: (
               <RequirePermission perm="equipment_families.view">
                 <FamiliesPage />
+              </RequirePermission>
+            ),
+          },
+          {
+            path: '/admin/usuarios',
+            element: (
+              <RequirePermission perm="users.view">
+                <UsersPage />
               </RequirePermission>
             ),
           },

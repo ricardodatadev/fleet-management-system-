@@ -15,6 +15,10 @@ import {
   PageHeader,
   Select,
   Switch,
+  Tabs,
+  TabsContent,
+  TabsList,
+  TabsTrigger,
   useToast,
 } from '@/components/ui';
 import type { DataTableColumn, SortState } from '@/components/ui';
@@ -23,6 +27,8 @@ import { CrudFormModal } from './CrudFormModal';
 import type { CrudResource, CrudRow } from './types';
 
 export const PER_PAGE = 15;
+/** Valor interno da aba "todos" (o Radix Tabs não aceita valor vazio). */
+const ALL_TAB = '__all';
 export const SEARCH_DEBOUNCE_MS = 300;
 
 function parseSort(value: string | null): SortState | null {
@@ -52,7 +58,11 @@ export function CrudPage<T extends CrudRow>({ resource }: { resource: CrudResour
   const queryClient = useQueryClient();
   const [params, setParams] = useSearchParams();
 
-  const filterNames = (resource.filters ?? []).map((filter) => filter.name);
+  const tabs = resource.tabs;
+  const filterNames = [
+    ...(resource.filters ?? []).map((filter) => filter.name),
+    ...(tabs ? [tabs.param] : []),
+  ];
   const sort = parseSort(params.get('sort'));
   const page = Math.max(1, Number(params.get('page')) || 1);
   // with_trashed só para quem tem manage (sem ela a API responde 403).
@@ -197,14 +207,16 @@ export function CrudPage<T extends CrudRow>({ resource }: { resource: CrudResour
                 icon={<Pencil className="size-5" />}
                 onClick={() => setEditing({ row })}
               />
-              <IconButton
-                label={`Excluir ${name}`}
-                icon={<Trash2 className="size-5" />}
-                onClick={() => {
-                  remove.reset();
-                  setDeleting(row);
-                }}
-              />
+              {(resource.canDelete?.(row) ?? true) && (
+                <IconButton
+                  label={`Excluir ${name}`}
+                  icon={<Trash2 className="size-5" />}
+                  onClick={() => {
+                    remove.reset();
+                    setDeleting(row);
+                  }}
+                />
+              )}
             </div>
           );
         },
@@ -213,6 +225,30 @@ export function CrudPage<T extends CrudRow>({ resource }: { resource: CrudResour
   })();
 
   const hasFilters = Boolean(q) || filterNames.some((name) => params.get(name));
+
+  const dataTable = (
+    <DataTable
+      caption={resource.title}
+      columns={columns}
+      rows={list.data?.data ?? []}
+      rowKey={(row) => row.id}
+      sort={sort}
+      onSortChange={(next) => updateParams({ sort: formatSort(next) })}
+      meta={list.data?.meta}
+      onPageChange={(next) => updateParams({ page: String(next) })}
+      loading={list.isPending || outOfRange}
+      error={list.isError ? errorMessage(list.error) : null}
+      onRetry={() => void list.refetch()}
+      emptyTitle={hasFilters ? 'Nenhum resultado para os filtros' : 'Nenhum registro cadastrado'}
+      emptyDescription={
+        hasFilters
+          ? 'Ajuste a busca ou os filtros.'
+          : canManage
+            ? `Use "${labels.create}".`
+            : undefined
+      }
+    />
+  );
 
   return (
     <div className="flex flex-col gap-6">
@@ -263,27 +299,27 @@ export function CrudPage<T extends CrudRow>({ resource }: { resource: CrudResour
         )}
       </div>
 
-      <DataTable
-        caption={resource.title}
-        columns={columns}
-        rows={list.data?.data ?? []}
-        rowKey={(row) => row.id}
-        sort={sort}
-        onSortChange={(next) => updateParams({ sort: formatSort(next) })}
-        meta={list.data?.meta}
-        onPageChange={(next) => updateParams({ page: String(next) })}
-        loading={list.isPending || outOfRange}
-        error={list.isError ? errorMessage(list.error) : null}
-        onRetry={() => void list.refetch()}
-        emptyTitle={hasFilters ? 'Nenhum resultado para os filtros' : 'Nenhum registro cadastrado'}
-        emptyDescription={
-          hasFilters
-            ? 'Ajuste a busca ou os filtros.'
-            : canManage
-              ? `Use "${labels.create}".`
-              : undefined
-        }
-      />
+      {tabs ? (
+        <Tabs
+          value={params.get(tabs.param) || ALL_TAB}
+          onValueChange={(value) =>
+            updateParams({ [tabs.param]: value === ALL_TAB ? null : value })
+          }
+          className="flex flex-col gap-4"
+        >
+          <TabsList aria-label={tabs.label}>
+            {tabs.items.map((item) => (
+              <TabsTrigger key={item.value || ALL_TAB} value={item.value || ALL_TAB}>
+                {item.label}
+              </TabsTrigger>
+            ))}
+          </TabsList>
+          {/* Uma única área: a lista da aba ativa (a aba vira parâmetro da API). */}
+          <TabsContent value={params.get(tabs.param) || ALL_TAB}>{dataTable}</TabsContent>
+        </Tabs>
+      ) : (
+        dataTable
+      )}
 
       {editing && (
         <CrudFormModal

@@ -70,8 +70,8 @@ const soon = (id: string, label: string, icon: LucideIcon, perm?: string): NavIt
 /**
  * Navegação principal (spec G.3), na ordem da nota de UI.
  * Grupo sem nenhum item visível para o usuário não é renderizado (ex.: ADMINISTRAÇÃO para quem
- * não tem settings/users/audit). Itens de Cadastros e Administração ficam desabilitados até as
- * telas das F1-30/F1-31 existirem; o selo some ao trocar `enabled` para `true`.
+ * não tem settings/users/audit). Unidades, Centros de Custo e Famílias estão habilitados (F1-30);
+ * Colaboradores, Usuários e Auditoria seguem desabilitados até as F1-31/F1-32.
  */
 export const NAVIGATION: NavGroupConfig[] = [
   {
@@ -164,16 +164,28 @@ export const NAVIGATION: NavGroupConfig[] = [
         to: '/cadastros/colaboradores',
       },
       {
-        ...soon('unidades', 'Unidades/Filiais', Landmark, 'branches.view'),
+        id: 'unidades',
+        label: 'Unidades/Filiais',
+        icon: Landmark,
         to: '/cadastros/unidades',
+        perm: 'branches.view',
+        enabled: true,
       },
       {
-        ...soon('centros-custo', 'Centros de Custo', ChartColumn, 'cost_centers.view'),
+        id: 'centros-custo',
+        label: 'Centros de Custo',
+        icon: ChartColumn,
         to: '/cadastros/centros-custo',
+        perm: 'cost_centers.view',
+        enabled: true,
       },
       {
-        ...soon('familias', 'Famílias/Classes', Activity, 'equipment_families.view'),
+        id: 'familias',
+        label: 'Famílias/Classes',
+        icon: Activity,
         to: '/cadastros/familias',
+        perm: 'equipment_families.view',
+        enabled: true,
       },
       soon('parceiros', 'Parceiros & Terceiros', Handshake),
     ],

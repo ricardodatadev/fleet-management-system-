@@ -115,4 +115,10 @@ export interface CrudResource<T extends CrudRow> {
   tabs?: { param: string; label: string; items: { value: string; label: string }[] };
   /** Esconde a ação de excluir numa linha (ex.: o próprio usuário). Padrão: todas podem. */
   canDelete?: (row: T) => boolean;
+  /**
+   * Substituem o formulário embutido (Modal gerado de `fields`) quando a tela tem o próprio fluxo
+   * de criar/editar (ex.: equipamentos, com wizard por abas).
+   */
+  onCreate?: () => void;
+  onEdit?: (row: T) => void;
 }

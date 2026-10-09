@@ -1,7 +1,7 @@
 import { useQuery } from '@tanstack/react-query';
 import { api } from '@/api';
 import type { SelectOption } from '@/components/ui';
-import type { Branch, CostCenter, MetaEnums, User } from './types';
+import type { Branch, CostCenter, EquipmentFamily, MetaEnums, User } from './types';
 
 /** Limite de itens dos selects de lookup (D.1: até 200 com `is_active=1`). */
 export const LOOKUP_PER_PAGE = 200;
@@ -57,6 +57,24 @@ export function useUserLookup(enabled = true) {
         signal,
       }),
     select: (page) => page.data,
+    enabled,
+  });
+}
+
+/** Famílias/classes ativas para selects (exige equipment_families.view). */
+export function useFamilyOptions(enabled = true) {
+  return useQuery({
+    queryKey: ['/equipment-families', 'lookup'],
+    queryFn: ({ signal }) =>
+      api.getPage<EquipmentFamily>('/equipment-families', {
+        query: { per_page: LOOKUP_PER_PAGE, is_active: 1, sort: 'name' },
+        signal,
+      }),
+    select: (page): SelectOption[] =>
+      page.data.map((family) => ({
+        value: String(family.id),
+        label: `${family.code} — ${family.name}`,
+      })),
     enabled,
   });
 }

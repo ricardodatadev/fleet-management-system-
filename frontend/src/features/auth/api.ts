@@ -1,8 +1,9 @@
 import { api } from '@/api';
+import { APP_SLUG } from '@/config/brand';
 import type { LoginCredentials, LoginData, MeData } from './types';
 
 /** Identifica o dispositivo no token Sanctum (`device_name`). */
-export const DEVICE_NAME = 'sigof-web';
+export const DEVICE_NAME = `${APP_SLUG}-web`;
 
 export const authApi = {
   /** Sem Bearer: o login nunca usa o token salvo. */

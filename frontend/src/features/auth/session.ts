@@ -1,8 +1,10 @@
+import { APP_SLUG } from '@/config/brand';
+
 /**
  * Persistência do token Bearer em localStorage (spec G.2, decisão D15: aprovado na Fase 1 com CSP
  * estrita; revisão obrigatória na fase do PWA). Guarda só token + expiração, nunca dados do usuário.
  */
-export const SESSION_STORAGE_KEY = 'sigof.session';
+export const SESSION_STORAGE_KEY = `${APP_SLUG}.session`;
 
 export interface StoredSession {
   token: string;

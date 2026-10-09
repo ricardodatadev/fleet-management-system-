@@ -6,6 +6,7 @@ use App\Exceptions\DomainConflictException;
 use App\Models\Branch;
 use Closure;
 use Illuminate\Database\Eloquent\Model;
+use Illuminate\Database\Eloquent\ModelNotFoundException;
 use Illuminate\Database\UniqueConstraintViolationException;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Validation\ValidationException;
@@ -37,7 +38,8 @@ trait CrudActions
     /**
      * Soft delete com a regra de dependentes ativos (409). A linha é travada (FOR UPDATE) antes da
      * checagem: quem cria um filho trava a mesma linha (FOR SHARE) e, por isso, espera esta transação
-     * e então vê o pai excluído.
+     * e então vê o pai excluído. Se a linha travada já estiver excluída (exclusão concorrente que
+     * chegou antes), responde 404 sem excluir de novo nem gerar outro evento `deleted`.
      *
      * $before roda na mesma transação ANTES de travar a linha (ex.: travar outras linhas numa ordem fixa
      * e lançar 409); $after roda depois da exclusão (ex.: revogar tokens).
@@ -52,6 +54,9 @@ trait CrudActions
                 $before();
             }
             $locked = $model->newQueryWithoutScopes()->whereKey($model->getKey())->lockForUpdate()->firstOrFail();
+            if ($locked->getAttribute('deleted_at') !== null) {
+                throw (new ModelNotFoundException)->setModel($model::class, [$model->getKey()]);
+            }
 
             $dependents = $locked->activeDependents();
             if ($dependents !== []) {

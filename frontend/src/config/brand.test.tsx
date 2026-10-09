@@ -60,6 +60,7 @@ describe('brand (F1-33)', () => {
     const user = {
       id: 1,
       name: 'Ana Souza',
+      username: 'anasouza',
       email: 'ana@example.com',
       role: 'admin',
       branch: null,

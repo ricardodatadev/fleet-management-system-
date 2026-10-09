@@ -1,6 +1,13 @@
 import { Navigate, createBrowserRouter } from 'react-router-dom';
 import type { RouteObject } from 'react-router-dom';
-import { LoginPage, PublicOnly, RequireAuth, RequirePermission } from '@/features/auth';
+import {
+  ForgotPasswordPage,
+  LoginPage,
+  PublicOnly,
+  RequireAuth,
+  RequirePermission,
+  ResetPasswordPage,
+} from '@/features/auth';
 import { DEFAULT_AUTHENTICATED_PATH } from '@/features/auth';
 import { BranchesPage } from '@/features/cadastros/BranchesPage';
 import { CostCentersPage } from '@/features/cadastros/CostCentersPage';
@@ -22,6 +29,22 @@ export const routes: RouteObject[] = [
         element: (
           <PublicOnly>
             <LoginPage />
+          </PublicOnly>
+        ),
+      },
+      {
+        path: '/esqueci-senha',
+        element: (
+          <PublicOnly>
+            <ForgotPasswordPage />
+          </PublicOnly>
+        ),
+      },
+      {
+        path: '/redefinir-senha',
+        element: (
+          <PublicOnly>
+            <ResetPasswordPage />
           </PublicOnly>
         ),
       },

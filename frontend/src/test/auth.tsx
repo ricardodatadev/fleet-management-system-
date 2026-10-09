@@ -47,6 +47,7 @@ export function makeUser(role: Role = 'admin'): AuthUser {
   return {
     id: 1,
     name: 'Ana Souza',
+    username: 'anasouza',
     email: 'ana@example.com',
     role,
     branch: role === 'admin' ? null : MATRIZ,
@@ -67,16 +68,29 @@ export const fail = (
 
 export const futureIso = (ms = 12 * 3600_000) => new Date(Date.now() + ms).toISOString();
 
-/** Handlers de auth: login aceita `senha-correta`, /me responde conforme o perfil. */
+export const INVALID_DATA = 'Os dados informados são inválidos.';
+export const INVALID_CREDENTIALS = 'Credenciais inválidas.';
+export const USERNAME_REQUIRED = 'O campo usuário é obrigatório.';
+export const PASSWORD_REQUIRED = 'O campo senha é obrigatório.';
+
+/**
+ * Handlers de auth (contrato v1.8 da D.2): só `username` entra (o backend faz trim + minúsculas),
+ * com `senha-correta`; vazio → 422 por campo; e-mail digitado, username inexistente ou senha
+ * errada → o mesmo 422 genérico; `{login}`/`{email}` antigos → username obrigatório. /me responde
+ * conforme o perfil.
+ */
 export function mockAuthApi(role: Role = 'admin', opts: { expiresAt?: string } = {}) {
   const user = makeUser(role);
   server.use(
     http.post(API('/auth/login'), async ({ request }) => {
-      const body = (await request.json()) as { password?: string };
-      if (body.password !== 'senha-correta') {
-        return fail(422, 'Os dados informados são inválidos.', {
-          email: ['Credenciais inválidas.'],
-        });
+      const body = (await request.json()) as { username?: string; password?: string };
+      const username = (body.username ?? '').trim().toLowerCase();
+      const required: Record<string, string[]> = {};
+      if (!username) required.username = [USERNAME_REQUIRED];
+      if (!body.password) required.password = [PASSWORD_REQUIRED];
+      if (Object.keys(required).length > 0) return fail(422, INVALID_DATA, required);
+      if (username !== user.username || body.password !== 'senha-correta') {
+        return fail(422, INVALID_DATA, { username: [INVALID_CREDENTIALS] });
       }
       return ok({
         token: 'tok-novo',
@@ -116,6 +130,7 @@ export function renderApp(initialPath = '/') {
       </AuthProvider>
     </QueryClientProvider>,
   );
-  const location = () => `${router.state.location.pathname}${router.state.location.search}`;
+  const location = () =>
+    `${router.state.location.pathname}${router.state.location.search}${router.state.location.hash}`;
   return { ...view, router, location, queryClient };
 }

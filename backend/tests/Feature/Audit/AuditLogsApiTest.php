@@ -70,7 +70,7 @@ it('filtra por auditable_type, auditable_id, actor_id, action e request_id', fun
 });
 
 it('auditable_type desconhecido, action fora do enum e parâmetros malformados → 422', function () {
-    foreach (['auditable_type=equipment', 'auditable_type=App%5CModels%5CUser', 'action=hacked', 'auditable_id=x', 'actor_id=x', 'request_id=123', 'from=ontem', 'per_page=101'] as $query) {
+    foreach (['auditable_type=vehicle', 'auditable_type=App%5CModels%5CUser', 'action=hacked', 'auditable_id=x', 'actor_id=x', 'request_id=123', 'from=ontem', 'per_page=101'] as $query) {
         api('GET', "audit-logs?{$query}", token: $this->token)->assertStatus(422);
     }
 });

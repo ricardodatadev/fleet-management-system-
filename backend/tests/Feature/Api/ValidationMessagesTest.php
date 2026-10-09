@@ -68,6 +68,8 @@ it('um campo de cada cadastro: 422 com mensagem traduzida e atributo em pt_BR', 
         ->toBe('O valor informado para e-mail já está em uso.');
     expect(api('POST', 'employees', ['registration' => 'M', 'name' => 'X', 'job_type' => 'mechanic', 'branch_id' => $branch->id, 'cnh_number' => '1'], $this->token)->assertStatus(422)->json('errors.cnh_number.0'))
         ->toBe('O campo número da CNH não se aplica à função mecânico.');
+    expect(api('POST', 'equipments', ['code' => 'E', 'name' => 'X', 'family_id' => 999999, 'branch_id' => $branch->id, 'cost_center_id' => 1, 'year' => 1900], $this->token)->assertStatus(422)->json('errors'))
+        ->toMatchArray(['family_id' => ['O valor selecionado para família é inválido.'], 'year' => ['O campo ano deve estar entre 1950 e '.((int) date('Y') + 1).'.']]);
 });
 
 it('nenhum 422 dos cadastros traz chave crua nem nome de campo com sublinhado', function () {
@@ -86,6 +88,8 @@ it('nenhum 422 dos cadastros traz chave crua nem nome de campo com sublinhado', 
         ['PATCH', "employees/{$driver->id}", ['job_type' => 'mechanic']],
         ['PATCH', "employees/{$driver->id}", ['user_id' => userWithRole(Role::Operator, $other)->id]],
         ['GET', 'users?per_page=500&sort=x&role=x', []],
+        ['POST', 'equipments', ['plate' => 'A-1', 'year' => 1900, 'status' => 'x', 'criticality_override' => 'x', 'odometer_km' => -1, 'hour_meter' => 1.25, 'acquisition_value' => 'x', 'acquisition_date' => '01/01/2024', 'family_id' => 'x', 'responsible_employee_id' => 999999, 'serial_number' => str_repeat('x', 61), 'manufacturer' => str_repeat('x', 81), 'model' => str_repeat('x', 81), 'notes' => str_repeat('x', 5001)]],
+        ['GET', 'equipments?sort=x&status=x&cost_center_id=x&responsible_employee_id=x', []],
         ['GET', 'audit-logs?from=2026-10-09&to=2026-10-01&auditable_type=x&request_id=1', []],
     ];
 

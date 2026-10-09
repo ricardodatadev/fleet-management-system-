@@ -177,7 +177,7 @@ it('excluir (soft) e restaurar com audit; excluída → 404 no show/update/delet
     api('POST', "equipment-families/{$family->id}/restore", token: $this->token)->assertStatus(409)->assertJsonPath('errors.code.0', __('api.restore_code_taken'));
 });
 
-it('dependentes: activeDependents declara a chave equipments, mas a checagem só liga na F1-15', function () {
+it('dependentes: família sem equipamento é excluída normalmente (o 409 com equipamentos está no EquipmentsTest)', function () {
     $family = EquipmentFamily::factory()->create();
 
     expect($family->activeDependents())->toBe([]);

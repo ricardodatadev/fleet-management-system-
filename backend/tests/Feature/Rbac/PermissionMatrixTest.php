@@ -5,6 +5,7 @@ use App\Models\AuditLog;
 use App\Models\Branch;
 use App\Models\CostCenter;
 use App\Models\Employee;
+use App\Models\Equipment;
 use App\Models\EquipmentFamily;
 use App\Models\User;
 use App\Support\Rbac\Rbac;
@@ -177,6 +178,14 @@ function routeMatrix(): array
         ['PATCH', 'employees/{employee}', ['name' => 'Renomeado'], $adminOnly(200)],
         ['DELETE', 'employees/{employee}', [], $adminOnly(200)],
         ['POST', 'employees/{employee}/restore', [], $adminOnly(200), ['employee' => 'trashed_employee']],
+        // F1-15 — equipamentos (equipments.view: todos, na própria filial; manage: A). Fixture na filial do usuário.
+        ['GET', 'equipments', [], $all],
+        ['POST', 'equipments', ['code' => 'EQ-NOVO', 'name' => 'Novo', 'family_id' => '{equipment_family}', 'branch_id' => '{branch}', 'cost_center_id' => '{cost_center}'], $adminOnly(201)],
+        ['GET', 'equipments/{equipment}', [], $all],
+        ['PUT', 'equipments/{equipment}', ['name' => 'Renomeado'], $adminOnly(200)],
+        ['PATCH', 'equipments/{equipment}', ['name' => 'Renomeado'], $adminOnly(200)],
+        ['DELETE', 'equipments/{equipment}', [], $adminOnly(200)],
+        ['POST', 'equipments/{equipment}/restore', [], $adminOnly(200), ['equipment' => 'trashed_equipment']],
         // F1-11 — usuários (users.view/users.manage: A) e auditoria (audit.view: A, somente leitura)
         ['GET', 'users', [], $adminOnly(200)],
         ['POST', 'users', ['name' => 'Novo', 'username' => 'novo', 'email' => 'novo@example.com', 'password' => 'NovaSenha2026', 'role' => 'admin'], $adminOnly(201)],
@@ -199,6 +208,8 @@ function routeFixtures(User $user): array
     $ownBranchId = $user->branch_id ?? Branch::factory()->create()->id;
     $trashedEmployee = Employee::factory()->create(['branch_id' => $ownBranchId]);
     $trashedEmployee->delete();
+    $trashedEquipment = Equipment::factory()->create(['branch_id' => $ownBranchId]);
+    $trashedEquipment->delete();
     $trashedBranch = Branch::factory()->create();
     $trashedBranch->delete();
     $trashedCostCenter = CostCenter::factory()->global()->create();
@@ -219,6 +230,8 @@ function routeFixtures(User $user): array
         'trashed_user' => $trashedUser->id,
         'employee' => Employee::factory()->create(['branch_id' => $ownBranchId])->id,
         'trashed_employee' => $trashedEmployee->id,
+        'equipment' => Equipment::factory()->create(['branch_id' => $ownBranchId])->id,
+        'trashed_equipment' => $trashedEquipment->id,
         'audit_log' => AuditLog::query()->value('id'),
     ];
 }

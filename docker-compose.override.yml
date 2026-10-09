@@ -21,7 +21,7 @@ services:
     ports:
       - "127.0.0.1:${DB_PORT:-5432}:5432"
     volumes:
-      # Banco de testes (sigof_test) só em dev; nunca em produção. Volume existente: `make test-db`.
+      # Banco de testes (<db>_test) só em dev; nunca em produção. Volume existente: `make test-db`.
       - ./docker/postgres/create-test-db.sh:/docker-entrypoint-initdb.d/02-create-test-db.sh:ro
   redis:
     ports:
@@ -41,16 +41,20 @@ services:
     environment:
       HOME: /tmp
       VITE_API_PROXY_TARGET: http://nginx
+      # Marca: vazio cai nos defaults do src/config/brand.ts (o vite.config mapeia APP_* → VITE_APP_*).
+      APP_NAME: ${APP_NAME:-}
+      APP_FULL_NAME: ${APP_FULL_NAME:-}
+      APP_SLUG: ${APP_SLUG:-}
     volumes:
       - ./frontend:/app
     ports:
       - "127.0.0.1:${FRONTEND_PORT:-5173}:5173"
     networks:
-      - sigof
+      - internal
     depends_on:
       - nginx
 
 volumes:
   # Atenção: após mudar composer.json/composer.lock, rebuild + `docker compose down` e
-  # `docker volume rm sigof_app_vendor` para o vendor novo da imagem substituir o antigo.
+  # `docker volume rm <projeto>_app_vendor` (ou `make vendor-reset`) para o vendor novo da imagem substituir o antigo.
   app_vendor:

@@ -1,7 +1,14 @@
-name: sigof
+# Projeto, imagens e prefixos derivam do slug (fonte única: APP_NAME/APP_FULL_NAME/APP_SLUG no .env).
+# Os defaults abaixo são o fallback da infra quando o .env não os define (ver docs/renaming.md).
+name: ${APP_SLUG:-gof}
+
+x-brand-env: &brand-env
+  APP_NAME: ${APP_NAME:-GOF}
+  APP_FULL_NAME: ${APP_FULL_NAME:-Gestão Operacional de Frotas}
+  APP_SLUG: ${APP_SLUG:-gof}
 
 x-laravel-env: &laravel-env
-  APP_NAME: SIGOF-M
+  <<: *brand-env
   APP_ENV: ${APP_ENV:-local}
   APP_KEY: ${APP_KEY:-}
   APP_DEBUG: ${APP_DEBUG:-false}
@@ -44,7 +51,7 @@ services:
       - db_data:/var/lib/postgresql/data
       - ./docker/postgres/init-pgvector.sql:/docker-entrypoint-initdb.d/01-init-pgvector.sql:ro
     networks:
-      - sigof
+      - internal
     healthcheck:
       test: ["CMD-SHELL", "pg_isready -U $${POSTGRES_USER} -d $${POSTGRES_DB}"]
       interval: 10s
@@ -66,7 +73,7 @@ services:
     volumes:
       - redis_data:/data
     networks:
-      - sigof
+      - internal
     healthcheck:
       test: ["CMD-SHELL", "redis-cli ping | grep -q PONG"]
       interval: 10s
@@ -79,11 +86,11 @@ services:
       context: .
       dockerfile: docker/laravel/Dockerfile
       target: app
-    image: sigof/app:local
+    image: ${APP_SLUG:-gof}/app:local
     restart: unless-stopped
     environment: *laravel-env
     networks:
-      - sigof
+      - internal
     depends_on:
       db:
         condition: service_healthy
@@ -97,12 +104,12 @@ services:
       start_period: 15s
 
   worker:
-    image: sigof/app:local
+    image: ${APP_SLUG:-gof}/app:local
     restart: unless-stopped
     command: ["php", "artisan", "horizon"]
     environment: *laravel-env
     networks:
-      - sigof
+      - internal
     depends_on:
       app:
         condition: service_healthy
@@ -123,12 +130,13 @@ services:
     build:
       context: ./services/python-ai
       target: prod
-    image: sigof/python-ai:local
+    image: ${APP_SLUG:-gof}/python-ai:local
     restart: unless-stopped
     environment:
+      <<: *brand-env
       SERVICE_VERSION: ${PYTHON_SERVICE_VERSION:-0.1.0}
     networks:
-      - sigof
+      - internal
     healthcheck:
       test: ["CMD", "python", "-c", "import urllib.request,sys; sys.exit(0 if urllib.request.urlopen('http://127.0.0.1:8000/health', timeout=3).status == 200 else 1)"]
       interval: 10s
@@ -140,16 +148,17 @@ services:
     build:
       context: ./services/node-realtime
       target: prod
-    image: sigof/node-realtime:local
+    image: ${APP_SLUG:-gof}/node-realtime:local
     restart: unless-stopped
     environment:
+      <<: *brand-env
       NODE_PORT: ${NODE_PORT:-3000}
       REDIS_HOST: ${REDIS_HOST:-redis}
       REDIS_PORT: 6379
       REDIS_PASSWORD: ${REDIS_PASSWORD:?defina REDIS_PASSWORD no .env}
       LARAVEL_INTERNAL_URL: ${LARAVEL_INTERNAL_URL:-http://nginx}
     networks:
-      - sigof
+      - internal
     depends_on:
       redis:
         condition: service_healthy
@@ -165,14 +174,16 @@ services:
     build:
       context: .
       dockerfile: docker/nginx/Dockerfile
-    image: sigof/nginx:local
+      # A SPA é compilada nesta imagem: o vite.config mapeia APP_* → VITE_APP_* no build.
+      args: *brand-env
+    image: ${APP_SLUG:-gof}/nginx:local
     restart: unless-stopped
     environment:
       L5_SWAGGER_ENABLED: ${L5_SWAGGER_ENABLED:-false}
     ports:
       - "${WEB_HTTP_PORT:-80}:80"
     networks:
-      - sigof
+      - internal
     depends_on:
       app:
         condition: service_healthy
@@ -183,9 +194,9 @@ services:
       retries: 5
       start_period: 10s
 
+# Sem `name:`: rede e volumes herdam o prefixo do projeto (<slug>_internal, <slug>_db_data...).
 networks:
-  sigof:
-    name: sigof_net
+  internal:
 
 volumes:
   db_data:

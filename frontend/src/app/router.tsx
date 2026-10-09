@@ -2,6 +2,9 @@ import { Navigate, createBrowserRouter } from 'react-router-dom';
 import type { RouteObject } from 'react-router-dom';
 import { LoginPage, PublicOnly, RequireAuth, RequirePermission } from '@/features/auth';
 import { DEFAULT_AUTHENTICATED_PATH } from '@/features/auth';
+import { BranchesPage } from '@/features/cadastros/BranchesPage';
+import { CostCentersPage } from '@/features/cadastros/CostCentersPage';
+import { FamiliesPage } from '@/features/cadastros/FamiliesPage';
 import { EquipmentsPage } from '@/features/equipments/EquipmentsPage';
 import { SettingsPage } from '@/features/settings/SettingsPage';
 import { AppLayout } from '@/layouts/AppLayout';
@@ -36,6 +39,30 @@ export const routes: RouteObject[] = [
             element: (
               <RequirePermission perm="equipments.view">
                 <EquipmentsPage />
+              </RequirePermission>
+            ),
+          },
+          {
+            path: '/cadastros/unidades',
+            element: (
+              <RequirePermission perm="branches.view">
+                <BranchesPage />
+              </RequirePermission>
+            ),
+          },
+          {
+            path: '/cadastros/centros-custo',
+            element: (
+              <RequirePermission perm="cost_centers.view">
+                <CostCentersPage />
+              </RequirePermission>
+            ),
+          },
+          {
+            path: '/cadastros/familias',
+            element: (
+              <RequirePermission perm="equipment_families.view">
+                <FamiliesPage />
               </RequirePermission>
             ),
           },

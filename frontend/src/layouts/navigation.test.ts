@@ -52,10 +52,13 @@ describe('navigation.ts (G.3)', () => {
     expect(shape(NAVIGATION)).toEqual(G3);
   });
 
-  it('nesta fase só Frotas & Equipamentos e Painel de Parâmetros estão habilitados', () => {
+  it('habilitados: Equipamentos, Parâmetros e os cadastros da F1-30 (Colaboradores segue na F1-31)', () => {
     const enabled = NAVIGATION.flatMap((g) => g.items.filter((i) => i.enabled));
     expect(enabled.map((i) => [i.label, i.to, i.perm])).toEqual([
       ['Frotas & Equipamentos', '/ativos/equipamentos', 'equipments.view'],
+      ['Unidades/Filiais', '/cadastros/unidades', 'branches.view'],
+      ['Centros de Custo', '/cadastros/centros-custo', 'cost_centers.view'],
+      ['Famílias/Classes', '/cadastros/familias', 'equipment_families.view'],
       ['Painel de Parâmetros', '/parametros', 'settings.view'],
     ]);
   });

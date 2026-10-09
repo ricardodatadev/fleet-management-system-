@@ -96,6 +96,23 @@ it('o e-mail vai pela fila, depois do commit, em pt_BR, com o nome de config(app
     expect($html)->toContain('Marca X')->toContain('Redefinir senha')->not->toContain('Hello!')->not->toContain('Regards');
 });
 
+it('link: token e e-mail com rawurlencode no fragmento; e-mail com "+" chega intacto ao URLSearchParams e ao reset', function () {
+    config(['app.frontend_url' => 'https://frota.exemplo.test']);
+    $user = User::factory()->create(['email' => 'ana+frota@x.com']);
+
+    forgot('ana+frota@x.com')->assertOk();
+    $token = sentToken($user);
+    $url = (new ResetPasswordNotification($token))->url($user);
+
+    expect($url)->toBe('https://frota.exemplo.test/redefinir-senha#token='.rawurlencode($token).'&email=ana%2Bfrota%40x.com')
+        ->and($url)->not->toContain('+');
+    // URLSearchParams trata "+" como espaço; com %2B o valor volta igual
+    parse_str(str_replace('+', '%20', parse_url($url, PHP_URL_FRAGMENT)), $params);
+    expect($params)->toBe(['token' => $token, 'email' => 'ana+frota@x.com']);
+
+    resetWith($params['email'], $params['token'])->assertOk();
+});
+
 it('forgot enfileira a notificação (SendQueuedNotifications) em vez de enviar na requisição', function () {
     Notification::swap(new ChannelManager(app())); // canal real (sem o fake do beforeEach), fila falsa
     Queue::fake();

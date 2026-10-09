@@ -17,6 +17,42 @@ class AuditLog extends Model
 
     protected $guarded = [];
 
+    /**
+     * Alias curto do tipo auditável (filtro `auditable_type` e campo `auditable.type` de /audit-logs) →
+     * model. Cada cadastro que usa Auditable acrescenta o seu (F1-13..16).
+     *
+     * @var array<string, class-string<Model>>
+     */
+    public const AUDITABLE_TYPES = [
+        'branch' => Branch::class,
+        'cost_center' => CostCenter::class,
+        'equipment_family' => EquipmentFamily::class,
+        'user' => User::class,
+    ];
+
+    /** Valor gravado em auditable_type (morph class) para o alias; null se o alias não existir. */
+    public static function morphClassFor(string $alias): ?string
+    {
+        $class = self::AUDITABLE_TYPES[$alias] ?? null;
+
+        return $class === null ? null : (new $class)->getMorphClass();
+    }
+
+    /** Alias do auditable_type gravado; tipo sem alias sai como gravado. */
+    public static function aliasFor(?string $morphClass): ?string
+    {
+        if ($morphClass === null) {
+            return null;
+        }
+        foreach (array_keys(self::AUDITABLE_TYPES) as $alias) {
+            if (self::morphClassFor($alias) === $morphClass) {
+                return $alias;
+            }
+        }
+
+        return $morphClass;
+    }
+
     protected function casts(): array
     {
         return [

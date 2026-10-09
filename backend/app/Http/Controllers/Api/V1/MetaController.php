@@ -2,8 +2,10 @@
 
 namespace App\Http\Controllers\Api\V1;
 
+use App\Enums\Role;
 use App\Http\Controllers\Controller;
 use App\Models\Branch;
+use App\Models\EquipmentFamily;
 use App\Support\Api\ApiResponse;
 use Illuminate\Http\JsonResponse;
 use OpenApi\Attributes as OA;
@@ -30,8 +32,13 @@ class MetaController extends Controller
                         properties: [new OA\Property(
                             property: 'enums',
                             type: 'object',
-                            required: ['branch_types'],
-                            properties: [new OA\Property(property: 'branch_types', type: 'array', items: new OA\Items(type: 'string', enum: Branch::TYPES))],
+                            required: ['branch_types', 'roles', 'equipment_categories', 'criticalities'],
+                            properties: [
+                                new OA\Property(property: 'branch_types', type: 'array', items: new OA\Items(type: 'string', enum: Branch::TYPES)),
+                                new OA\Property(property: 'roles', type: 'array', items: new OA\Items(type: 'string', enum: ['operator', 'mechanic', 'leader', 'admin'])),
+                                new OA\Property(property: 'equipment_categories', type: 'array', items: new OA\Items(type: 'string', enum: EquipmentFamily::CATEGORIES)),
+                                new OA\Property(property: 'criticalities', type: 'array', items: new OA\Items(type: 'string', enum: EquipmentFamily::CRITICALITIES)),
+                            ],
                         )],
                     )]),
                 ]),
@@ -45,6 +52,9 @@ class MetaController extends Controller
     {
         return ApiResponse::success(['enums' => [
             'branch_types' => Branch::TYPES,
+            'roles' => Role::values(),
+            'equipment_categories' => EquipmentFamily::CATEGORIES,
+            'criticalities' => EquipmentFamily::CRITICALITIES,
         ]]);
     }
 }

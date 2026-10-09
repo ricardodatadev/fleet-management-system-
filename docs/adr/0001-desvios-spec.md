@@ -124,6 +124,24 @@ Pesquisa de 2026-10-08. Versões do backend confirmadas no packagist/`composer s
 - **Centros de custo:** `BranchScoped` com `branchScopeIncludesNull` (L vê os da própria filial + os sem filial; outra filial → 404). `branch_id` deve ser filial existente e não excluída; filial inativa é aceita.
 - **OpenAPI:** parâmetros de lista reutilizáveis (`#/components/parameters/*`) ficam em `App\Support\Api\OpenApi\ListParameters`: declarados na classe `Spec`, faziam a geração perder os schemas dela. `/meta/enums` passou a devolver `branch_types`.
 
+## Notas de implementação (F1-11 — usuários e auditoria)
+
+- **CRUD `/users`** segue as convenções da F1-12 (`ListQuery`, `CrudActions`, PUT = PATCH, 409/restore, `with_trashed` só com `users.manage`). Resposta no schema `User` (`ManagedUserResource`), sem `password`/`remember_token`; o usuário de `/auth/*` continua no schema `AuthUser`. `User` **não** usa `BranchScoped` (alerta da F1-10, com teste): o filtro por filial é o parâmetro `branch_id`.
+- **Filial:** `branch_id` é exigido quando o perfil resultante (enviado ou atual) não é admin; criar/alterar trava a filial com `FOR SHARE` na transação da gravação (`CrudActions::lockBranch`, que saiu do `CostCenterController` para a base). Filial excluída → 422.
+- **Tokens:** trocar a senha de outro usuário, desativar ou excluir revoga todos os tokens do alvo. Quando o próprio admin troca a senha por `/users`, o token atual é mantido e os demais são revogados, como em `PUT /auth/password`. A troca de senha gera `password_changed` (`metadata.revoked_tokens`), porque o `updated` nunca leva a senha.
+- **409:** o admin autenticado não exclui, não desativa e não muda o próprio `role`. Último admin ativo: antes de travar o alvo, as linhas de admin ativo não excluído são travadas `FOR UPDATE` em ordem de id (`softDeleteGuarded` ganhou um hook `$before` para isso), o que evita deadlock entre duas operações cruzadas e faz a segunda enxergar o resultado da primeira. Como o autenticado é sempre um admin ativo, o caso só ocorre em corrida; o teste simula o outro admin já desativado no banco.
+- **Restore:** `restoreGuarded` passou a receber o campo único (`code` ou `email`); e-mail reutilizado ou filial excluída → 409.
+- **`/audit-logs`:** somente leitura (`audit.view`). `auditable_type` usa o alias curto de `AuditLog::AUDITABLE_TYPES` (cada cadastro novo acrescenta o seu; um teste garante que todo model com `Auditable` tem alias). `action` fora do enum → 422. `from`/`to` são inclusivos; data sem hora cobre o dia inteiro em UTC, e a comparação mantém os microssegundos. Ordenação fixa `event_at desc, id desc` (`ListQuery::fixedOrder`; `sort` é ignorado). `actor` vem do snapshot gravado no evento (nome e perfil da época). `with_trashed` só existe para models com SoftDeletes.
+- **409 fora do log de erro:** `DomainConflictException` entrou em `dontReport`, porque um conflito de regra é resposta esperada, não falha do servidor.
+- `/meta/enums` devolve `roles`.
+
+## Notas de implementação (F1-13 — famílias de equipamento)
+
+- **Tabela** `equipment_families` conforme a C.4, com CHECKs no banco (category, criticality, `0 < preventive_lead_pct ≤ 100`, tolerâncias ≥ 0) e UQ parcial em `code`. A violação direta no SQL é rejeitada (teste).
+- **Contrato v1.4, combinado com a Íris:** `preventive_lead_pct` tem cast `float` no model, porque o `numeric(5,2)` chega do PDO como string; a API sempre devolve número JSON. A validação aceita até 2 casas, igual à coluna. `tolerance_*` são inteiros ou null. No create, `criticality=medium` e `preventive_lead_pct=90` (iguais aos DEFAULT do banco, também em `$attributes`). `sort` ∈ code, name, category, criticality. `/meta/enums` ganha `equipment_categories` e `criticalities`. Sem escopo de filial (cadastro global; leitura M, L e A).
+- **Dependentes:** `activeDependents()` já declara a chave `equipments`, mas a checagem fica desligada até a F1-15 criar a tabela.
+- **Base (pendência da F1-12):** `softDeleteGuarded` responde 404 quando a linha travada já está excluída (duas exclusões concorrentes), sem excluir de novo e sem um segundo `deleted` no audit. Vale para todos os cadastros (teste por model).
+
 ## Notas de implementação (F1-33 — nome do sistema em fonte única, D17)
 
 - **Fonte única:** `.env.example` define `APP_NAME` (nome curto), `APP_FULL_NAME` (nome completo) e `APP_SLUG` (identificador técnico); `POSTGRES_DB`/`POSTGRES_USER` usam o slug. Um rebrand é editar valores e os literais da allowlist, nunca caçar strings (passo a passo em `docs/renaming.md`).

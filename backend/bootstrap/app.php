@@ -51,6 +51,8 @@ return Application::configure(basePath: dirname(__DIR__))
         $exceptions->render(function (ModelNotFoundException $e, Request $request) use ($isApi) {
             return $isApi($request) ? ApiResponse::error(__('api.404'), 404) : null;
         });
+        // 409 é regra de negócio esperada (não é falha do servidor): não vai para o log de erro.
+        $exceptions->dontReport(DomainConflictException::class);
         $exceptions->render(function (DomainConflictException $e, Request $request) use ($isApi) {
             return $isApi($request) ? ApiResponse::error($e->getMessage(), 409, $e->errors) : null;
         });

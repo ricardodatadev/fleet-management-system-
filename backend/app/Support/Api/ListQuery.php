@@ -4,6 +4,7 @@ namespace App\Support\Api;
 
 use Illuminate\Contracts\Pagination\LengthAwarePaginator;
 use Illuminate\Database\Eloquent\Builder;
+use Illuminate\Database\Eloquent\SoftDeletes;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Gate;
 use Illuminate\Support\Facades\Validator;
@@ -19,7 +20,8 @@ use Illuminate\Support\Facades\Validator;
  *       ->sortable(['code', 'name', 'created_at'], 'code')
  *       ->paginate();
  *
- * Parâmetros fora dos declarados são ignorados; valores inválidos → 422.
+ * Parâmetros fora dos declarados são ignorados; valores inválidos → 422. `fixedOrder()` troca o `sort`
+ * por uma ordenação fixa (o parâmetro passa a ser ignorado). `with_trashed` só existe em models com SoftDeletes.
  *
  * @template TModel of \Illuminate\Database\Eloquent\Model
  */
@@ -45,6 +47,9 @@ class ListQuery
     private array $sortColumns = [];
 
     private string $defaultSort = 'id';
+
+    /** @var list<array{0: string, 1: 'asc'|'desc'}>|null */
+    private ?array $fixedOrder = null;
 
     /** @param  Builder<TModel>  $query */
     private function __construct(private readonly Request $request, private readonly Builder $query) {}
@@ -90,6 +95,18 @@ class ListQuery
         return $this;
     }
 
+    /**
+     * Ordenação fixa, sem `sort` do cliente e sem o desempate por id asc (inclua o id em $orders).
+     *
+     * @param  list<array{0: string, 1: 'asc'|'desc'}>  $orders
+     */
+    public function fixedOrder(array $orders): self
+    {
+        $this->fixedOrder = $orders;
+
+        return $this;
+    }
+
     /** @return LengthAwarePaginator<int, TModel> */
     public function paginate(): LengthAwarePaginator
     {
@@ -122,10 +139,16 @@ class ListQuery
             });
         }
 
-        foreach ($this->sorts($input['sort'] ?? null) as [$column, $direction]) {
-            $query->orderBy($model->qualifyColumn($column), $direction);
+        if ($this->fixedOrder !== null) {
+            foreach ($this->fixedOrder as [$column, $direction]) {
+                $query->orderBy($model->qualifyColumn($column), $direction);
+            }
+        } else {
+            foreach ($this->sorts($input['sort'] ?? null) as [$column, $direction]) {
+                $query->orderBy($model->qualifyColumn($column), $direction);
+            }
+            $query->orderBy($model->qualifyColumn($model->getKeyName())); // desempate estável
         }
-        $query->orderBy($model->qualifyColumn($model->getKeyName())); // desempate estável
 
         return $query->paginate((int) ($input['per_page'] ?? self::PER_PAGE), ['*'], 'page', (int) ($input['page'] ?? 1));
     }
@@ -141,9 +164,13 @@ class ListQuery
             'page' => ['sometimes', 'integer', 'min:1'],
             'per_page' => ['sometimes', 'integer', 'min:1', 'max:'.($activeOnly ? self::MAX_PER_PAGE_ACTIVE : self::MAX_PER_PAGE)],
             'q' => ['sometimes', 'nullable', 'string', 'max:100'],
-            'sort' => ['sometimes', 'string', 'regex:'.$sortPattern],
-            'with_trashed' => ['sometimes', 'boolean'],
         ];
+        if ($this->fixedOrder === null) {
+            $rules['sort'] = ['sometimes', 'string', 'regex:'.$sortPattern];
+        }
+        if (in_array(SoftDeletes::class, class_uses_recursive($this->query->getModel()), true)) {
+            $rules['with_trashed'] = ['sometimes', 'boolean'];
+        }
         foreach ($this->filterRules as $name => $filterRules) {
             $rules[$name] = ['sometimes', 'nullable', ...$filterRules];
         }

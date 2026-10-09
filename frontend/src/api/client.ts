@@ -71,6 +71,16 @@ function isEnvelope(value: unknown): value is ApiEnvelope<unknown> {
   );
 }
 
+/** `Retry-After` em segundos (aceita número de segundos ou data HTTP). */
+export function parseRetryAfter(header: string | null, now: number = Date.now()): number | null {
+  if (!header) return null;
+  const value = header.trim();
+  if (/^\d+$/.test(value)) return Number(value);
+  const date = Date.parse(value);
+  if (Number.isNaN(date)) return null;
+  return Math.max(0, Math.ceil((date - now) / 1000));
+}
+
 async function parseBody(response: Response): Promise<unknown> {
   const text = await response.text();
   if (!text) return null;
@@ -130,6 +140,7 @@ export class ApiClient {
         message: envelope?.message || GENERIC_ERROR_MESSAGE,
         errors: envelope?.errors ?? null,
         requestId,
+        retryAfter: parseRetryAfter(response.headers.get('Retry-After')),
       });
       if (response.status === 401) this.config.onUnauthorized?.(error);
       throw error;

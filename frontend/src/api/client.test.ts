@@ -1,7 +1,7 @@
 import { http, HttpResponse } from 'msw';
 import { describe, expect, it, vi } from 'vitest';
 import { server } from '@/test/server';
-import { ApiClient } from './client';
+import { ApiClient, parseRetryAfter } from './client';
 import { ApiError, NETWORK_ERROR_MESSAGE } from './errors';
 
 const BASE = 'http://sigof.test/api/v1';
@@ -158,6 +158,27 @@ describe('ApiClient', () => {
     expect(error.errors).toBeNull();
   });
 
+  it('429: expõe retryAfter (segundos) do header Retry-After', async () => {
+    server.use(
+      http.post(url('/auth/login'), () =>
+        HttpResponse.json(envelope({ status: 'error', message: 'Muitas tentativas.' }), {
+          status: 429,
+          headers: { 'Retry-After': '42' },
+        }),
+      ),
+    );
+    const error = await catchError(makeClient().post('/auth/login', {}));
+    expect(error.status).toBe(429);
+    expect(error.isTooManyRequests).toBe(true);
+    expect(error.retryAfter).toBe(42);
+    expect(error.message).toBe('Muitas tentativas.');
+  });
+
+  it('erro sem Retry-After: retryAfter null', async () => {
+    server.use(http.get(url('/x'), () => HttpResponse.json(envelope(), { status: 500 })));
+    expect((await catchError(makeClient().get('/x'))).retryAfter).toBeNull();
+  });
+
   it('rede indisponível: ApiError status 0', async () => {
     server.use(http.get(url('/down'), () => HttpResponse.error()));
     const error = await catchError(makeClient().get('/down'));
@@ -172,5 +193,16 @@ describe('ApiClient', () => {
     await expect(makeClient().get('/slow', { signal: controller.signal })).rejects.toMatchObject({
       name: 'AbortError',
     });
+  });
+});
+
+describe('parseRetryAfter', () => {
+  it('aceita segundos e data HTTP; ignora valor inválido', () => {
+    const now = Date.parse('2026-10-08T12:00:00Z');
+    expect(parseRetryAfter('30', now)).toBe(30);
+    expect(parseRetryAfter('Thu, 08 Oct 2026 12:01:00 GMT', now)).toBe(60);
+    expect(parseRetryAfter('Thu, 08 Oct 2026 11:00:00 GMT', now)).toBe(0);
+    expect(parseRetryAfter('abc', now)).toBeNull();
+    expect(parseRetryAfter(null, now)).toBeNull();
   });
 });

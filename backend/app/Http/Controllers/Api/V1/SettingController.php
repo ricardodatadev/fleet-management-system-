@@ -238,7 +238,10 @@ class SettingController extends Controller
             $request->input('value'),
         );
 
-        return ApiResponse::item(new SettingResource($setting->load('updatedBy')), __('api.setting_saved'));
+        // mesmo valor de antes: nada mudou nem foi auditado, e a mensagem diz isso
+        $changed = $setting->wasRecentlyCreated || $setting->wasChanged('value');
+
+        return ApiResponse::item(new SettingResource($setting->load('updatedBy')), __($changed ? 'api.setting_saved' : 'api.setting_unchanged'));
     }
 
     #[OA\Delete(

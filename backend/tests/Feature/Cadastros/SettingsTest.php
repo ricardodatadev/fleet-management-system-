@@ -122,8 +122,8 @@ it('PUT é upsert idempotente: mesmo valor não cria linha nem audit; mudança a
     putSetting($key, 'branch', $this->x->id, 'hard_block')->assertOk()
         ->assertJsonPath('data.scope', ['id' => $this->x->id, 'code' => 'X', 'name' => 'Filial X'])
         ->assertJsonPath('data.updated_by', ['id' => $this->admin->id, 'name' => $this->admin->name]);
-    putSetting($key, 'branch', $this->x->id, 'hard_block')->assertOk();
-    putSetting($key, 'branch', $this->x->id, 'warning')->assertOk()->assertJsonPath('data.value', 'warning');
+    putSetting($key, 'branch', $this->x->id, 'hard_block')->assertOk()->assertJsonPath('message', __('api.setting_unchanged'));
+    putSetting($key, 'branch', $this->x->id, 'warning')->assertOk()->assertJsonPath('data.value', 'warning')->assertJsonPath('message', __('api.setting_saved'));
 
     expect(Setting::query()->count())->toBe(1);
     expect(settingLogs())->toBe([

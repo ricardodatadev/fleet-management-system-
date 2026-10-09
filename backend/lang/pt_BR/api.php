@@ -55,6 +55,7 @@ return [
     'setting_global_not_removable' => 'O valor global não pode ser removido; altere-o em vez de remover.',
     'setting_removed' => 'Override removido. Vale o valor herdado.',
     'setting_saved' => 'Parâmetro salvo. A alteração foi registrada em auditoria.',
+    'setting_unchanged' => 'Nenhuma alteração: o parâmetro já tinha esse valor.',
     'job_types' => [
         'driver' => 'motorista',
         'mechanic' => 'mecânico',

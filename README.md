@@ -1,4 +1,4 @@
-# SIGOF-M — Sistema Integrado de Gestão e Otimização de Frota e Manutenção
+# GOF — Gestão Operacional de Frotas
 
 Monorepo da Fase 1 (fundação + cadastros). Fonte de verdade da fase: especificação `fase-1-especificacao` v1.1.
 
@@ -6,7 +6,7 @@ Monorepo da Fase 1 (fundação + cadastros). Fonte de verdade da fase: especific
 
 ## Arquitetura
 
-Monólito modular Laravel + 2 serviços, tudo em Docker Compose (projeto `sigof`).
+Monólito modular Laravel + 2 serviços, tudo em Docker Compose (projeto = `APP_SLUG` do `.env`).
 
 | Serviço | Papel | Pasta |
 |---|---|---|
@@ -31,15 +31,19 @@ bash scripts/smoke.sh     # verificação ponta a ponta (F1-20)
 
 Acesse `http://localhost:${WEB_HTTP_PORT}/` (padrão 80; use ex. 8080 se a porta 80 estiver ocupada ou sem privilégio). Health do nginx: `/healthz`. Documentação da API: `/api/documentation` apenas com `L5_SWAGGER_ENABLED=true`.
 
-Alvos do Makefile: `up, down, init, migrate, seed, test, lint, ci` (`up`/`down`/`init`/`migrate`/`test` reais; `test-db`/`openapi`/`openapi-lint`; `seed`, `lint`, `ci` são stubs até F1-17/F1-19).
+Alvos do Makefile: `up, down, init, migrate, seed, test, test-db, openapi, openapi-lint, brand, lint, ci, vendor-reset`. `lint` = guarda de marca + teste da guarda + Pint (Larastan chega na F1-19); `ci` = `lint` + `test`; `seed` é stub até a F1-17.
 
 ## Desenvolvimento
 
-O `docker-compose.override.yml` (dev) monta `./backend` nos containers `app`/`worker` (recarga sem rebuild) e roda com o seu uid: `export HOST_UID=$(id -u) HOST_GID=$(id -g)` (default 1000). Se mudar `composer.json/lock`: `docker compose build app && docker compose down && docker volume rm sigof_app_vendor`. Testes: `make test` (Pest no container `app`) rodam em **PostgreSQL**, no banco `sigof_test` (nunca no de dev): `Tests\TestCase` aborta se o driver não for `pgsql` ou o banco não terminar em `_test`. O banco de testes é criado pelo init do postgres em volumes novos; em volumes antigos `make test-db` (idempotente, também executado por `make test`) cria o banco e a extensão `vector`. CORS extra só via `CORS_ALLOWED_ORIGINS`.
+O `docker-compose.override.yml` (dev) monta `./backend` nos containers `app`/`worker` (recarga sem rebuild) e roda com o seu uid: `export HOST_UID=$(id -u) HOST_GID=$(id -g)` (default 1000). Se mudar `composer.json/lock`: `make vendor-reset` (rebuild do `app` + `docker volume rm <projeto>_app_vendor`). Testes: `make test` (Pest no container `app`) rodam em **PostgreSQL**, no banco `<POSTGRES_DB>_test` (nunca no de dev): `Tests\TestCase` aborta se o driver não for `pgsql` ou o banco não terminar em `_test`. O banco de testes é criado pelo init do postgres em volumes novos; em volumes antigos `make test-db` (idempotente, também executado por `make test`) cria o banco e a extensão `vector`. CORS extra só via `CORS_ALLOWED_ORIGINS`.
 
 ## OpenAPI
 
 Contrato da API: `docs/api/openapi.json` (OpenAPI 3.0, versionado), gerado dos atributos PHP (swagger-php): `make openapi` (= `composer openapi` no container). Lint: `make openapi-lint` (Redocly em container node efêmero; 0 erros, avisos justificados no ADR). Os testes Pest falham se uma rota `api/v1` não estiver documentada ou se o JSON versionado estiver desatualizado. Swagger UI: `L5_SWAGGER_ENABLED=true` no `.env` e recriar `nginx`/`app` → `/api/documentation` (com `false` a rota não existe e responde 404). A CSP do Swagger UI é própria desse location; `/` mantém `default-src 'self'`.
+
+## Nome do sistema
+
+O nome vem de uma fonte única: `APP_NAME`, `APP_FULL_NAME` e `APP_SLUG` no `.env` (modelo no `.env.example`). O nome exibido (API/OpenAPI, Swagger, FastAPI, SPA) vem dos dois primeiros; todo identificador técnico (projeto do compose, imagens, rede, volumes, banco, prefixos de cache/Redis/sessão/Horizon, chave de sessão do front) deriva do slug. `make brand` (`scripts/check-brand.sh`) falha se o nome aparecer fora da allowlist (`scripts/brand-allowlist.txt`). Para trocar o nome, veja [`docs/renaming.md`](docs/renaming.md).
 
 ## Portas
 
@@ -57,7 +61,7 @@ Repositório, `main`, `develop` e merges são do Escrivão. Branches `feat/f1-XX
 
 ## Desvios em relação à especificação original
 
-Resumo; detalhes em [`docs/adr/0001-desvios-spec.md`](docs/adr/0001-desvios-spec.md): Laravel última estável (D1), Sanctum Bearer e não OAuth2 (D2), monólito modular + 2 serviços, sem K8s (D3), só nginx publicado (D4), sem senhas hardcoded (D5), sem `version:` no compose (D6), código dos serviços em `services/` (D7), nomes de serviço sem `container_name` (D8), envelope próprio em vez de JSON:API (D9), somente Redis (D10), Node 24 LTS (D11), sem Horizon exposto (D12), papéis Almoxarife/Financeiro adiados (D13), RN-002 placeholder (D14), Bearer em localStorage com CSP estrita (D15), git sob o Escrivão (D16).
+Resumo; detalhes em [`docs/adr/0001-desvios-spec.md`](docs/adr/0001-desvios-spec.md): Laravel última estável (D1), Sanctum Bearer e não OAuth2 (D2), monólito modular + 2 serviços, sem K8s (D3), só nginx publicado (D4), sem senhas hardcoded (D5), sem `version:` no compose (D6), código dos serviços em `services/` (D7), nomes de serviço sem `container_name` (D8), envelope próprio em vez de JSON:API (D9), somente Redis (D10), Node 24 LTS (D11), sem Horizon exposto (D12), papéis Almoxarife/Financeiro adiados (D13), RN-002 placeholder (D14), Bearer em localStorage com CSP estrita (D15), git sob o Escrivão (D16), nome do sistema em fonte única com guarda (D17).
 
 ## Troubleshooting
 

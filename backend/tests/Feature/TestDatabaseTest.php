@@ -2,6 +2,7 @@
 
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Str;
 use Tests\Support\TestDatabaseGuard;
 
 uses(RefreshDatabase::class);
@@ -19,8 +20,11 @@ it('roda em PostgreSQL com banco terminado em _test e extensão vector', functio
 
 it('a guarda rejeita sqlite e bancos que não terminam em _test', function () {
     expect(fn () => TestDatabaseGuard::assertSafe('sqlite', ':memory:'))->toThrow(RuntimeException::class, 'SUÍTE ABORTADA');
-    expect(fn () => TestDatabaseGuard::assertSafe('pgsql', 'sigof'))->toThrow(RuntimeException::class, 'SUÍTE ABORTADA');
+    $testDb = (string) config('database.connections.pgsql.database');
+    $devDb = Str::beforeLast($testDb, '_test');
+
+    expect(fn () => TestDatabaseGuard::assertSafe('pgsql', $devDb))->toThrow(RuntimeException::class, 'SUÍTE ABORTADA');
     expect(fn () => TestDatabaseGuard::assertSafe(null, null))->toThrow(RuntimeException::class);
-    TestDatabaseGuard::assertSafe('pgsql', 'sigof_test');
+    TestDatabaseGuard::assertSafe('pgsql', $testDb);
     expect(true)->toBeTrue();
 });

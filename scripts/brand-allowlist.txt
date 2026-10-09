@@ -1,0 +1,18 @@
+# Arquivos versionados que PODEM conter o nome do sistema (APP_NAME, APP_FULL_NAME ou APP_SLUG).
+# Um caminho por linha, relativo à raiz, com o motivo após '#'. Lido por scripts/check-brand.sh.
+# Num rebrand, estes são os únicos arquivos com literal a atualizar (ver docs/renaming.md).
+# O nome antigo não é liberado por esta lista: só a entrada D17 do ADR-0001 pode citá-lo.
+
+.env.example                          # fonte única: define APP_NAME, APP_FULL_NAME e APP_SLUG (e POSTGRES_DB/USER = slug)
+docker-compose.yml                    # fallback da infra (${APP_*:-...}) quando o .env não define a marca
+backend/phpunit.xml                   # DB_DATABASE forçado como <slug>_test (XML do PHPUnit não interpola env)
+backend/composer.json                 # nome do pacote composer (<slug>/backend; JSON não interpola)
+docs/api/openapi.json                 # artefato gerado (make openapi): título/descrição vêm de app.name/app.full_name
+services/python-ai/app/main.py        # default do APP_NAME no título do FastAPI quando o ambiente não define
+services/node-realtime/package.json   # nome do pacote npm (<slug>-node-realtime)
+services/node-realtime/package-lock.json  # espelha o nome do package.json
+frontend/src/config/brand.ts          # defaults do front (único módulo com o nome em src/)
+frontend/package.json                 # nome do pacote npm (<slug>-frontend)
+frontend/package-lock.json            # espelha o nome do package.json
+README.md                             # título e apresentação do projeto
+docs/adr/0001-desvios-spec.md         # D17 registra o rebrand (nome atual e anterior)

@@ -17,6 +17,21 @@ return [
 
     /*
     |--------------------------------------------------------------------------
+    | Marca: nome completo e slug
+    |--------------------------------------------------------------------------
+    |
+    | Fonte única: APP_NAME, APP_FULL_NAME e APP_SLUG no .env (ver docs/renaming.md).
+    | O nome exibido vem de `name`/`full_name`; todo identificador técnico
+    | (prefixos de cache, Redis, sessão e Horizon, tmp da OpenAPI) deriva do `slug`.
+    |
+    */
+
+    'full_name' => env('APP_FULL_NAME', env('APP_NAME', 'Laravel')),
+
+    'slug' => env('APP_SLUG', 'laravel'),
+
+    /*
+    |--------------------------------------------------------------------------
     | Application Environment
     |--------------------------------------------------------------------------
     |

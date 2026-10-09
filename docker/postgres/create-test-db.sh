@@ -3,10 +3,11 @@
 # Usado de duas formas:
 #   - volume novo: executado pelo entrypoint do postgres (/docker-entrypoint-initdb.d/02-create-test-db.sh)
 #   - volume existente: `make test-db` (docker compose exec db sh /docker-entrypoint-initdb.d/02-create-test-db.sh)
-# O nome é fixo (sigof_test) porque o phpunit.xml o força; a suíte aborta se o banco não terminar em _test.
+# O nome deriva do POSTGRES_DB e precisa bater com o DB_DATABASE forçado no backend/phpunit.xml
+# (literal, na allowlist da guarda de marca); a suíte aborta se o banco não terminar em _test.
 set -eu
 
-TEST_DB="sigof_test"
+TEST_DB="${POSTGRES_DB}_test"
 PSQL="psql -v ON_ERROR_STOP=1 -U ${POSTGRES_USER}"
 
 if [ "$($PSQL -d postgres -tAc "SELECT 1 FROM pg_database WHERE datname='${TEST_DB}'")" != "1" ]; then

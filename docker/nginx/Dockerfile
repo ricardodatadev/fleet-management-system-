@@ -5,6 +5,9 @@ WORKDIR /app
 COPY frontend/package.json frontend/package-lock.json ./
 RUN npm ci
 COPY frontend/ ./
+# Marca (build args do compose): o vite.config mapeia APP_* → VITE_APP_*; vazio = defaults do brand.ts.
+ARG APP_NAME APP_FULL_NAME APP_SLUG
+ENV APP_NAME=${APP_NAME} APP_FULL_NAME=${APP_FULL_NAME} APP_SLUG=${APP_SLUG}
 RUN npm run build
 
 FROM nginx:1.30.5-alpine AS web

@@ -104,6 +104,18 @@ export function CrudPage<T extends CrudRow>({ resource }: { resource: CrudResour
     placeholderData: keepPreviousData,
   });
 
+  // Página fora do intervalo (excluiu o único item da última página, ou deep-link `?page=99`):
+  // vai para a última página existente, ou para a 1ª quando não há nada. Enquanto redireciona,
+  // a tabela fica em loading em vez de mostrar um "vazio" falso.
+  const lastPage = list.data?.meta.last_page ?? 1;
+  const outOfRange =
+    !list.isPlaceholderData && list.data?.data.length === 0 && page > 1 && page > lastPage;
+  useEffect(() => {
+    if (outOfRange) updateParams({ page: lastPage > 1 ? String(lastPage) : null });
+    // updateParams lê a URL pelo ref; basta reagir à detecção.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [outOfRange, lastPage]);
+
   const invalidate = () => queryClient.invalidateQueries({ queryKey: [endpoint] });
 
   // --- Criar / editar --------------------------------------------------------------------------
@@ -260,7 +272,7 @@ export function CrudPage<T extends CrudRow>({ resource }: { resource: CrudResour
         onSortChange={(next) => updateParams({ sort: formatSort(next) })}
         meta={list.data?.meta}
         onPageChange={(next) => updateParams({ page: String(next) })}
-        loading={list.isPending}
+        loading={list.isPending || outOfRange}
         error={list.isError ? errorMessage(list.error) : null}
         onRetry={() => void list.refetch()}
         emptyTitle={hasFilters ? 'Nenhum resultado para os filtros' : 'Nenhum registro cadastrado'}

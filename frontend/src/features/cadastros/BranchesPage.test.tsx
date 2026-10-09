@@ -97,6 +97,43 @@ describe('Unidades/Filiais (F1-30)', () => {
     expect(await screen.findByText('Página 2 de 2 · 20 registros')).toBeInTheDocument();
   });
 
+  it('excluir o único item da última página volta para a última página existente', async () => {
+    const seed = Array.from({ length: 31 }, (_, i) =>
+      branch(i + 1, `FIL-${String(i + 1).padStart(3, '0')}`, `Filial ${i + 1}`),
+    );
+    const fake = mockBranches(seed);
+    const user = userEvent.setup();
+    const { location } = await renderPage('admin', '/cadastros/unidades?page=3');
+    await screen.findByText('Página 3 de 3 · 31 registros');
+
+    await user.click(screen.getByRole('button', { name: 'Excluir FIL-031 — Filial 31' }));
+    const dialog = await screen.findByRole('alertdialog');
+    await user.click(within(dialog).getByRole('button', { name: 'Excluir' }));
+
+    expect(await screen.findByText('Página 2 de 2 · 30 registros')).toBeInTheDocument();
+    expect(location()).toContain('page=2');
+    expect(fake.lastListParams().get('page')).toBe('2');
+    expect(screen.getByText('Filial 30')).toBeInTheDocument();
+    expect(screen.queryByText('Nenhum registro cadastrado')).not.toBeInTheDocument();
+  });
+
+  it('deep-link com página inexistente (?page=99) cai na última página', async () => {
+    const fake = mockBranches();
+    const { location } = await renderPage('admin', '/cadastros/unidades?type=filial&page=99');
+    expect(await screen.findByText('Matriz')).toBeInTheDocument();
+    expect(location()).toBe('/cadastros/unidades?type=filial');
+    expect(fake.lastListParams().get('page')).toBe('1');
+    expect(fake.lastListParams().get('type')).toBe('filial');
+    expect(screen.queryByText(/Nenhum registro|Nenhum resultado/)).not.toBeInTheDocument();
+  });
+
+  it('página inexistente sem nenhum registro vai para a 1ª e mostra o vazio real', async () => {
+    mockBranches([]);
+    const { location } = await renderPage('admin', '/cadastros/unidades?page=5');
+    expect(await screen.findByText('Nenhum registro cadastrado')).toBeInTheDocument();
+    expect(location()).toBe('/cadastros/unidades');
+  });
+
   it('cria unidade: tipo do /meta/enums, UF, payload com nulos e lista atualizada', async () => {
     const fake = mockBranches();
     const user = userEvent.setup();

@@ -55,7 +55,7 @@ export interface paths {
         put?: never;
         /**
          * Login (emite token Bearer)
-         * @description Público. Credenciais inválidas → 422 com mensagem genérica (não revela se o e-mail existe). Usuário inativo → 403 (somente com a senha correta). Rate limit: 5/min por e-mail+IP e 20/min por IP (toda tentativa conta). Token expira em SANCTUM_EXPIRATION minutos (padrão 720).
+         * @description Público. Só username + senha (v1.8); o e-mail serve apenas para a recuperação de senha. `username` passa por trim + minúsculas, sem validação de formato. Username inexistente (inclusive um e-mail digitado), usuário excluído ou senha errada → 422 em `errors.username` com a mesma mensagem genérica. Campo vazio → 422 por campo. Usuário inativo → 403 (somente com a senha correta). Rate limit: 5/min por username normalizado + IP e 20/min por IP (toda tentativa conta). Token expira em SANCTUM_EXPIRATION minutos (padrão 720).
          */
         post: operations["authLogin"];
         delete?: never;
@@ -112,6 +112,46 @@ export interface paths {
          */
         put: operations["authChangePassword"];
         post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/auth/forgot-password": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Pede o link de redefinição de senha
+         * @description Público. Sempre 200 com a mesma mensagem, exista ou não o e-mail (sem enumeração). Só usuário ativo e não excluído recebe o e-mail, enviado pela fila; o link é `${APP_FRONTEND_URL}/redefinir-senha#token=…&email=…` (fragmento: não vai ao servidor), vale 60 min e um pedido novo invalida o anterior. E-mail vazio ou malformado → 422. Rate limit: 3/min por e-mail + IP e 10/min por IP.
+         */
+        post: operations["authForgotPassword"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/auth/reset-password": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Redefine a senha com o link recebido por e-mail
+         * @description Público. Política de senha → 422 por campo (`password`, inclusive a confirmação). Link inválido, expirado, já usado, de outro e-mail ou de usuário inativo/excluído → 422 genérico em `errors.token`. Sucesso revoga todos os tokens de acesso do usuário e não faz login automático. Rate limit: 5/min por IP.
+         */
+        post: operations["authResetPassword"];
         delete?: never;
         options?: never;
         head?: never;
@@ -229,7 +269,7 @@ export interface paths {
         get: operations["costCentersShow"];
         /**
          * Atualiza centro de custo (parcial; PUT = PATCH)
-         * @description Permissão: cost_centers.manage. Só os campos enviados são validados e gravados.
+         * @description Permissão: cost_centers.manage. Só os campos enviados são validados e gravados. Trocar a filial com colaboradores de outra filial vinculados → 422.
          */
         put: operations["costCentersUpdate"];
         post?: never;
@@ -258,6 +298,79 @@ export interface paths {
          * @description Permissão: cost_centers.manage. 409 se não estiver excluído, se o código já estiver em uso por um centro de custo ativo ou se a filial vinculada estiver excluída.
          */
         post: operations["costCentersRestore"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/employees": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Lista colaboradores
+         * @description Permissão: employees.view (L e A). Escopo: L vê só a própria filial. Busca `q` em name e registration. Ordenação: name, registration, job_type, hired_at (`-` = desc; padrão name).
+         */
+        get: operations["employeesIndex"];
+        put?: never;
+        /**
+         * Cria colaborador
+         * @description Permissão: employees.manage. 422: matrícula duplicada entre ativos; filial/centro de custo inexistente ou excluído; centro de custo de outra filial; usuário excluído, já vinculado ou (não-admin) de outra filial; campo fora do job_type.
+         */
+        post: operations["employeesStore"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/employees/{employee}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Detalha colaborador
+         * @description Permissão: employees.view. Excluído ou de outra filial (L) → 404.
+         */
+        get: operations["employeesShow"];
+        /**
+         * Atualiza colaborador (parcial; PUT = PATCH)
+         * @description Permissão: employees.manage. Só os campos enviados são validados e gravados; as regras de filial valem também ao trocar a filial do colaborador.
+         */
+        put: operations["employeesUpdate"];
+        post?: never;
+        /**
+         * Exclui colaborador (soft delete)
+         * @description Permissão: employees.manage. 409 (`errors.dependents=["equipments"]`) se for responsável por equipamento ativo, regra ativada na F1-15. O usuário vinculado fica livre.
+         */
+        delete: operations["employeesDestroy"];
+        options?: never;
+        head?: never;
+        /** Atualiza colaborador (parcial; igual ao PUT) */
+        patch: operations["employeesPatch"];
+        trace?: never;
+    };
+    "/employees/{employee}/restore": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Restaura colaborador excluído
+         * @description Permissão: employees.manage. 409 se não estiver excluído, se a matrícula foi reutilizada, se o usuário vinculado está excluído, já vinculado a outro colaborador ou (não-admin) em outra filial, ou se a filial ou o centro de custo vinculado está excluído (ou o centro de custo mudou para outra filial).
+         */
+        post: operations["employeesRestore"];
         delete?: never;
         options?: never;
         head?: never;
@@ -386,7 +499,7 @@ export interface paths {
         };
         /**
          * Lista usuários
-         * @description Permissão: users.view (A). Sem escopo de filial. Busca `q` em name e email. Ordenação: name, email, role, created_at, last_login_at (`-` = desc; padrão name).
+         * @description Permissão: users.view (A). Sem escopo de filial. Busca `q` em name, username e email. Ordenação: name, username, email, role, created_at, last_login_at (`-` = desc; padrão name).
          */
         get: operations["usersIndex"];
         put?: never;
@@ -415,13 +528,13 @@ export interface paths {
         get: operations["usersShow"];
         /**
          * Atualiza usuário (parcial; PUT = PATCH)
-         * @description Permissão: users.manage. Só os campos enviados são validados e gravados. Revoga todos os tokens do usuário ao trocar a senha de outro usuário ou ao desativá-lo (na própria senha, revoga os demais tokens). 409: alterar o próprio perfil, desativar a si mesmo, rebaixar ou desativar o último admin ativo.
+         * @description Permissão: users.manage. Só os campos enviados são validados e gravados. Usuário vinculado a colaborador: não-admin precisa ficar na filial do colaborador (422 ao mudar branch_id ou rebaixar de admin). Revoga todos os tokens do usuário ao trocar a senha de outro usuário ou ao desativá-lo (na própria senha, revoga os demais tokens). 409: alterar o próprio perfil, desativar a si mesmo, rebaixar ou desativar o último admin ativo.
          */
         put: operations["usersUpdate"];
         post?: never;
         /**
          * Exclui usuário (soft delete)
-         * @description Permissão: users.manage. Revoga todos os tokens do usuário. 409: excluir a si mesmo ou o último admin ativo (o vínculo com colaborador entra na F1-14).
+         * @description Permissão: users.manage. Revoga todos os tokens do usuário. 409: excluir a si mesmo, o último admin ativo ou usuário com colaborador vinculado não excluído (`errors.dependents=["employees"]`).
          */
         delete: operations["usersDestroy"];
         options?: never;
@@ -441,7 +554,7 @@ export interface paths {
         put?: never;
         /**
          * Restaura usuário excluído
-         * @description Permissão: users.manage. 409 se não estiver excluído, se o e-mail já estiver em uso por um usuário ativo ou se a filial vinculada estiver excluída. Os tokens revogados na exclusão não voltam.
+         * @description Permissão: users.manage. 409 se não estiver excluído, se o e-mail ou o username já estiver em uso por um usuário ativo ou se a filial vinculada estiver excluída. Os tokens revogados na exclusão não voltam.
          */
         post: operations["usersRestore"];
         delete?: never;
@@ -471,11 +584,19 @@ export interface components {
         };
         MeData: {
             user: components["schemas"]["AuthUser"];
-            /**
-             * @description Colaborador vinculado (preenchido a partir da F1-14).
-             * @example null
-             */
-            employee: Record<string, never> | null;
+            /** @description Colaborador vinculado ao usuário (1:1); null quando não há. */
+            employee: {
+                /** @example 1 */
+                id: number;
+                /** @example MAT-00123 */
+                registration: string;
+                /** @example João Pereira */
+                name: string;
+                /** @enum {string} */
+                job_type: "driver" | "mechanic" | "leader" | "admin_staff";
+                /** @example 1 */
+                branch_id: number;
+            } | null;
             /**
              * @description Permissões do perfil (config/rbac.php). auth.* é implícito e não aparece.
              * @example [
@@ -515,6 +636,38 @@ export interface components {
         };
         CostCenterEnvelope: components["schemas"]["Envelope"] & {
             data?: components["schemas"]["CostCenter"];
+        };
+        /** @description Create: registration, name, job_type e branch_id obrigatórios. Update (PUT = PATCH): parcial. `registration` é gravada sem espaços nas pontas e em maiúsculas (única entre não excluídos). Campos de CNH só para `driver`; `specialty` e `hourly_cost` só para `mechanic` (valor em campo de outro tipo → 422). Ao trocar o `job_type`, os campos preenchidos do tipo anterior precisam vir como null no mesmo payload (senão 422). `cost_center_id`: não excluído e da mesma filial do colaborador ou sem filial. `user_id`: usuário não excluído e livre; se não for admin, precisa ser da mesma filial do colaborador. */
+        EmployeeInput: {
+            /** @example MAT-00123 */
+            registration?: string;
+            /** @example João Pereira */
+            name?: string;
+            /** @enum {string} */
+            job_type?: "driver" | "mechanic" | "leader" | "admin_staff";
+            /** @example 1 */
+            branch_id?: number;
+            cost_center_id?: number | null;
+            user_id?: number | null;
+            phone?: string | null;
+            /** Format: date */
+            hired_at?: string | null;
+            cnh_number?: string | null;
+            /** @enum {string|null} */
+            cnh_category?: "A" | "B" | "C" | "D" | "E" | "AB" | "AC" | "AD" | "AE" | null;
+            /** Format: date */
+            cnh_expires_at?: string | null;
+            specialty?: string | null;
+            /**
+             * Format: float
+             * @example 85.5
+             */
+            hourly_cost?: number | null;
+            /** @default true */
+            is_active: boolean;
+        };
+        EmployeeEnvelope: components["schemas"]["Envelope"] & {
+            data?: components["schemas"]["Employee"];
         };
         /** @description Create: code, name e category obrigatórios; criticality (padrão medium) e preventive_lead_pct (padrão 90) opcionais. Update (PUT = PATCH): parcial. `code` é gravado sem espaços nas pontas e em maiúsculas. `preventive_lead_pct` em (0, 100] com até 2 casas; tolerâncias inteiras ≥ 0 ou null. */
         EquipmentFamilyInput: {
@@ -557,10 +710,12 @@ export interface components {
             /** @example 0.1.0 */
             version: string;
         };
-        /** @description Create: name, email, password e role obrigatórios. Update (PUT = PATCH): parcial. `email` é gravado em minúsculas e é único entre usuários não excluídos. `password`: mín. 10 caracteres, com maiúscula, minúscula e número. `branch_id` é obrigatório quando o perfil (enviado ou atual) não é admin, inclusive ao trocar de admin para outro perfil; filial existente e não excluída (inativa é aceita). */
+        /** @description Create: name, username, email, password e role obrigatórios. Update (PUT = PATCH): parcial. `username`: trim + minúsculas e depois letras minúsculas sem acento, números e ponto (não no início, no fim nem repetido), 3 a 30 caracteres; fora disso (acento, espaço, `_`, `-`, `@`, `..`) → 422, sem transliteração; único entre não excluídos. `email` é gravado em minúsculas e é único entre usuários não excluídos. `password`: mín. 10 caracteres, com maiúscula, minúscula e número. `branch_id` é obrigatório quando o perfil (enviado ou atual) não é admin, inclusive ao trocar de admin para outro perfil; filial existente e não excluída (inativa é aceita). */
         UserInput: {
             /** @example Ana Souza */
             name?: string;
+            /** @example ana.souza */
+            username?: string;
             /**
              * Format: email
              * @example ana@example.com
@@ -603,7 +758,7 @@ export interface components {
                 role: "operator" | "mechanic" | "leader" | "admin" | null;
             } | null;
             /** @enum {string} */
-            action: "created" | "updated" | "deleted" | "restored" | "login_succeeded" | "login_failed" | "logout" | "password_changed" | "setting_changed" | "setting_removed";
+            action: "created" | "updated" | "deleted" | "restored" | "login_succeeded" | "login_failed" | "logout" | "password_changed" | "password_reset_requested" | "password_reset" | "setting_changed" | "setting_removed";
             /** @description Registro afetado; null em eventos sem alvo (ex.: login_failed). */
             auditable: {
                 /** @example cost_center */
@@ -680,6 +835,80 @@ export interface components {
              */
             deleted_at: string | null;
         };
+        Employee: {
+            /** @example 1 */
+            id: number;
+            /**
+             * @description Matrícula (maiúsculas).
+             * @example MAT-00123
+             */
+            registration: string;
+            /** @example João Pereira */
+            name: string;
+            /** @enum {string} */
+            job_type: "driver" | "mechanic" | "leader" | "admin_staff";
+            branch: {
+                /** @example 1 */
+                id: number;
+                /** @example FIL-001 */
+                code: string;
+                /** @example Matriz */
+                name: string;
+            };
+            cost_center: {
+                /** @example 1 */
+                id: number;
+                /** @example CC-0101 */
+                code: string;
+                /** @example Manutenção pesada */
+                name: string;
+            } | null;
+            /** @description Usuário vinculado (1:1); null = sem acesso ao sistema. */
+            user: {
+                /** @example 1 */
+                id: number;
+                /** @example João Pereira */
+                name: string;
+                /**
+                 * Format: email
+                 * @example joao@example.com
+                 */
+                email: string;
+            } | null;
+            phone: string | null;
+            /** Format: date */
+            hired_at: string | null;
+            /** @description Só motorista. */
+            cnh_number: string | null;
+            /**
+             * @description Só motorista.
+             * @enum {string|null}
+             */
+            cnh_category: "A" | "B" | "C" | "D" | "E" | "AB" | "AC" | "AD" | "AE" | null;
+            /**
+             * Format: date
+             * @description Só motorista.
+             */
+            cnh_expires_at: string | null;
+            /** @description Só mecânico. */
+            specialty: string | null;
+            /**
+             * Format: float
+             * @description Só mecânico. Custo/hora; número JSON, até 2 casas.
+             * @example 85.5
+             */
+            hourly_cost: number | null;
+            is_active: boolean;
+            /** Format: date-time */
+            created_at: string | null;
+            /** Format: date-time */
+            updated_at: string | null;
+            /**
+             * Format: date-time
+             * @description Sempre presente; null quando ativo.
+             */
+            deleted_at: string | null;
+        };
         EquipmentFamily: {
             /** @example 1 */
             id: number;
@@ -721,6 +950,11 @@ export interface components {
             /** @example Ana Souza */
             name: string;
             /**
+             * @description Minúsculas sem acento, números e ponto (não no início, no fim nem repetido), 3 a 30.
+             * @example ana.souza
+             */
+            username: string;
+            /**
              * Format: email
              * @example ana@example.com
              */
@@ -754,6 +988,11 @@ export interface components {
             id: number;
             /** @example Ana Souza */
             name: string;
+            /**
+             * @description Minúsculas sem acento, números e ponto (não no início, no fim nem repetido), 3 a 30.
+             * @example ana.souza
+             */
+            username: string;
             /**
              * Format: email
              * @example ana@example.com
@@ -950,10 +1189,10 @@ export interface operations {
                 /** @description Itens por página: máx. 100; até 200 com `is_active=1` (selects). */
                 per_page?: components["parameters"]["PerPage"];
                 /** @description Alias curto do registro auditado; desconhecido → 422. */
-                auditable_type?: "branch" | "cost_center" | "equipment_family" | "user";
+                auditable_type?: "branch" | "cost_center" | "employee" | "equipment_family" | "user";
                 auditable_id?: number;
                 actor_id?: number;
-                action?: "created" | "updated" | "deleted" | "restored" | "login_succeeded" | "login_failed" | "logout" | "password_changed" | "setting_changed" | "setting_removed";
+                action?: "created" | "updated" | "deleted" | "restored" | "login_succeeded" | "login_failed" | "logout" | "password_changed" | "password_reset_requested" | "password_reset" | "setting_changed" | "setting_removed";
                 /** @description ISO 8601 (date-time ou só a data, dia inteiro em UTC); inclusivo. */
                 from?: string;
                 /** @description ISO 8601 (date-time ou só a data, até 23:59:59.999999 UTC); inclusivo; menor que `from` → 422. */
@@ -1020,10 +1259,10 @@ export interface operations {
             content: {
                 "application/json": {
                     /**
-                     * Format: email
-                     * @example admin@example.com
+                     * @description Nome de usuário (trim + minúsculas no servidor).
+                     * @example admin
                      */
-                    email: string;
+                    username: string;
                     /** Format: password */
                     password: string;
                     /** @example web */
@@ -1127,6 +1366,75 @@ export interface operations {
                 };
             };
             401: components["responses"]["Unauthenticated"];
+            422: components["responses"]["ValidationError"];
+            429: components["responses"]["TooManyRequests"];
+            500: components["responses"]["ServerError"];
+        };
+    };
+    authForgotPassword: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": {
+                    /**
+                     * Format: email
+                     * @example ana@example.com
+                     */
+                    email: string;
+                };
+            };
+        };
+        responses: {
+            /** @description Mensagem genérica (`data` null). */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Envelope"];
+                };
+            };
+            422: components["responses"]["ValidationError"];
+            429: components["responses"]["TooManyRequests"];
+            500: components["responses"]["ServerError"];
+        };
+    };
+    authResetPassword: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": {
+                    /** Format: email */
+                    email: string;
+                    /** @description Token do link do e-mail. */
+                    token: string;
+                    /** Format: password */
+                    password: string;
+                    /** Format: password */
+                    password_confirmation: string;
+                };
+            };
+        };
+        responses: {
+            /** @description Senha redefinida (`data` null). */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Envelope"];
+                };
+            };
             422: components["responses"]["ValidationError"];
             429: components["responses"]["TooManyRequests"];
             500: components["responses"]["ServerError"];
@@ -1566,6 +1874,224 @@ export interface operations {
             429: components["responses"]["TooManyRequests"];
         };
     };
+    employeesIndex: {
+        parameters: {
+            query?: {
+                /** @description Página (1..n). */
+                page?: components["parameters"]["Page"];
+                /** @description Itens por página: máx. 100; até 200 com `is_active=1` (selects). */
+                per_page?: components["parameters"]["PerPage"];
+                /** @description Busca textual (contém, sem diferenciar maiúsculas; `%` e `_` são literais). */
+                q?: components["parameters"]["Search"];
+                sort?: string;
+                job_type?: "driver" | "mechanic" | "leader" | "admin_staff";
+                branch_id?: number;
+                /** @description Filtra por ativo (1) / inativo (0). */
+                is_active?: components["parameters"]["IsActive"];
+                /** @description Inclui registros excluídos (soft delete). Exige `*.manage` do recurso; sem ela → 403. */
+                with_trashed?: components["parameters"]["WithTrashed"];
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Lista paginada. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Envelope"] & {
+                        data?: components["schemas"]["Employee"][];
+                    };
+                };
+            };
+            401: components["responses"]["Unauthenticated"];
+            403: components["responses"]["Forbidden"];
+            422: components["responses"]["ValidationError"];
+            429: components["responses"]["TooManyRequests"];
+        };
+    };
+    employeesStore: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["EmployeeInput"];
+            };
+        };
+        responses: {
+            /** @description Criado. */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["EmployeeEnvelope"];
+                };
+            };
+            401: components["responses"]["Unauthenticated"];
+            403: components["responses"]["Forbidden"];
+            422: components["responses"]["ValidationError"];
+            429: components["responses"]["TooManyRequests"];
+        };
+    };
+    employeesShow: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                employee: number;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Colaborador. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["EmployeeEnvelope"];
+                };
+            };
+            401: components["responses"]["Unauthenticated"];
+            403: components["responses"]["Forbidden"];
+            404: components["responses"]["NotFound"];
+            429: components["responses"]["TooManyRequests"];
+        };
+    };
+    employeesUpdate: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                employee: number;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["EmployeeInput"];
+            };
+        };
+        responses: {
+            /** @description Atualizado. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["EmployeeEnvelope"];
+                };
+            };
+            401: components["responses"]["Unauthenticated"];
+            403: components["responses"]["Forbidden"];
+            404: components["responses"]["NotFound"];
+            422: components["responses"]["ValidationError"];
+            429: components["responses"]["TooManyRequests"];
+        };
+    };
+    employeesDestroy: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                employee: number;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Excluído (`data` null). */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Envelope"];
+                };
+            };
+            401: components["responses"]["Unauthenticated"];
+            403: components["responses"]["Forbidden"];
+            404: components["responses"]["NotFound"];
+            /** @description Dependentes ativos. */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["DeleteConflictEnvelope"];
+                };
+            };
+            429: components["responses"]["TooManyRequests"];
+        };
+    };
+    employeesPatch: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                employee: number;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["EmployeeInput"];
+            };
+        };
+        responses: {
+            /** @description Atualizado. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["EmployeeEnvelope"];
+                };
+            };
+            401: components["responses"]["Unauthenticated"];
+            403: components["responses"]["Forbidden"];
+            404: components["responses"]["NotFound"];
+            422: components["responses"]["ValidationError"];
+            429: components["responses"]["TooManyRequests"];
+        };
+    };
+    employeesRestore: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                employee: number;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Restaurado. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["EmployeeEnvelope"];
+                };
+            };
+            401: components["responses"]["Unauthenticated"];
+            403: components["responses"]["Forbidden"];
+            404: components["responses"]["NotFound"];
+            409: components["responses"]["Conflict"];
+            429: components["responses"]["TooManyRequests"];
+        };
+    };
     equipmentFamiliesIndex: {
         parameters: {
             query?: {
@@ -1839,6 +2365,8 @@ export interface operations {
                                 roles: ("operator" | "mechanic" | "leader" | "admin")[];
                                 equipment_categories: ("light_vehicle" | "truck" | "agri_machine" | "implement" | "support")[];
                                 criticalities: ("low" | "medium" | "high" | "critical")[];
+                                job_types: ("driver" | "mechanic" | "leader" | "admin_staff")[];
+                                cnh_categories: ("A" | "B" | "C" | "D" | "E" | "AB" | "AC" | "AD" | "AE")[];
                             };
                         };
                     };

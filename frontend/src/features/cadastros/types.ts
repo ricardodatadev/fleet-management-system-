@@ -10,18 +10,8 @@ export type Employee = components['schemas']['Employee'];
 export type JobType = Employee['job_type'];
 export type CnhCategory = NonNullable<Employee['cnh_category']>;
 
-/** Colaborador vinculado a um usuário, como em /auth/me. */
-export interface LinkedEmployee {
-  id: number;
-  registration: string;
-  name: string;
-}
-
-/**
- * Item de /users. `employee` entra no contrato junto com a F1-15 (combinado com o backend): até lá
- * a API real não o envia (undefined), e a tela mostra "—". Trocar pelo tipo gerado após o gen:api.
- */
-export type User = components['schemas']['User'] & { employee?: LinkedEmployee | null };
+/** Item de /users, com o colaborador vinculado (`employee`, ou null) desde a F1-15. */
+export type User = components['schemas']['User'];
 
 /** `/meta/enums`: cada cadastro acrescenta as suas chaves (arrays de strings). */
 type MetaEnumsData = NonNullable<

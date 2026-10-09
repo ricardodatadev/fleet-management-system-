@@ -202,7 +202,7 @@ export interface paths {
         post?: never;
         /**
          * Exclui filial (soft delete)
-         * @description Permissão: branches.manage. 409 se houver centros de custo ou usuários ativos (não excluídos) vinculados; equipamentos e colaboradores entram nas F1-14/15.
+         * @description Permissão: branches.manage. 409 (`errors.dependents`) se houver centros de custo, usuários, colaboradores ou equipamentos ativos (não excluídos) vinculados.
          */
         delete: operations["branchesDestroy"];
         options?: never;
@@ -269,13 +269,13 @@ export interface paths {
         get: operations["costCentersShow"];
         /**
          * Atualiza centro de custo (parcial; PUT = PATCH)
-         * @description Permissão: cost_centers.manage. Só os campos enviados são validados e gravados. Trocar a filial com colaboradores de outra filial vinculados → 422.
+         * @description Permissão: cost_centers.manage. Só os campos enviados são validados e gravados. Trocar a filial com colaboradores ou equipamentos de outra filial vinculados → 422.
          */
         put: operations["costCentersUpdate"];
         post?: never;
         /**
          * Exclui centro de custo (soft delete)
-         * @description Permissão: cost_centers.manage. 409 se houver equipamentos ou colaboradores ativos vinculados (regras ativadas nas F1-14/15).
+         * @description Permissão: cost_centers.manage. 409 (`errors.dependents` com `employees` e/ou `equipments`) se houver colaboradores ou equipamentos ativos vinculados.
          */
         delete: operations["costCentersDestroy"];
         options?: never;
@@ -348,7 +348,7 @@ export interface paths {
         post?: never;
         /**
          * Exclui colaborador (soft delete)
-         * @description Permissão: employees.manage. 409 (`errors.dependents=["equipments"]`) se for responsável por equipamento ativo, regra ativada na F1-15. O usuário vinculado fica livre.
+         * @description Permissão: employees.manage. 409 (`errors.dependents=["equipments"]`) se for responsável por equipamento ativo. O usuário vinculado fica livre.
          */
         delete: operations["employeesDestroy"];
         options?: never;
@@ -371,6 +371,79 @@ export interface paths {
          * @description Permissão: employees.manage. 409 se não estiver excluído, se a matrícula foi reutilizada, se o usuário vinculado está excluído, já vinculado a outro colaborador ou (não-admin) em outra filial, ou se a filial ou o centro de custo vinculado está excluído (ou o centro de custo mudou para outra filial).
          */
         post: operations["employeesRestore"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/equipments": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Lista equipamentos
+         * @description Permissão: equipments.view (todos os perfis). Escopo: não-admin vê só a própria filial. Busca `q` em code, name e plate. Ordenação: code, name, plate, status, year, acquisition_date (`-` = desc; padrão code).
+         */
+        get: operations["equipmentsIndex"];
+        put?: never;
+        /**
+         * Cria equipamento
+         * @description Permissão: equipments.manage. 422: code ou placa duplicados entre ativos; placa fora do formato; família, filial, centro de custo ou responsável inexistente ou excluído; centro de custo de outra filial; responsável de outra filial; ano fora de 1950..ano atual + 1.
+         */
+        post: operations["equipmentsStore"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/equipments/{equipment}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Detalha equipamento
+         * @description Permissão: equipments.view. Excluído ou de outra filial (não-admin) → 404.
+         */
+        get: operations["equipmentsShow"];
+        /**
+         * Atualiza equipamento (parcial; PUT = PATCH)
+         * @description Permissão: equipments.manage. Só os campos enviados são validados e gravados; as regras de filial valem também ao trocar a filial do equipamento.
+         */
+        put: operations["equipmentsUpdate"];
+        post?: never;
+        /**
+         * Exclui equipamento (soft delete)
+         * @description Permissão: equipments.manage. Exclusão concorrente de equipamento já excluído → 404.
+         */
+        delete: operations["equipmentsDestroy"];
+        options?: never;
+        head?: never;
+        /** Atualiza equipamento (parcial; igual ao PUT) */
+        patch: operations["equipmentsPatch"];
+        trace?: never;
+    };
+    "/equipments/{equipment}/restore": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Restaura equipamento excluído
+         * @description Permissão: equipments.manage. 409 se não estiver excluído, se o code ou a placa foram reutilizados, se a filial, a família ou o centro de custo vinculado está excluído (ou o centro de custo mudou para outra filial), ou se o responsável está excluído ou em outra filial.
+         */
+        post: operations["equipmentsRestore"];
         delete?: never;
         options?: never;
         head?: never;
@@ -421,7 +494,7 @@ export interface paths {
         post?: never;
         /**
          * Exclui família de equipamento (soft delete)
-         * @description Permissão: equipment_families.manage. 409 (`errors.dependents=["equipments"]`) se houver equipamentos ativos, regra ativada na F1-15. Exclusão concorrente de família já excluída → 404.
+         * @description Permissão: equipment_families.manage. 409 (`errors.dependents=["equipments"]`) se houver equipamentos ativos. Exclusão concorrente de família já excluída → 404.
          */
         delete: operations["equipmentFamiliesDestroy"];
         options?: never;
@@ -668,6 +741,51 @@ export interface components {
         };
         EmployeeEnvelope: components["schemas"]["Envelope"] & {
             data?: components["schemas"]["Employee"];
+        };
+        /** @description Create: code, name, family_id, branch_id e cost_center_id obrigatórios. Update (PUT = PATCH): parcial. `code` em trim + maiúsculas. `plate`: maiúsculas, sem espaços nem hífen, depois `^[A-Z0-9]{5,8}$`; única entre não excluídos sobre o valor normalizado. `year` entre 1950 e o ano atual + 1. `cost_center_id`: não excluído e da mesma filial do equipamento ou sem filial. `responsible_employee_id`: colaborador não excluído da mesma filial. Família, filial, centro de custo e responsável existentes e não excluídos. */
+        EquipmentInput: {
+            /** @example CAM-001 */
+            code?: string;
+            /** @example Caminhão basculante 01 */
+            name?: string;
+            /** @example 1 */
+            family_id?: number;
+            /** @example 1 */
+            branch_id?: number;
+            /** @example 1 */
+            cost_center_id?: number;
+            responsible_employee_id?: number | null;
+            /** @example abc-1d23 */
+            plate?: string | null;
+            serial_number?: string | null;
+            manufacturer?: string | null;
+            model?: string | null;
+            year?: number | null;
+            /**
+             * @default active
+             * @enum {string}
+             */
+            status: "active" | "inactive" | "disposed";
+            /** @enum {string|null} */
+            criticality_override?: "low" | "medium" | "high" | "critical" | null;
+            /**
+             * Format: float
+             * @default 0
+             */
+            odometer_km: number;
+            /**
+             * Format: float
+             * @default 0
+             */
+            hour_meter: number;
+            /** Format: date */
+            acquisition_date?: string | null;
+            /** Format: float */
+            acquisition_value?: number | null;
+            notes?: string | null;
+        };
+        EquipmentEnvelope: components["schemas"]["Envelope"] & {
+            data?: components["schemas"]["Equipment"];
         };
         /** @description Create: code, name e category obrigatórios; criticality (padrão medium) e preventive_lead_pct (padrão 90) opcionais. Update (PUT = PATCH): parcial. `code` é gravado sem espaços nas pontas e em maiúsculas. `preventive_lead_pct` em (0, 100] com até 2 casas; tolerâncias inteiras ≥ 0 ou null. */
         EquipmentFamilyInput: {
@@ -940,6 +1058,84 @@ export interface components {
              */
             deleted_at: string | null;
         };
+        EquipmentRef: {
+            /** @example 1 */
+            id: number;
+            /** @example X-01 */
+            code: string;
+            /** @example Nome */
+            name: string;
+        };
+        Equipment: {
+            /** @example 1 */
+            id: number;
+            /** @example CAM-001 */
+            code: string;
+            /** @example Caminhão basculante 01 */
+            name: string;
+            family: components["schemas"]["EquipmentRef"];
+            branch: components["schemas"]["EquipmentRef"];
+            cost_center: components["schemas"]["EquipmentRef"];
+            responsible_employee: {
+                /** @example 1 */
+                id: number;
+                /** @example MAT-00123 */
+                registration: string;
+                /** @example João Pereira */
+                name: string;
+            } | null;
+            /**
+             * @description Maiúsculas, sem espaços nem hífen.
+             * @example ABC1D23
+             */
+            plate: string | null;
+            serial_number: string | null;
+            manufacturer: string | null;
+            model: string | null;
+            /** @example 2022 */
+            year: number | null;
+            /** @enum {string} */
+            status: "active" | "inactive" | "disposed";
+            /**
+             * @description Efetiva: override do equipamento ou a da família.
+             * @enum {string}
+             */
+            criticality: "low" | "medium" | "high" | "critical";
+            /** @enum {string} */
+            criticality_source: "family" | "override";
+            /** @enum {string|null} */
+            criticality_override: "low" | "medium" | "high" | "critical" | null;
+            /**
+             * Format: float
+             * @description Número JSON (1 casa).
+             * @example 125430.5
+             */
+            odometer_km: number;
+            /**
+             * Format: float
+             * @description Número JSON (1 casa).
+             * @example 3210
+             */
+            hour_meter: number;
+            /** Format: date */
+            acquisition_date: string | null;
+            /**
+             * Format: float
+             * @description Número JSON (2 casas).
+             * @example 450000
+             */
+            acquisition_value: number | null;
+            notes: string | null;
+            /** Format: date-time */
+            created_at: string | null;
+            /** Format: date-time */
+            updated_at: string | null;
+            /**
+             * Format: date-time
+             * @description Sempre presente; null quando ativo.
+             */
+            deleted_at: string | null;
+        };
         User: {
             /**
              * @description Usuário no CRUD /users (contrato v1.3). Nunca inclui `password` nem `remember_token`.
@@ -968,6 +1164,15 @@ export interface components {
                 /** @example FIL-001 */
                 code: string;
                 /** @example Matriz */
+                name: string;
+            } | null;
+            /** @description Colaborador vinculado (não excluído); null quando não há. */
+            employee: {
+                /** @example 1 */
+                id: number;
+                /** @example MAT-00123 */
+                registration: string;
+                /** @example João Pereira */
                 name: string;
             } | null;
             is_active: boolean;
@@ -1189,7 +1394,7 @@ export interface operations {
                 /** @description Itens por página: máx. 100; até 200 com `is_active=1` (selects). */
                 per_page?: components["parameters"]["PerPage"];
                 /** @description Alias curto do registro auditado; desconhecido → 422. */
-                auditable_type?: "branch" | "cost_center" | "employee" | "equipment_family" | "user";
+                auditable_type?: "branch" | "cost_center" | "employee" | "equipment" | "equipment_family" | "user";
                 auditable_id?: number;
                 actor_id?: number;
                 action?: "created" | "updated" | "deleted" | "restored" | "login_succeeded" | "login_failed" | "logout" | "password_changed" | "password_reset_requested" | "password_reset" | "setting_changed" | "setting_removed";
@@ -1884,7 +2089,8 @@ export interface operations {
                 /** @description Busca textual (contém, sem diferenciar maiúsculas; `%` e `_` são literais). */
                 q?: components["parameters"]["Search"];
                 sort?: string;
-                job_type?: "driver" | "mechanic" | "leader" | "admin_staff";
+                /** @description Um ou mais, separados por vírgula (ex.: `leader,admin_staff`); valor fora de driver, mechanic, leader e admin_staff em qualquer posição → 422. */
+                job_type?: string;
                 branch_id?: number;
                 /** @description Filtra por ativo (1) / inativo (0). */
                 is_active?: components["parameters"]["IsActive"];
@@ -2083,6 +2289,216 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["EmployeeEnvelope"];
+                };
+            };
+            401: components["responses"]["Unauthenticated"];
+            403: components["responses"]["Forbidden"];
+            404: components["responses"]["NotFound"];
+            409: components["responses"]["Conflict"];
+            429: components["responses"]["TooManyRequests"];
+        };
+    };
+    equipmentsIndex: {
+        parameters: {
+            query?: {
+                /** @description Página (1..n). */
+                page?: components["parameters"]["Page"];
+                /** @description Itens por página: máx. 100; até 200 com `is_active=1` (selects). */
+                per_page?: components["parameters"]["PerPage"];
+                /** @description Busca textual (contém, sem diferenciar maiúsculas; `%` e `_` são literais). */
+                q?: components["parameters"]["Search"];
+                sort?: string;
+                family_id?: number;
+                branch_id?: number;
+                cost_center_id?: number;
+                status?: "active" | "inactive" | "disposed";
+                responsible_employee_id?: number;
+                /** @description Inclui registros excluídos (soft delete). Exige `*.manage` do recurso; sem ela → 403. */
+                with_trashed?: components["parameters"]["WithTrashed"];
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Lista paginada. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Envelope"] & {
+                        data?: components["schemas"]["Equipment"][];
+                    };
+                };
+            };
+            401: components["responses"]["Unauthenticated"];
+            403: components["responses"]["Forbidden"];
+            422: components["responses"]["ValidationError"];
+            429: components["responses"]["TooManyRequests"];
+        };
+    };
+    equipmentsStore: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["EquipmentInput"];
+            };
+        };
+        responses: {
+            /** @description Criado (status=active, odômetro e horímetro 0 quando omitidos). */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["EquipmentEnvelope"];
+                };
+            };
+            401: components["responses"]["Unauthenticated"];
+            403: components["responses"]["Forbidden"];
+            422: components["responses"]["ValidationError"];
+            429: components["responses"]["TooManyRequests"];
+        };
+    };
+    equipmentsShow: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                equipment: number;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Equipamento. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["EquipmentEnvelope"];
+                };
+            };
+            401: components["responses"]["Unauthenticated"];
+            403: components["responses"]["Forbidden"];
+            404: components["responses"]["NotFound"];
+            429: components["responses"]["TooManyRequests"];
+        };
+    };
+    equipmentsUpdate: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                equipment: number;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["EquipmentInput"];
+            };
+        };
+        responses: {
+            /** @description Atualizado. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["EquipmentEnvelope"];
+                };
+            };
+            401: components["responses"]["Unauthenticated"];
+            403: components["responses"]["Forbidden"];
+            404: components["responses"]["NotFound"];
+            422: components["responses"]["ValidationError"];
+            429: components["responses"]["TooManyRequests"];
+        };
+    };
+    equipmentsDestroy: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                equipment: number;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Excluído (`data` null). */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Envelope"];
+                };
+            };
+            401: components["responses"]["Unauthenticated"];
+            403: components["responses"]["Forbidden"];
+            404: components["responses"]["NotFound"];
+            429: components["responses"]["TooManyRequests"];
+        };
+    };
+    equipmentsPatch: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                equipment: number;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["EquipmentInput"];
+            };
+        };
+        responses: {
+            /** @description Atualizado. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["EquipmentEnvelope"];
+                };
+            };
+            401: components["responses"]["Unauthenticated"];
+            403: components["responses"]["Forbidden"];
+            404: components["responses"]["NotFound"];
+            422: components["responses"]["ValidationError"];
+            429: components["responses"]["TooManyRequests"];
+        };
+    };
+    equipmentsRestore: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                equipment: number;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Restaurado. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["EquipmentEnvelope"];
                 };
             };
             401: components["responses"]["Unauthenticated"];
@@ -2367,6 +2783,7 @@ export interface operations {
                                 criticalities: ("low" | "medium" | "high" | "critical")[];
                                 job_types: ("driver" | "mechanic" | "leader" | "admin_staff")[];
                                 cnh_categories: ("A" | "B" | "C" | "D" | "E" | "AB" | "AC" | "AD" | "AE")[];
+                                equipment_statuses: ("active" | "inactive" | "disposed")[];
                             };
                         };
                     };
@@ -2389,6 +2806,8 @@ export interface operations {
                 sort?: string;
                 role?: "operator" | "mechanic" | "leader" | "admin";
                 branch_id?: number;
+                /** @description 1 = com colaborador vinculado (não excluído); 0 = sem. Outro valor → 422. */
+                has_employee?: 0 | 1;
                 /** @description Filtra por ativo (1) / inativo (0). */
                 is_active?: components["parameters"]["IsActive"];
                 /** @description Inclui registros excluídos (soft delete). Exige `*.manage` do recurso; sem ela → 403. */

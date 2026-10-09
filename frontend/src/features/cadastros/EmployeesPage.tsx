@@ -38,8 +38,7 @@ export function EmployeesPage() {
       .filter((cc) => !cc.branch || String(cc.branch.id) === values.branch_id)
       .map(ref);
 
-  // Só usuários livres (sem colaborador). `employee` chega com a F1-15; até lá, todos aparecem e
-  // o 422 do backend avisa se o usuário já estiver vinculado.
+  // Só usuários livres (sem colaborador vinculado); o atual entra pelo currentOption na edição.
   const userOptions = (users.data ?? [])
     .filter((user) => !user.employee)
     .map((user) => ({ value: String(user.id), label: `${user.name} (${user.username})` }));

@@ -1,5 +1,8 @@
-# SIGOF-M — alvos reais chegam nas tarefas indicadas; ate la falham com mensagem clara.
-.PHONY: up down init migrate seed test test-db openapi openapi-lint lint ci
+# Alvos do projeto; os que ainda nao existem chegam nas tarefas indicadas e falham com mensagem clara.
+# Sem nome do sistema aqui: o slug (projeto do compose, prefixo dos volumes) vem do .env.
+.PHONY: up down init migrate seed test test-db openapi openapi-lint brand lint ci vendor-reset
+
+APP_SLUG := $(shell sed -n 's/^APP_SLUG=//p' .env 2>/dev/null | tail -n 1 | tr -d "\"'")
 
 up:
 	docker compose up -d --build --wait
@@ -21,7 +24,7 @@ migrate:
 seed:
 	@echo "ERRO: 'make seed' ainda nao implementado (disponivel a partir de F1-17 (seeders))." >&2; exit 1
 
-# Cria o banco sigof_test (idempotente) — necessário em volumes criados antes da F1-06.
+# Cria o banco <POSTGRES_DB>_test (idempotente) — necessário em volumes criados antes da F1-06.
 test-db:
 	docker compose exec -T db sh /docker-entrypoint-initdb.d/02-create-test-db.sh
 
@@ -36,9 +39,21 @@ openapi:
 openapi-lint:
 	docker run --rm -v "$(CURDIR)":/spec -w /spec node:24.21.0-alpine npx --yes @redocly/cli@2.60.0 lint docs/api/openapi.json
 
-lint:
-	@echo "ERRO: 'make lint' ainda nao implementado (disponivel a partir de F1-19 (Pint/Larastan))." >&2; exit 1
+# Guarda de marca: nome/slug so na fonte unica (.env.example) e na allowlist (scripts/brand-allowlist.txt).
+brand:
+	bash scripts/check-brand.sh
 
-ci:
-	@echo "ERRO: 'make ci' ainda nao implementado (disponivel a partir de F1-19 (gate local))." >&2; exit 1
+lint: brand
+	bash scripts/check-brand.test.sh
+	docker compose exec -T app vendor/bin/pint --test
+	@echo "AVISO: Larastan chega na F1-19."
+
+ci: lint test
+
+# Apos mudar composer.json/lock: rebuild e troca o volume do vendor (<projeto>_app_vendor) pelo da imagem nova.
+vendor-reset:
+	@test -n "$(APP_SLUG)" || { echo "ERRO: defina APP_SLUG no .env." >&2; exit 1; }
+	docker compose build app
+	docker compose down
+	docker volume rm $(APP_SLUG)_app_vendor
 

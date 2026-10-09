@@ -1,0 +1,21 @@
+# Workflow de CI mantido no repositório porém INATIVO (só dispara manualmente) até haver remoto
+# configurado (Q7). O gate é o `make ci` local. A F1-19 completa com compose, Pest, Pint,
+# Larastan, pytest e Vitest.
+name: ci
+
+on:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  brand:
+    name: Guarda de marca
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@v4
+      - name: check-brand
+        run: bash scripts/check-brand.sh
+      - name: teste da guarda
+        run: bash scripts/check-brand.test.sh

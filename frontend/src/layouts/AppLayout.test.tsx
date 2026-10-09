@@ -96,6 +96,11 @@ describe('AppLayout — desktop (≥1024)', () => {
     expect(screen.getByRole('main')).toHaveFocus();
   });
 
+  it('fora do modo ícones não há divisores (os títulos separam os grupos)', async () => {
+    await renderShell('admin');
+    expect(within(mainNav()).queryAllByTestId('nav-separator')).toHaveLength(0);
+  });
+
   it('assistente virtual: botão flutuante desabilitado', async () => {
     await renderShell('admin');
     expect(
@@ -133,6 +138,34 @@ describe('AppLayout — tablet (768–1023)', () => {
     expect(link).toHaveClass('bg-brand-600', 'justify-center');
     const disabled = within(mainNav()).getByRole('button', { name: /TCO/ });
     expect(disabled).toHaveAccessibleName(/Em breve/);
+  });
+
+  it('ícone de item desabilitado é esmaecido; o habilitado não', async () => {
+    await renderShell('admin', '/parametros');
+    const disabled = within(mainNav()).getByRole('button', { name: /Ordens de Serviço/ });
+    const enabled = within(mainNav()).getByRole('link', { name: 'Frotas & Equipamentos' });
+    expect(within(disabled).getByTestId('nav-icon')).toHaveClass('opacity-50');
+    expect(disabled).toHaveClass('text-ink-muted');
+    expect(within(enabled).getByTestId('nav-icon')).not.toHaveClass('opacity-50');
+    expect(enabled).toHaveClass('text-ink');
+    expect(enabled).not.toHaveClass('opacity-70');
+    // Continua focável, com tooltip e aria-disabled.
+    act(() => disabled.focus());
+    expect(disabled).toHaveFocus();
+    expect(disabled).toHaveAttribute('aria-disabled', 'true');
+    expect(await screen.findByRole('tooltip')).toHaveTextContent('Ordens de Serviço');
+  });
+
+  it('divisor entre cada par de grupos', async () => {
+    await renderShell('admin');
+    const nav = mainNav();
+    const separators = within(nav).getAllByTestId('nav-separator');
+    expect(separators).toHaveLength(within(nav).getAllByRole('group').length - 1);
+    separators.forEach((hr) => {
+      expect(hr.tagName).toBe('HR');
+      expect(hr).toHaveAttribute('aria-hidden', 'true');
+      expect(hr.nextElementSibling).toHaveAttribute('role', 'group');
+    });
   });
 
   it('não tem violações de acessibilidade', async () => {

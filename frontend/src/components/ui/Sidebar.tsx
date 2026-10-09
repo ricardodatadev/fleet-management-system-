@@ -76,8 +76,18 @@ export function NavItem({
     'flex w-full items-center gap-3 rounded-lg text-left',
     collapsed ? 'justify-center px-0' : 'px-3',
   );
+  // Modo ícones, desabilitado: ícone esmaecido (único sinal visual além do tooltip; no modo
+  // completo o botão inteiro já fica com opacity-70 e o selo "Em breve").
+  // Habilitado: ícone na cor do texto (ink, 17:1), acima dos 3:1 da WCAG 1.4.11.
   const iconNode = icon && (
-    <span aria-hidden="true" className="inline-flex size-6 shrink-0 items-center justify-center">
+    <span
+      aria-hidden="true"
+      data-testid="nav-icon"
+      className={cn(
+        'inline-flex size-6 shrink-0 items-center justify-center',
+        disabled && collapsed && 'opacity-50',
+      )}
+    >
       {icon}
     </span>
   );
@@ -90,7 +100,11 @@ export function NavItem({
           <button
             type="button"
             aria-disabled="true"
-            className={cn(itemBase, 'cursor-not-allowed text-ink-muted opacity-70')}
+            className={cn(
+              itemBase,
+              'cursor-not-allowed text-ink-muted',
+              !collapsed && 'opacity-70',
+            )}
             onClick={(event) => event.preventDefault()}
           >
             {iconNode}

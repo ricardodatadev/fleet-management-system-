@@ -29,7 +29,7 @@ describe('ConfirmDialog', () => {
     renderDialog();
     const dialog = screen.getByRole('alertdialog', { name: 'Excluir frota?' });
     expect(dialog).toHaveAccessibleDescription('Esta ação não pode ser desfeita.');
-    expect(screen.getByRole('button', { name: 'Excluir' })).toHaveClass('bg-danger-600');
+    expect(screen.getByRole('button', { name: 'Excluir' })).toHaveClass('bg-danger');
   });
 
   it('foca Cancelar ao abrir; confirmar chama onConfirm sem fechar', async () => {

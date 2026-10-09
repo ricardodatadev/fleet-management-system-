@@ -182,10 +182,10 @@ export function Combobox({
       </div>
       <div
         hidden={!open}
-        className="absolute z-30 mt-1 max-h-64 w-full overflow-y-auto rounded-lg border border-border bg-surface shadow-lg"
+        className="absolute z-30 mt-1 max-h-64 w-full overflow-y-auto rounded-control border border-border bg-surface shadow-lg"
       >
         {message && (
-          <p role={message.role} className="border-b border-border p-3 text-ink-muted">
+          <p role={message.role} className="border-b border-border p-3 text-text-muted">
             {message.text}
           </p>
         )}

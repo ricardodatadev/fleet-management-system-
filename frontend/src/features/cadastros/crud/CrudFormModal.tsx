@@ -89,7 +89,7 @@ export function CrudFormModal<T extends CrudRow>({
     >
       <form id={formId} noValidate onSubmit={handleSubmit} className="flex flex-col gap-4">
         {formError && (
-          <p role="alert" className="rounded-lg bg-red-50 p-3 font-medium text-red-900">
+          <p role="alert" className="rounded-control bg-danger-subtle p-3 font-bold text-danger">
             {formError}
           </p>
         )}
@@ -105,7 +105,7 @@ export function CrudFormModal<T extends CrudRow>({
                     checked={Boolean(value)}
                     onCheckedChange={(checked) => setValue(field.name, checked)}
                   />
-                  {error && <p className="text-sm font-medium text-danger-600">{error}</p>}
+                  {error && <p className="text-sm font-bold text-danger">{error}</p>}
                 </div>
               );
             }

@@ -1,31 +1,127 @@
 @import 'tailwindcss';
+/* Roboto empacotada (sem CDN, por causa da CSP): só latin, pesos 400 e 700. */
+@import '@fontsource/roboto/latin-400.css';
+@import '@fontsource/roboto/latin-700.css';
 
 /*
- * Tokens de design (spec G.1). Escala 8pt: o espaçamento base do Tailwind (0.25rem = 4px)
- * é mantido, de modo que `min-h-12`/`min-w-12` = 48px = --tap-min.
- * Cores com contraste AA (texto >= 4.5:1) sobre o fundo claro.
+ * Identidade visual (F1-36), inspirada no design system público PO UI: tipografia, cantos e
+ * neutros. Este é o ÚNICO arquivo com valores de cor (o teste tokens.test.ts garante).
+ *
+ * Estrutura dos temas: os VALORES ficam em variáveis por tema (o bloco `:root` abaixo é o LIGHT).
+ * O Tailwind só referencia essas variáveis (`@theme inline`), então um tema futuro (ex.: dark) é
+ * outro bloco com as mesmas variáveis, como `:root[data-theme='dark'] { --bg: …; … }`, sem tocar
+ * em componente nenhum.
+ *
+ * Contraste (WCAG AA, conferido no tokens.test.ts): texto >= 4.5:1 sobre o fundo em que aparece;
+ * borda de controle >= 3:1. Desvios da paleta do PO UI por contraste: o texto de erro é #a8322c
+ * (o #be3e37 dá 4.4:1 sobre o fundo de erro) e o texto de aviso é âmbar escuro (o amarelo
+ * #d8a20e fica só como acento decorativo).
  */
-@theme {
-  --font-sans:
-    system-ui, -apple-system, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, 'Noto Sans', sans-serif;
 
-  --color-surface: #ffffff;
-  --color-surface-muted: #f4f6f8;
-  --color-border: #c4ccd4;
-  --color-ink: #111827; /* 16.8:1 sobre surface */
-  --color-ink-muted: #4b5563; /* 7.6:1 sobre surface */
-  --color-brand-600: #1d4ed8; /* 6.7:1 sobre surface */
-  --color-brand-700: #1e40af;
-  --color-danger-600: #b91c1c; /* 6.5:1 sobre surface */
-  --color-success-600: #15803d; /* 5.0:1 sobre surface */
-  --color-warning-700: #a16207;
-  --color-focus: #1d4ed8;
+/* ---- Tema LIGHT (valores) ------------------------------------------------------------------- */
+:root {
+  color-scheme: light;
+
+  /* Superfícies e neutros (escala de neutros do PO UI) */
+  --bg: #f7f8f8; /* fundo da página: sem branco puro */
+  --surface: #ffffff; /* cartões, tabelas, modais, drawer */
+  --surface-muted: #eceeee; /* cabeçalho de tabela, hover, skeleton */
+  --border: #dadedf; /* divisórias e contorno de cartões */
+  --border-strong: #6e7c7f; /* contorno de campos: 4.3:1 sobre surface */
+  --text: #1d2426; /* grafite, sem preto puro: 15.8:1 sobre surface */
+  --text-muted: #4a5c60; /* 6.0:1 sobre surface-muted */
+
+  /* Marca: azul-petróleo */
+  --brand: #0f6b7a; /* 6.2:1 sobre surface; texto branco sobre ele: 6.2:1 */
+  --brand-hover: #0b5864;
+  --brand-pressed: #08454f;
+  --brand-subtle: #e1f0f2;
+  --on-brand: #ffffff;
+  --focus: #0b5864; /* contorno de foco: 8.1:1 sobre surface */
+
+  /* Inverso (tooltip) */
+  --inverse: #1d2426;
+  --on-inverse: #ffffff;
+
+  /* Feedback: fg (texto/ícone/borda) e fundo claro (subtle) */
+  --success: #107048;
+  --success-subtle: #def7ed;
+  --danger: #a8322c;
+  --danger-hover: #8c2924;
+  --danger-subtle: #f6e6e5;
+  --on-danger: #ffffff;
+  --warning: #6b4e00; /* texto escuro: o amarelo não passa AA como texto */
+  --warning-accent: #d8a20e; /* só decorativo (borda) */
+  --warning-subtle: #fcf6e3;
+  --info: #23489f;
+  --info-subtle: #e3e9f7;
+
+  --overlay: rgb(29 36 38 / 0.5); /* fundo de modal/drawer (grafite translúcido) */
 }
 
+/* ---- Tokens do Tailwind (sem valores: só referências ao tema) --------------------------------- */
+@theme inline {
+  /* Sem a paleta padrão do Tailwind (red-50, blue-900…): só as cores semânticas abaixo existem. */
+  --color-*: initial;
+  --color-bg: var(--bg);
+  --color-surface: var(--surface);
+  --color-surface-muted: var(--surface-muted);
+  --color-border: var(--border);
+  --color-border-strong: var(--border-strong);
+  --color-text: var(--text);
+  --color-text-muted: var(--text-muted);
+  --color-brand: var(--brand);
+  --color-brand-hover: var(--brand-hover);
+  --color-brand-pressed: var(--brand-pressed);
+  --color-brand-subtle: var(--brand-subtle);
+  --color-on-brand: var(--on-brand);
+  --color-focus: var(--focus);
+  --color-inverse: var(--inverse);
+  --color-on-inverse: var(--on-inverse);
+  --color-success: var(--success);
+  --color-success-subtle: var(--success-subtle);
+  --color-danger: var(--danger);
+  --color-danger-hover: var(--danger-hover);
+  --color-danger-subtle: var(--danger-subtle);
+  --color-on-danger: var(--on-danger);
+  --color-warning: var(--warning);
+  --color-warning-accent: var(--warning-accent);
+  --color-warning-subtle: var(--warning-subtle);
+  --color-info: var(--info);
+  --color-info-subtle: var(--info-subtle);
+  --color-overlay: var(--overlay);
+}
+
+@theme {
+  --font-sans: Roboto, system-ui, -apple-system, 'Segoe UI', 'Helvetica Neue', Arial, sans-serif;
+
+  /* Escala tipográfica (PO UI): 12/14/16/20/24/32, line-height 140–150%. */
+  --text-*: initial;
+  --text-xs: 0.75rem;
+  --text-xs--line-height: 1.5;
+  --text-sm: 0.875rem;
+  --text-sm--line-height: 1.5;
+  --text-base: 1rem;
+  --text-base--line-height: 1.5;
+  --text-xl: 1.25rem;
+  --text-xl--line-height: 1.4;
+  --text-2xl: 1.5rem;
+  --text-2xl--line-height: 1.4;
+  --text-3xl: 2rem;
+  --text-3xl--line-height: 1.4;
+
+  /* Cantos: 4px em controles (botão, campo, select), 8px em cartões/modais/drawer. */
+  --radius-control: 4px;
+  --radius-card: 8px;
+}
+
+/*
+ * Escala 8pt: o espaçamento base do Tailwind (0.25rem = 4px) é mantido, de modo que
+ * `min-h-12`/`min-w-12` = 48px = --tap-min (RNF-003; o PO UI usa 44px, aqui fica 48).
+ */
 :root {
   --tap-min: 48px;
   --space-unit: 8px;
-  color-scheme: light;
 }
 
 @layer base {
@@ -34,11 +130,11 @@
   }
 
   body {
-    @apply min-h-screen bg-surface font-sans text-ink antialiased;
+    @apply min-h-screen bg-bg font-sans text-base text-text antialiased;
   }
 
   :focus-visible {
-    outline: 3px solid var(--color-focus);
+    outline: 3px solid var(--focus);
     outline-offset: 2px;
   }
 }

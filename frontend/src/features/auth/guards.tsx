@@ -7,7 +7,7 @@ import { loginPath, safeNext } from './safeNext';
 function SessionLoading() {
   return (
     <main className="flex min-h-screen items-center justify-center p-4">
-      <p role="status" className="text-ink-muted">
+      <p role="status" className="text-text-muted">
         Carregando sessão…
       </p>
     </main>

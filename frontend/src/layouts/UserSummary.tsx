@@ -7,7 +7,7 @@ import { cn } from '@/lib/cn';
 export function UserSummary({ user, className }: { user: AuthUser; className?: string }) {
   return (
     <div className={cn('flex items-center gap-4', className)}>
-      <p className="flex items-center gap-2 text-ink-muted">
+      <p className="flex items-center gap-2 text-text-muted">
         <Landmark aria-hidden="true" className="size-5 shrink-0" />
         <span>
           <span className="sr-only">Filial: </span>
@@ -15,8 +15,8 @@ export function UserSummary({ user, className }: { user: AuthUser; className?: s
         </span>
       </p>
       <p className="flex flex-col leading-tight">
-        <span className="font-semibold text-ink">{user.name}</span>
-        <span className="text-sm text-ink-muted">{ROLE_LABELS[user.role]}</span>
+        <span className="font-bold text-text">{user.name}</span>
+        <span className="text-sm text-text-muted">{ROLE_LABELS[user.role]}</span>
       </p>
     </div>
   );

@@ -34,14 +34,14 @@ export const RadioGroup = forwardRef<HTMLDivElement, RadioGroupProps>(function R
               disabled={option.disabled}
               className={cn(
                 TAP_MIN_CLASSES,
-                'group inline-flex shrink-0 items-center justify-center rounded-lg bg-transparent disabled:cursor-not-allowed disabled:opacity-50',
+                'group inline-flex shrink-0 items-center justify-center rounded-control bg-transparent disabled:cursor-not-allowed disabled:opacity-50',
               )}
             >
-              <span className="inline-flex size-6 items-center justify-center rounded-full border-2 border-ink-muted bg-surface group-data-[state=checked]:border-brand-600">
-                <RadioPrimitive.Indicator className="block size-3 rounded-full bg-brand-600" />
+              <span className="inline-flex size-6 items-center justify-center rounded-full border-2 border-border-strong bg-surface group-data-[state=checked]:border-brand">
+                <RadioPrimitive.Indicator className="block size-3 rounded-full bg-brand" />
               </span>
             </RadioPrimitive.Item>
-            <label htmlFor={id} className="min-h-12 flex-1 content-center text-ink">
+            <label htmlFor={id} className="min-h-12 flex-1 content-center text-text">
               {option.label}
             </label>
           </div>

@@ -17,7 +17,7 @@ describe('Input', () => {
     render(<Input aria-label="Placa" invalid />);
     const input = screen.getByRole('textbox');
     expect(input).toHaveAttribute('aria-invalid', 'true');
-    expect(input).toHaveClass('border-danger-600');
+    expect(input).toHaveClass('border-danger');
   });
 
   it('desabilitado não recebe foco', async () => {

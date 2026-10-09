@@ -72,7 +72,7 @@ export function DataTable<T>({
 
   return (
     <div className="flex flex-col gap-4">
-      <div className="overflow-x-auto rounded-xl border border-border">
+      <div className="overflow-x-auto rounded-card border border-border bg-surface">
         <table className="w-full border-collapse text-left" aria-busy={loading || undefined}>
           <caption className="sr-only">{caption}</caption>
           <thead className="bg-surface-muted">
@@ -82,14 +82,14 @@ export function DataTable<T>({
                   key={column.key}
                   scope="col"
                   aria-sort={column.sortable ? ariaSort(sort, column.key) : undefined}
-                  className={cn('px-2 font-semibold whitespace-nowrap', column.className)}
+                  className={cn('px-2 font-bold whitespace-nowrap', column.className)}
                 >
                   {column.sortable ? (
                     <button
                       type="button"
                       className={cn(
                         TAP_MIN_CLASSES,
-                        'inline-flex items-center gap-2 px-2 font-semibold',
+                        'inline-flex items-center gap-2 px-2 font-bold',
                       )}
                       onClick={() => onSortChange?.(nextSort(sort, column.key))}
                     >
@@ -101,7 +101,7 @@ export function DataTable<T>({
                           <ArrowDown aria-hidden="true" className="size-4" />
                         )
                       ) : (
-                        <ChevronsUpDown aria-hidden="true" className="size-4 text-ink-muted" />
+                        <ChevronsUpDown aria-hidden="true" className="size-4 text-text-muted" />
                       )}
                     </button>
                   ) : (
@@ -147,7 +147,7 @@ export function DataTable<T>({
                           type="button"
                           className={cn(
                             TAP_MIN_CLASSES,
-                            'text-left font-semibold text-brand-600 underline',
+                            'text-left font-bold text-brand underline',
                           )}
                           onClick={(event) => {
                             event.stopPropagation();
@@ -185,7 +185,7 @@ export function DataTable<T>({
       </div>
       {showPagination && meta && (
         <nav aria-label="Paginação" className="flex flex-wrap items-center justify-between gap-2">
-          <p className="text-ink-muted" aria-live="polite">
+          <p className="text-text-muted" aria-live="polite">
             Página {meta.current_page} de {meta.last_page} · {meta.total} registros
           </p>
           <div className="flex gap-2">

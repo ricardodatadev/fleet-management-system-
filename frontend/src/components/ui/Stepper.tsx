@@ -24,15 +24,15 @@ export function Stepper({ steps, current, className }: StepperProps) {
             aria-current={active ? 'step' : undefined}
             className={cn(
               'flex items-center gap-2',
-              active ? 'font-bold text-ink' : 'text-ink-muted',
+              active ? 'font-bold text-text' : 'text-text-muted',
             )}
           >
             <span
               aria-hidden="true"
               className={cn(
                 'inline-flex size-8 items-center justify-center rounded-full border-2 text-sm',
-                (done || active) && 'border-brand-600',
-                done && 'bg-brand-600 text-white',
+                (done || active) && 'border-brand',
+                done && 'bg-brand text-on-brand',
               )}
             >
               {done ? <Check className="size-4" /> : index + 1}

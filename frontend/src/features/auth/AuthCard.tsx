@@ -17,12 +17,12 @@ export function AuthCard({
   children: ReactNode;
 }) {
   return (
-    <main className="flex min-h-screen items-center justify-center bg-surface-muted p-4">
-      <div className="flex w-full max-w-md flex-col gap-6 rounded-xl bg-surface p-6 shadow-lg sm:p-8">
+    <main className="flex min-h-screen items-center justify-center bg-bg p-4">
+      <div className="flex w-full max-w-md flex-col gap-6 rounded-card bg-surface p-6 shadow-lg sm:p-8">
         <div className="flex flex-col gap-1 text-center">
-          <p className="text-sm font-bold tracking-wide text-brand-600 uppercase">{APP_NAME}</p>
-          <h1 className="text-2xl font-bold text-ink">{title}</h1>
-          <p className="text-ink-muted">{description}</p>
+          <p className="text-sm font-bold tracking-wide text-brand uppercase">{APP_NAME}</p>
+          <h1 className="text-2xl font-bold text-text">{title}</h1>
+          <p className="text-text-muted">{description}</p>
         </div>
         {children}
       </div>
@@ -43,8 +43,8 @@ export function AuthLink({ className, ...props }: LinkProps) {
 /** Erro do formulário (envelope); `detail` = linha extra (ex.: contagem do 429). */
 export function FormAlert({ message, detail }: { message: string; detail?: ReactNode }) {
   return (
-    <div role="alert" className="rounded-lg bg-red-50 p-3 text-red-900">
-      <p className="font-medium">{message}</p>
+    <div role="alert" className="rounded-control bg-danger-subtle p-3 text-danger">
+      <p className="font-bold">{message}</p>
       {detail && <div className="text-sm">{detail}</div>}
     </div>
   );
@@ -53,7 +53,7 @@ export function FormAlert({ message, detail }: { message: string; detail?: React
 /** Aviso neutro/positivo (sessão expirada, senha redefinida, e-mail enviado). */
 export function FormNotice({ children }: { children: ReactNode }) {
   return (
-    <div role="status" className="rounded-lg bg-blue-50 p-3 text-blue-950">
+    <div role="status" className="rounded-control bg-info-subtle p-3 text-info">
       {children}
     </div>
   );

@@ -15,7 +15,7 @@ export function AssistantButton() {
         className={cn(
           TAP_MIN_CLASSES,
           buttonBase,
-          'fixed right-4 bottom-4 z-30 size-14 rounded-full bg-surface-muted px-0 text-ink-muted shadow-lg',
+          'fixed right-4 bottom-4 z-30 size-14 rounded-full bg-surface-muted px-0 text-text-muted shadow-lg',
         )}
         onClick={(event) => event.preventDefault()}
       >

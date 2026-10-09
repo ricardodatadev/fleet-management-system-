@@ -17,10 +17,10 @@ export function Tooltip({ content, children, side = 'top' }: TooltipProps) {
           <TooltipPrimitive.Content
             side={side}
             sideOffset={8}
-            className="z-50 max-w-xs rounded-lg bg-gray-900 px-3 py-2 text-sm text-white shadow-lg"
+            className="z-50 max-w-xs rounded-control bg-inverse px-3 py-2 text-sm text-on-inverse shadow-lg"
           >
             {content}
-            <TooltipPrimitive.Arrow className="fill-gray-900" />
+            <TooltipPrimitive.Arrow className="fill-inverse" />
           </TooltipPrimitive.Content>
         </TooltipPrimitive.Portal>
       </TooltipPrimitive.Root>

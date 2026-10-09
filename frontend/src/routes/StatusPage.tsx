@@ -14,11 +14,11 @@ export function StatusPage({
 }) {
   return (
     <main className="flex min-h-screen flex-col items-center justify-center gap-4 p-4 text-center">
-      <p aria-hidden="true" className="text-6xl font-bold text-brand-600">
+      <p aria-hidden="true" className="text-3xl font-bold text-brand">
         {code}
       </p>
-      <h1 className="text-2xl font-bold text-ink">{title}</h1>
-      <p className="max-w-prose text-ink-muted">{description}</p>
+      <h1 className="text-2xl font-bold text-text">{title}</h1>
+      <p className="max-w-prose text-text-muted">{description}</p>
       {action}
     </main>
   );

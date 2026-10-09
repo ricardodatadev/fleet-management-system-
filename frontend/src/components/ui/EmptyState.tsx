@@ -18,12 +18,12 @@ export function EmptyState({ title, description, icon, action, role, className }
       className={cn('flex flex-col items-center gap-2 px-4 py-12 text-center', className)}
     >
       {icon && (
-        <div aria-hidden="true" className="text-ink-muted">
+        <div aria-hidden="true" className="text-text-muted">
           {icon}
         </div>
       )}
-      <h2 className="text-lg font-semibold text-ink">{title}</h2>
-      {description && <p className="max-w-prose text-ink-muted">{description}</p>}
+      <h2 className="text-xl font-bold text-text">{title}</h2>
+      {description && <p className="max-w-prose text-text-muted">{description}</p>}
       {action && <div className="mt-2">{action}</div>}
     </div>
   );

@@ -35,7 +35,7 @@ function DialogShell({
   return (
     <Dialog.Root open={open} onOpenChange={onOpenChange}>
       <Dialog.Portal>
-        <Dialog.Overlay className="fixed inset-0 z-40 bg-black/50" />
+        <Dialog.Overlay className="fixed inset-0 z-40 bg-overlay" />
         <Dialog.Content
           {...returnFocus}
           className={cn(
@@ -46,9 +46,9 @@ function DialogShell({
         >
           <div className="flex items-start justify-between gap-2 border-b border-border p-4">
             <div className="flex flex-col gap-1">
-              <Dialog.Title className="text-xl font-bold text-ink">{title}</Dialog.Title>
+              <Dialog.Title className="text-xl font-bold text-text">{title}</Dialog.Title>
               {description ? (
-                <Dialog.Description className="text-ink-muted">{description}</Dialog.Description>
+                <Dialog.Description className="text-text-muted">{description}</Dialog.Description>
               ) : (
                 <Dialog.Description className="sr-only">{title}</Dialog.Description>
               )}
@@ -73,7 +73,7 @@ export function Modal(props: OverlayPanelProps) {
   return (
     <DialogShell
       {...props}
-      panelClassName="top-1/2 left-1/2 max-h-[90vh] w-[calc(100%-2rem)] max-w-2xl -translate-x-1/2 -translate-y-1/2 rounded-xl"
+      panelClassName="top-1/2 left-1/2 max-h-[90vh] w-[calc(100%-2rem)] max-w-2xl -translate-x-1/2 -translate-y-1/2 rounded-card"
     />
   );
 }
@@ -89,7 +89,7 @@ export function Drawer({ side = 'right', ...props }: DrawerProps) {
       {...props}
       panelClassName={cn(
         'top-0 h-full w-full',
-        side === 'right' ? 'right-0 max-w-xl sm:rounded-l-xl' : 'left-0 max-w-xs rounded-r-xl',
+        side === 'right' ? 'right-0 max-w-xl sm:rounded-l-card' : 'left-0 max-w-xs rounded-r-card',
       )}
     />
   );

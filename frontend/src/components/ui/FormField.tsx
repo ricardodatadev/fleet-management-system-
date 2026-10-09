@@ -49,10 +49,10 @@ export function FormField({
 
   return (
     <div className={cn('flex flex-col gap-2', className)}>
-      <label htmlFor={id} className="font-semibold text-ink">
+      <label htmlFor={id} className="font-bold text-text">
         {label}
         {required && !hideRequiredMark && (
-          <span aria-hidden="true" className="text-danger-600">
+          <span aria-hidden="true" className="text-danger">
             {' '}
             *
           </span>
@@ -64,12 +64,12 @@ export function FormField({
           ? cloneElement(children, control)
           : null}
       {help && (
-        <p id={helpId} className="text-sm text-ink-muted">
+        <p id={helpId} className="text-sm text-text-muted">
           {help}
         </p>
       )}
       {error && (
-        <p id={errorId} className="text-sm font-medium text-danger-600">
+        <p id={errorId} className="text-sm font-bold text-danger">
           {error}
         </p>
       )}

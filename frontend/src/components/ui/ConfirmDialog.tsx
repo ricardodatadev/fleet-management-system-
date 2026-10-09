@@ -33,17 +33,17 @@ export function ConfirmDialog({
   return (
     <AlertDialog.Root open={open} onOpenChange={onOpenChange}>
       <AlertDialog.Portal>
-        <AlertDialog.Overlay className="fixed inset-0 z-40 bg-black/50" />
+        <AlertDialog.Overlay className="fixed inset-0 z-40 bg-overlay" />
         <AlertDialog.Content
           {...returnFocus}
-          className="fixed top-1/2 left-1/2 z-50 flex w-[calc(100%-2rem)] max-w-md -translate-x-1/2 -translate-y-1/2 flex-col gap-4 rounded-xl bg-surface p-6 shadow-xl focus:outline-none"
+          className="fixed top-1/2 left-1/2 z-50 flex w-[calc(100%-2rem)] max-w-md -translate-x-1/2 -translate-y-1/2 flex-col gap-4 rounded-card bg-surface p-6 shadow-xl focus:outline-none"
         >
-          <AlertDialog.Title className="text-xl font-bold text-ink">{title}</AlertDialog.Title>
-          <AlertDialog.Description className="text-ink-muted">
+          <AlertDialog.Title className="text-xl font-bold text-text">{title}</AlertDialog.Title>
+          <AlertDialog.Description className="text-text-muted">
             {description}
           </AlertDialog.Description>
           {error && (
-            <p role="alert" className="font-medium text-danger-600">
+            <p role="alert" className="font-bold text-danger">
               {error}
             </p>
           )}

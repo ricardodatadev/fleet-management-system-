@@ -135,7 +135,7 @@ describe('AppLayout — tablet (768–1023)', () => {
     expect(await screen.findByRole('tooltip')).toHaveTextContent('Frotas & Equipamentos');
     // Regressão: o Slot do Tooltip não pode quebrar o estilo do item ativo.
     expect(link).toHaveAttribute('aria-current', 'page');
-    expect(link).toHaveClass('bg-brand-600', 'justify-center');
+    expect(link).toHaveClass('bg-brand', 'justify-center');
     const disabled = within(mainNav()).getByRole('button', { name: /TCO/ });
     expect(disabled).toHaveAccessibleName(/Em breve/);
   });
@@ -145,9 +145,9 @@ describe('AppLayout — tablet (768–1023)', () => {
     const disabled = within(mainNav()).getByRole('button', { name: /Ordens de Serviço/ });
     const enabled = within(mainNav()).getByRole('link', { name: 'Frotas & Equipamentos' });
     expect(within(disabled).getByTestId('nav-icon')).toHaveClass('opacity-50');
-    expect(disabled).toHaveClass('text-ink-muted');
+    expect(disabled).toHaveClass('text-text-muted');
     expect(within(enabled).getByTestId('nav-icon')).not.toHaveClass('opacity-50');
-    expect(enabled).toHaveClass('text-ink');
+    expect(enabled).toHaveClass('text-text');
     expect(enabled).not.toHaveClass('opacity-70');
     // Continua focável, com tooltip e aria-disabled.
     act(() => disabled.focus());

@@ -41,6 +41,19 @@ describe('FormField', () => {
     expect(screen.getByRole('textbox', { name: 'Senha' })).toHaveAttribute('aria-required', 'true');
   });
 
+  it('erro igual à ajuda (422 que repete a regra) aparece uma vez só, como erro', () => {
+    const rule = 'Use letras minúsculas, números e ponto.';
+    const { container } = render(
+      <FormField label="Usuário" help={rule} error={rule}>
+        <Input />
+      </FormField>,
+    );
+    const input = screen.getByRole('textbox', { name: 'Usuário' });
+    expect(input).toHaveAttribute('aria-invalid', 'true');
+    expect(input).toHaveAccessibleDescription(rule);
+    expect(container.textContent?.split(rule)).toHaveLength(2);
+  });
+
   it('campo opcional não tem asterisco nem aria-required', () => {
     const { container } = render(
       <FormField label="Observações">

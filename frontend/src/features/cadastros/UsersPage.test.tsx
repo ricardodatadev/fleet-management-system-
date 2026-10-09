@@ -211,7 +211,8 @@ describe('Usuários (F1-31)', () => {
     await ue.selectOptions(within(dialog).getByRole('combobox', { name: /Perfil/ }), 'admin');
     await ue.click(within(dialog).getByRole('button', { name: 'Salvar' }));
     await waitFor(() => expect(username).toHaveAttribute('aria-invalid', 'true'));
-    expect(username).toHaveAccessibleDescription(`${USERNAME_HELP} ${USERNAME_HELP}`);
+    // O 422 repete a regra da ajuda: aparece uma vez só, como erro.
+    expect(username).toHaveAccessibleDescription(USERNAME_HELP);
     expect(within(dialog).getByRole('alert')).toHaveTextContent(INVALID_DATA);
   });
 

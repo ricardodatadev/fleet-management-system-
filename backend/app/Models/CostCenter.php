@@ -51,7 +51,7 @@ class CostCenter extends Model
     }
 
     /**
-     * Dependentes ativos que impedem a exclusão (409): colaboradores; equipamentos entram na F1-15.
+     * Dependentes ativos que impedem a exclusão (409): colaboradores e equipamentos.
      *
      * @return list<string>
      */
@@ -59,6 +59,7 @@ class CostCenter extends Model
     {
         return array_keys(array_filter([
             'employees' => $this->employees()->exists(),
+            'equipments' => Equipment::query()->withoutGlobalScope(Scopes\BranchScope::class)->where('cost_center_id', $this->getKey())->exists(),
         ]));
     }
 }

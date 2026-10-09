@@ -7,6 +7,7 @@ use App\Models\AuditLog;
 use App\Models\Branch;
 use App\Models\CostCenter;
 use App\Models\Employee;
+use App\Models\Equipment;
 use App\Models\EquipmentFamily;
 use App\Models\User;
 use App\Policies\AuditLogPolicy;
@@ -14,6 +15,7 @@ use App\Policies\BranchPolicy;
 use App\Policies\CostCenterPolicy;
 use App\Policies\EmployeePolicy;
 use App\Policies\EquipmentFamilyPolicy;
+use App\Policies\EquipmentPolicy;
 use App\Policies\UserPolicy;
 use App\Support\Audit\AuditContext;
 use App\Support\Rbac\Rbac;
@@ -82,6 +84,7 @@ class AppServiceProvider extends ServiceProvider
         Gate::policy(CostCenter::class, CostCenterPolicy::class);
         Gate::policy(EquipmentFamily::class, EquipmentFamilyPolicy::class);
         Gate::policy(Employee::class, EmployeePolicy::class);
+        Gate::policy(Equipment::class, EquipmentPolicy::class);
         Gate::policy(AuditLog::class, AuditLogPolicy::class);
 
         // Token de usuário inativo ou soft-deleted (tokenable null) não autentica.

@@ -27,6 +27,7 @@ class AuditLog extends Model
         'branch' => Branch::class,
         'cost_center' => CostCenter::class,
         'employee' => Employee::class,
+        'equipment' => Equipment::class,
         'equipment_family' => EquipmentFamily::class,
         'user' => User::class,
     ];

@@ -7,6 +7,7 @@ use App\Support\Audit\Auditable;
 use Database\Factories\EquipmentFamilyFactory;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
+use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Database\Eloquent\SoftDeletes;
 
 /**
@@ -48,16 +49,22 @@ class EquipmentFamily extends Model
         ];
     }
 
+    /** @return HasMany<Equipment, $this> */
+    public function equipments(): HasMany
+    {
+        // Sem o escopo de filial: a regra de exclusão precisa enxergar todos.
+        return $this->hasMany(Equipment::class, 'family_id')->withoutGlobalScopes([Scopes\BranchScope::class]);
+    }
+
     /**
-     * Dependentes ativos que impedem a exclusão (409, chave `equipments`). A checagem só é ativada
-     * na F1-15, quando a tabela de equipamentos existir.
+     * Dependentes ativos que impedem a exclusão (409): equipamentos.
      *
      * @return list<string> chaves de tradução em api.dependents.*
      */
     public function activeDependents(): array
     {
         return array_keys(array_filter([
-            'equipments' => false, // F1-15: $this->equipments()->exists()
+            'equipments' => $this->equipments()->exists(),
         ]));
     }
 }

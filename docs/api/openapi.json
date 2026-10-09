@@ -310,7 +310,7 @@
                     "Infra"
                 ],
                 "summary": "Enums e metadados para selects (esqueleto)",
-                "description": "Esqueleto vazio na F1-06. Será protegido por bearerAuth na F1-10 (perfil: qualquer autenticado).",
+                "description": "Esqueleto (vazio até os cadastros). Perfil: qualquer autenticado.",
                 "operationId": "metaEnums",
                 "responses": {
                     "200": {
@@ -340,6 +340,9 @@
                             }
                         }
                     },
+                    "401": {
+                        "$ref": "#/components/responses/Unauthenticated"
+                    },
                     "429": {
                         "$ref": "#/components/responses/TooManyRequests"
                     },
@@ -347,7 +350,11 @@
                         "$ref": "#/components/responses/ServerError"
                     }
                 },
-                "security": []
+                "security": [
+                    {
+                        "bearerAuth": []
+                    }
+                ]
             }
         }
     },

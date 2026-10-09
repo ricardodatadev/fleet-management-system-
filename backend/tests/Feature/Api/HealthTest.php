@@ -28,8 +28,8 @@ it('503 com redis down', function () {
     $this->getJson('/api/v1/health')->assertStatus(503)->assertJsonPath('data.redis', 'down');
 });
 
-it('meta/enums responde esqueleto no envelope', function () {
-    $this->getJson('/api/v1/meta/enums')->assertOk()->assertJsonStructure(['status', 'message', 'errors', 'data' => ['enums']]);
+it('meta/enums exige autenticação (401 no envelope); o 200 autenticado está em tests/Feature/Rbac', function () {
+    $this->getJson('/api/v1/meta/enums')->assertUnauthorized()->assertJsonPath('status', 'error');
 });
 
 it('health não passa pelo throttle (precisa responder 503 com o Redis fora)', function () {

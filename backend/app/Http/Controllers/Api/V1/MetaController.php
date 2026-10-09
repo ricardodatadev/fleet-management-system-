@@ -6,6 +6,7 @@ use App\Enums\Role;
 use App\Http\Controllers\Controller;
 use App\Models\Branch;
 use App\Models\Employee;
+use App\Models\Equipment;
 use App\Models\EquipmentFamily;
 use App\Support\Api\ApiResponse;
 use Illuminate\Http\JsonResponse;
@@ -33,7 +34,7 @@ class MetaController extends Controller
                         properties: [new OA\Property(
                             property: 'enums',
                             type: 'object',
-                            required: ['branch_types', 'roles', 'equipment_categories', 'criticalities', 'job_types', 'cnh_categories'],
+                            required: ['branch_types', 'roles', 'equipment_categories', 'criticalities', 'job_types', 'cnh_categories', 'equipment_statuses'],
                             properties: [
                                 new OA\Property(property: 'branch_types', type: 'array', items: new OA\Items(type: 'string', enum: Branch::TYPES)),
                                 new OA\Property(property: 'roles', type: 'array', items: new OA\Items(type: 'string', enum: ['operator', 'mechanic', 'leader', 'admin'])),
@@ -41,6 +42,7 @@ class MetaController extends Controller
                                 new OA\Property(property: 'criticalities', type: 'array', items: new OA\Items(type: 'string', enum: EquipmentFamily::CRITICALITIES)),
                                 new OA\Property(property: 'job_types', type: 'array', items: new OA\Items(type: 'string', enum: Employee::JOB_TYPES)),
                                 new OA\Property(property: 'cnh_categories', type: 'array', items: new OA\Items(type: 'string', enum: Employee::CNH_CATEGORIES)),
+                                new OA\Property(property: 'equipment_statuses', type: 'array', items: new OA\Items(type: 'string', enum: Equipment::STATUSES)),
                             ],
                         )],
                     )]),
@@ -60,6 +62,7 @@ class MetaController extends Controller
             'criticalities' => EquipmentFamily::CRITICALITIES,
             'job_types' => Employee::JOB_TYPES,
             'cnh_categories' => Employee::CNH_CATEGORIES,
+            'equipment_statuses' => Equipment::STATUSES,
         ]]);
     }
 }

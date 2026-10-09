@@ -41,6 +41,12 @@ O `docker-compose.override.yml` (dev) monta `./backend` nos containers `app`/`wo
 
 Contrato da API: `docs/api/openapi.json` (OpenAPI 3.0, versionado), gerado dos atributos PHP (swagger-php): `make openapi` (= `composer openapi` no container). Lint: `make openapi-lint` (Redocly em container node efêmero; 0 erros, avisos justificados no ADR). Os testes Pest falham se uma rota `api/v1` não estiver documentada ou se o JSON versionado estiver desatualizado. Swagger UI: `L5_SWAGGER_ENABLED=true` no `.env` e recriar `nginx`/`app` → `/api/documentation` (com `false` a rota não existe e responde 404). A CSP do Swagger UI é própria desse location; `/` mantém `default-src 'self'`.
 
+## Autenticação e e-mail
+
+- **Login só por usuário (username) + senha** (`POST /api/v1/auth/login` com `{username, password, device_name}`); o username passa por trim + minúsculas no servidor. O e-mail serve apenas para a recuperação de senha.
+- **Esqueci a senha:** `POST /auth/forgot-password` (sempre 200, sem revelar se o e-mail existe) envia, pela fila, um link `${APP_FRONTEND_URL}/redefinir-senha#token=…&email=…` (o token vai no fragmento, que não chega ao servidor); `POST /auth/reset-password` troca a senha e encerra todas as sessões.
+- **E-mail em dev:** o `docker-compose.override.yml` sobe o Mailpit e aponta `app`/`worker` para ele; os e-mails aparecem em `http://127.0.0.1:${MAILPIT_UI_PORT:-8025}`. Fora do override o padrão é `MAIL_MAILER=log`.
+
 ## Nome do sistema
 
 O nome vem de uma fonte única: `APP_NAME`, `APP_FULL_NAME` e `APP_SLUG` no `.env` (modelo no `.env.example`). O nome exibido (API/OpenAPI, Swagger, FastAPI, SPA) vem dos dois primeiros; todo identificador técnico (projeto do compose, imagens, rede, volumes, banco, prefixos de cache/Redis/sessão/Horizon, chave de sessão do front) deriva do slug. `make brand` (`scripts/check-brand.sh`) falha se o nome aparecer fora da allowlist (`scripts/brand-allowlist.txt`). Para trocar o nome, veja [`docs/renaming.md`](docs/renaming.md).

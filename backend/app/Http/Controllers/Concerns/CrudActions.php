@@ -18,20 +18,30 @@ use Illuminate\Validation\ValidationException;
 trait CrudActions
 {
     /**
-     * Grava (create/update). Se o índice único parcial de `code` for violado por concorrência após a
-     * validação, responde 422 no campo, como a própria validação faria.
+     * Grava (create/update). Se um índice único parcial for violado por concorrência após a validação,
+     * responde 422 no campo, como a própria validação faria. $uniqueField é o campo, ou um mapa
+     * nome do índice → campo quando a tabela tem mais de um (o primeiro é o padrão).
      *
      * @template T
      *
      * @param  Closure(): T  $callback
+     * @param  string|array<string, string>  $uniqueField
      * @return T
      */
-    protected function persist(Closure $callback, string $uniqueField = 'code'): mixed
+    protected function persist(Closure $callback, string|array $uniqueField = 'code'): mixed
     {
         try {
             return DB::transaction($callback);
-        } catch (UniqueConstraintViolationException) {
-            throw ValidationException::withMessages([$uniqueField => __('validation.unique', ['attribute' => $uniqueField])]);
+        } catch (UniqueConstraintViolationException $e) {
+            $fields = (array) $uniqueField;
+            $field = reset($fields);
+            foreach ($fields as $index => $candidate) {
+                if (is_string($index) && str_contains($e->getMessage(), $index)) {
+                    $field = $candidate;
+                }
+            }
+
+            throw ValidationException::withMessages([$field => __('validation.unique', ['attribute' => $field])]);
         }
     }
 

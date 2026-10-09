@@ -10,6 +10,7 @@ use Illuminate\Database\Eloquent\Attributes\Hidden;
 use Illuminate\Database\Eloquent\Casts\Attribute;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
+use Illuminate\Database\Eloquent\Relations\HasOne;
 use Illuminate\Database\Eloquent\SoftDeletes;
 use Illuminate\Foundation\Auth\User as Authenticatable;
 use Illuminate\Notifications\Notifiable;
@@ -75,13 +76,22 @@ class User extends Authenticatable
         return $this->role === Role::Admin;
     }
 
+    /** @return HasOne<Employee, $this> */
+    public function employee(): HasOne
+    {
+        // Sem o escopo de filial: o vínculo é 1:1 e vale para qualquer perfil (admin pode ter filial null).
+        return $this->hasOne(Employee::class)->withoutGlobalScopes([Scopes\BranchScope::class]);
+    }
+
     /**
-     * Dependentes ativos que impedem a exclusão (409). O colaborador vinculado entra na F1-14.
+     * Dependentes ativos que impedem a exclusão (409): colaborador vinculado não excluído.
      *
      * @return list<string> chaves de tradução em api.dependents.*
      */
     public function activeDependents(): array
     {
-        return [];
+        return array_keys(array_filter([
+            'employees' => $this->employee()->exists(),
+        ]));
     }
 }

@@ -44,6 +44,13 @@ class Branch extends Model
         return $this->hasMany(User::class);
     }
 
+    /** @return HasMany<Employee, $this> */
+    public function employees(): HasMany
+    {
+        // Sem o escopo de filial: a regra de exclusão precisa enxergar todos.
+        return $this->hasMany(Employee::class)->withoutGlobalScopes([Scopes\BranchScope::class]);
+    }
+
     /** @return HasMany<CostCenter, $this> */
     public function costCenters(): HasMany
     {
@@ -52,8 +59,7 @@ class Branch extends Model
     }
 
     /**
-     * Dependentes ativos (não excluídos) que impedem a exclusão (409). Equipamentos e colaboradores
-     * entram com as F1-15/F1-14.
+     * Dependentes ativos (não excluídos) que impedem a exclusão (409). Equipamentos entram na F1-15.
      *
      * @return list<string> chaves de tradução em api.dependents.*
      */
@@ -62,6 +68,7 @@ class Branch extends Model
         return array_keys(array_filter([
             'cost_centers' => $this->costCenters()->exists(),
             'users' => $this->users()->exists(),
+            'employees' => $this->employees()->exists(),
         ]));
     }
 }

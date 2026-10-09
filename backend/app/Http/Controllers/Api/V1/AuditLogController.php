@@ -37,7 +37,7 @@ class AuditLogController extends Controller
         parameters: [
             new OA\Parameter(ref: '#/components/parameters/Page'),
             new OA\Parameter(ref: '#/components/parameters/PerPage'),
-            new OA\Parameter(name: 'auditable_type', in: 'query', description: 'Alias curto do registro auditado; desconhecido → 422.', schema: new OA\Schema(type: 'string', enum: ['branch', 'cost_center', 'equipment_family', 'user'])),
+            new OA\Parameter(name: 'auditable_type', in: 'query', description: 'Alias curto do registro auditado; desconhecido → 422.', schema: new OA\Schema(type: 'string', enum: ['branch', 'cost_center', 'employee', 'equipment_family', 'user'])),
             new OA\Parameter(name: 'auditable_id', in: 'query', schema: new OA\Schema(type: 'integer')),
             new OA\Parameter(name: 'actor_id', in: 'query', schema: new OA\Schema(type: 'integer')),
             new OA\Parameter(name: 'action', in: 'query', schema: new OA\Schema(type: 'string', enum: ['created', 'updated', 'deleted', 'restored', 'login_succeeded', 'login_failed', 'logout', 'password_changed', 'setting_changed', 'setting_removed'])),

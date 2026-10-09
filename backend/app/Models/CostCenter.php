@@ -9,6 +9,7 @@ use Database\Factories\CostCenterFactory;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
+use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Database\Eloquent\SoftDeletes;
 
 /**
@@ -42,13 +43,22 @@ class CostCenter extends Model
         return $this->belongsTo(Branch::class)->withTrashed();
     }
 
+    /** @return HasMany<Employee, $this> */
+    public function employees(): HasMany
+    {
+        // Sem o escopo de filial: as regras de exclusão e de troca de filial precisam enxergar todos.
+        return $this->hasMany(Employee::class)->withoutGlobalScopes([Scopes\BranchScope::class]);
+    }
+
     /**
-     * Dependentes ativos que impedem a exclusão (409): equipamentos (F1-15) e colaboradores (F1-14).
+     * Dependentes ativos que impedem a exclusão (409): colaboradores; equipamentos entram na F1-15.
      *
      * @return list<string>
      */
     public function activeDependents(): array
     {
-        return [];
+        return array_keys(array_filter([
+            'employees' => $this->employees()->exists(),
+        ]));
     }
 }

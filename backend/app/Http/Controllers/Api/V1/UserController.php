@@ -19,6 +19,7 @@ use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Gate;
 use Illuminate\Validation\Rule;
+use Illuminate\Validation\ValidationException;
 use Laravel\Sanctum\PersonalAccessToken;
 use OpenApi\Attributes as OA;
 
@@ -141,7 +142,7 @@ class UserController extends Controller
         path: '/users/{user}',
         operationId: 'usersUpdate',
         summary: 'Atualiza usuário (parcial; PUT = PATCH)',
-        description: 'Permissão: users.manage. Só os campos enviados são validados e gravados. Revoga todos os tokens do usuário ao trocar a senha de outro usuário ou ao desativá-lo (na própria senha, revoga os demais tokens). 409: alterar o próprio perfil, desativar a si mesmo, rebaixar ou desativar o último admin ativo.',
+        description: 'Permissão: users.manage. Só os campos enviados são validados e gravados. Usuário vinculado a colaborador: não-admin precisa ficar na filial do colaborador (422 ao mudar branch_id ou rebaixar de admin). Revoga todos os tokens do usuário ao trocar a senha de outro usuário ou ao desativá-lo (na própria senha, revoga os demais tokens). 409: alterar o próprio perfil, desativar a si mesmo, rebaixar ou desativar o último admin ativo.',
         tags: ['Usuários'],
         security: [['bearerAuth' => []]],
         parameters: [new OA\Parameter(name: 'user', in: 'path', required: true, schema: new OA\Schema(type: 'integer'))],
@@ -199,6 +200,7 @@ class UserController extends Controller
             if (array_key_exists('branch_id', $data)) {
                 $this->lockBranch($data['branch_id']);
             }
+            $this->guardEmployeeBranch($user, $data, $newRole);
             $user->update($data);
 
             if ($deactivates || ($passwordChanged && ! $self)) {
@@ -220,7 +222,7 @@ class UserController extends Controller
         path: '/users/{user}',
         operationId: 'usersDestroy',
         summary: 'Exclui usuário (soft delete)',
-        description: 'Permissão: users.manage. Revoga todos os tokens do usuário. 409: excluir a si mesmo ou o último admin ativo (o vínculo com colaborador entra na F1-14).',
+        description: 'Permissão: users.manage. Revoga todos os tokens do usuário. 409: excluir a si mesmo, o último admin ativo ou usuário com colaborador vinculado não excluído (`errors.dependents=["employees"]`).',
         tags: ['Usuários'],
         security: [['bearerAuth' => []]],
         parameters: [new OA\Parameter(name: 'user', in: 'path', required: true, schema: new OA\Schema(type: 'integer'))],
@@ -282,6 +284,27 @@ class UserController extends Controller
         }, 'email');
 
         return ApiResponse::item(new ManagedUserResource($restored->load('branch')), __('api.restored'));
+    }
+
+    /**
+     * Colaborador vinculado (D.2 v1.5): usuário não-admin precisa ficar na filial do colaborador, ao mudar
+     * o branch_id ou ao rebaixar de admin (422). A linha do usuário é travada antes da checagem: quem
+     * grava colaborador trava o usuário com FOR SHARE.
+     *
+     * @param  array<string, mixed>  $data
+     */
+    private function guardEmployeeBranch(User $user, array $data, Role $newRole): void
+    {
+        if ($newRole === Role::Admin || (! array_key_exists('branch_id', $data) && $newRole === $user->role)) {
+            return;
+        }
+        User::query()->whereKey($user->getKey())->lockForUpdate()->first(['id']);
+        $employee = $user->employee()->first(['id', 'branch_id']);
+        $branchId = array_key_exists('branch_id', $data) ? $data['branch_id'] : $user->branch_id;
+
+        if ($employee !== null && (int) $employee->branch_id !== (int) $branchId) {
+            throw ValidationException::withMessages(['branch_id' => __('api.user_employee_branch_mismatch')]);
+        }
     }
 
     /**

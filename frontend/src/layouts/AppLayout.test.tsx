@@ -38,7 +38,10 @@ describe('AppLayout — desktop (≥1024)', () => {
     expect(banner).toHaveTextContent('Todas as filiais');
     expect(banner).toHaveTextContent('Ana Souza');
     expect(banner).toHaveTextContent('PCM/Gestor/Admin');
-    expect(within(banner).getByRole('button', { name: 'Sair' })).toBeInTheDocument();
+    expect(
+      within(banner).getByRole('button', { name: 'Menu do usuário: Ana Souza' }),
+    ).toBeInTheDocument();
+    expect(within(banner).queryByRole('button', { name: 'Sair' })).toBeNull();
     expect(screen.queryByRole('button', { name: 'Abrir menu' })).not.toBeInTheDocument();
   });
 
@@ -182,7 +185,12 @@ describe('AppLayout — mobile (<768)', () => {
     const { location } = await renderShell('leader');
     expect(screen.queryByTestId('sidebar-panel')).toBeNull();
     expect(screen.queryByRole('navigation', { name: 'Navegação principal' })).toBeNull();
-    expect(screen.getByRole('button', { name: 'Sair' })).toHaveClass('min-h-12', 'min-w-12');
+    // No mobile o avatar substitui o antigo botão de sair.
+    expect(screen.getByRole('button', { name: /^Menu do usuário/ })).toHaveClass(
+      'min-h-12',
+      'min-w-12',
+    );
+    expect(screen.queryByRole('button', { name: 'Sair' })).toBeNull();
 
     const toggle = screen.getByRole('button', { name: 'Abrir menu' });
     expect(toggle).toHaveAttribute('aria-expanded', 'false');

@@ -50,12 +50,12 @@ class AppServiceProvider extends ServiceProvider
         // 120 req/min por usuário (ou IP quando anônimo).
         RateLimiter::for('api', fn (Request $request) => Limit::perMinute(120)->by($request->user()?->getAuthIdentifier() ?: $request->ip()));
 
-        // Login: 5/min por (login normalizado + IP) e 20/min por IP (D.2 v1.7). Conta toda tentativa, inclusive as bem-sucedidas.
+        // Login: 5/min por (username normalizado + IP) e 20/min por IP (D.2 v1.7). Conta toda tentativa, inclusive as bem-sucedidas.
         RateLimiter::for('login', function (Request $request) {
-            $login = LoginRequest::normalize($request->input('login'));
+            $username = LoginRequest::normalize($request->input('username'));
 
             return [
-                Limit::perMinute(5)->by('login:login-ip:'.$login.'|'.$request->ip()),
+                Limit::perMinute(5)->by('login:username-ip:'.$username.'|'.$request->ip()),
                 Limit::perMinute(20)->by('login:ip:'.$request->ip()),
             ];
         });

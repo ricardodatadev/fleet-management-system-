@@ -102,39 +102,44 @@ it('/users: q busca em username, sort por username; resposta, /auth/me e auditor
     expect($log->new_values['username'])->toBe('novo');
 });
 
-it('login por e-mail e por username, os dois com caixa mista e espaços nas pontas', function () {
+it('login por username com caixa mista e espaços nas pontas (v1.8: só username)', function () {
     $user = User::factory()->create(['username' => 'carlos', 'email' => 'carlos@example.com', 'branch_id' => $this->branch->id]);
 
-    foreach (['  Carlos@Example.COM ', 'CARLOS', ' carlos '] as $login) {
-        api('POST', 'auth/login', ['login' => $login, 'password' => UserFactory::PASSWORD, 'device_name' => 'pest'])
+    foreach (['CARLOS', ' carlos ', '  CaRlOs'] as $username) {
+        api('POST', 'auth/login', ['username' => $username, 'password' => UserFactory::PASSWORD, 'device_name' => 'pest'])
             ->assertOk()->assertJsonPath('data.user.id', $user->id)->assertJsonPath('data.user.username', 'carlos');
     }
 });
 
-it('credencial errada → 422 genérico igual para e-mail, username e login inexistente; inativo → 403 só com a senha certa', function () {
+it('credencial errada → 422 genérico igual para senha errada, username inexistente e e-mail digitado (mesmo com a senha certa); inativo → 403 só com a senha certa', function () {
     User::factory()->create(['username' => 'carlos', 'email' => 'carlos@example.com', 'branch_id' => $this->branch->id]);
     User::factory()->inactive()->create(['username' => 'inativo', 'branch_id' => $this->branch->id]);
-    $attempt = fn (string $login, string $password = 'SenhaErrada123') => api('POST', 'auth/login', ['login' => $login, 'password' => $password, 'device_name' => 'pest']);
+    $attempt = fn (string $username, string $password = 'SenhaErrada123') => api('POST', 'auth/login', ['username' => $username, 'password' => $password, 'device_name' => 'pest']);
 
-    $bodies = collect(['carlos@example.com', 'carlos', 'ninguem', 'ninguem@example.com'])
-        ->map(fn ($login) => collect($attempt($login)->assertStatus(422)->json())->only(['status', 'message', 'errors', 'data'])->all())
+    $bodies = collect([
+        $attempt('carlos'),                                   // senha errada
+        $attempt('ninguem'),                                  // inexistente
+        $attempt('carlos@example.com', UserFactory::PASSWORD), // e-mail não entra no login
+        $attempt('Fora Do Padrão!'),                          // sem validação de formato no login
+    ])->map(fn ($r) => collect($r->assertStatus(422)->json())->only(['status', 'message', 'errors', 'data'])->all())
         ->unique(fn ($b) => json_encode($b));
-    expect($bodies)->toHaveCount(1)->and($bodies->first()['errors'])->toBe(['login' => [__('auth.failed')]]);
+    expect($bodies)->toHaveCount(1)->and($bodies->first()['errors'])->toBe(['username' => [__('auth.failed')]]);
 
     $attempt('inativo', UserFactory::PASSWORD)->assertForbidden()->assertJsonPath('message', __('auth.inactive'));
     $attempt('inativo')->assertStatus(422);
 
     $metadata = AuditLog::query()->where('action', 'login_failed')->orderBy('id')->pluck('metadata')->all();
-    expect(array_column($metadata, 'login'))->toBe(['carlos@example.com', 'carlos', 'ninguem', 'ninguem@example.com', 'inativo', 'inativo']);
+    expect(array_column($metadata, 'username'))->toBe(['carlos', 'ninguem', 'carlos@example.com', 'fora do padrão!', 'inativo', 'inativo']);
 });
 
-it('throttle de login pela chave normalizada: caixa e espaços diferentes contam juntos', function () {
+it('throttle de login pela chave normalizada do username: caixa e espaços diferentes contam juntos', function () {
     User::factory()->create(['username' => 'alvo', 'branch_id' => $this->branch->id]);
-    $from = fn (string $login) => $this->withServerVariables(['REMOTE_ADDR' => '10.9.9.9'])
-        ->postJson('/api/v1/auth/login', ['login' => $login, 'password' => 'SenhaErrada123', 'device_name' => 'pest']);
+    $from = fn (string $username, string $ip = '10.9.9.9') => $this->withServerVariables(['REMOTE_ADDR' => $ip])
+        ->postJson('/api/v1/auth/login', ['username' => $username, 'password' => 'SenhaErrada123', 'device_name' => 'pest']);
 
-    foreach (['alvo', 'ALVO', ' Alvo ', 'aLvO', 'alvo '] as $login) {
-        $from($login)->assertStatus(422);
+    foreach (['alvo', 'ALVO', ' Alvo ', 'aLvO', 'alvo '] as $username) {
+        $from($username)->assertStatus(422);
     }
     $from('ALVO')->assertStatus(429)->assertHeader('Retry-After');
+    $from('alvo', '10.9.9.8')->assertStatus(422); // outro IP segue liberado
 });

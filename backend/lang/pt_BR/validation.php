@@ -191,7 +191,6 @@ return [
         // usuários e auth
         'email' => 'e-mail',
         'username' => 'usuário',
-        'login' => 'e-mail ou usuário',
         'token' => 'link de redefinição',
         'password' => 'senha',
         'current_password' => 'senha atual',

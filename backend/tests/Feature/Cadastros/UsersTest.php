@@ -160,7 +160,7 @@ it('trocar a senha de outro usuário revoga TODOS os tokens dele e audita passwo
 
     expect($target->tokens()->count())->toBe(0);
     api('GET', 'auth/me', token: $t1)->assertUnauthorized();
-    api('POST', 'auth/login', ['login' => $target->email, 'password' => NEW_PASSWORD, 'device_name' => 'pest'])->assertOk();
+    api('POST', 'auth/login', ['username' => $target->username, 'password' => NEW_PASSWORD, 'device_name' => 'pest'])->assertOk();
 
     $log = AuditLog::query()->where('action', 'password_changed')->sole();
     expect($log->actor_id)->toBe($this->admin->id)->and($log->auditable_id)->toBe($target->id)

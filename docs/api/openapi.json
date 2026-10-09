@@ -211,7 +211,7 @@
                     "Auth"
                 ],
                 "summary": "Login (emite token Bearer)",
-                "description": "Público. `login` com `@` é e-mail; sem `@` é username (os dois com trim + minúsculas). Credenciais inválidas → 422 em `errors.login` com mensagem genérica, igual para e-mail e username (não revela se o login existe). Usuário inativo → 403 (somente com a senha correta). Rate limit: 5/min por login normalizado + IP e 20/min por IP (toda tentativa conta). Token expira em SANCTUM_EXPIRATION minutos (padrão 720).",
+                "description": "Público. Só username + senha (v1.8); o e-mail serve apenas para a recuperação de senha. `username` passa por trim + minúsculas, sem validação de formato. Username inexistente (inclusive um e-mail digitado), usuário excluído ou senha errada → 422 em `errors.username` com a mesma mensagem genérica. Campo vazio → 422 por campo. Usuário inativo → 403 (somente com a senha correta). Rate limit: 5/min por username normalizado + IP e 20/min por IP (toda tentativa conta). Token expira em SANCTUM_EXPIRATION minutos (padrão 720).",
                 "operationId": "authLogin",
                 "requestBody": {
                     "required": true,
@@ -219,15 +219,15 @@
                         "application/json": {
                             "schema": {
                                 "required": [
-                                    "login",
+                                    "username",
                                     "password",
                                     "device_name"
                                 ],
                                 "properties": {
-                                    "login": {
-                                        "description": "E-mail ou username.",
+                                    "username": {
+                                        "description": "Nome de usuário (trim + minúsculas no servidor).",
                                         "type": "string",
-                                        "example": "admin@example.com",
+                                        "example": "admin",
                                         "maxLength": 190
                                     },
                                     "password": {

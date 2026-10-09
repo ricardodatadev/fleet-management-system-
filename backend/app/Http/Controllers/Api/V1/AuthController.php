@@ -72,13 +72,13 @@ class AuthController extends Controller
         path: '/auth/login',
         operationId: 'authLogin',
         summary: 'Login (emite token Bearer)',
-        description: 'Público. `login` com `@` é e-mail; sem `@` é username (os dois com trim + minúsculas). Credenciais inválidas → 422 em `errors.login` com mensagem genérica, igual para e-mail e username (não revela se o login existe). Usuário inativo → 403 (somente com a senha correta). Rate limit: 5/min por login normalizado + IP e 20/min por IP (toda tentativa conta). Token expira em SANCTUM_EXPIRATION minutos (padrão 720).',
+        description: 'Público. Só username + senha (v1.8); o e-mail serve apenas para a recuperação de senha. `username` passa por trim + minúsculas, sem validação de formato. Username inexistente (inclusive um e-mail digitado), usuário excluído ou senha errada → 422 em `errors.username` com a mesma mensagem genérica. Campo vazio → 422 por campo. Usuário inativo → 403 (somente com a senha correta). Rate limit: 5/min por username normalizado + IP e 20/min por IP (toda tentativa conta). Token expira em SANCTUM_EXPIRATION minutos (padrão 720).',
         tags: ['Auth'],
         security: [],
         requestBody: new OA\RequestBody(required: true, content: new OA\JsonContent(
-            required: ['login', 'password', 'device_name'],
+            required: ['username', 'password', 'device_name'],
             properties: [
-                new OA\Property(property: 'login', description: 'E-mail ou username.', type: 'string', maxLength: 190, example: 'admin@example.com'),
+                new OA\Property(property: 'username', description: 'Nome de usuário (trim + minúsculas no servidor).', type: 'string', maxLength: 190, example: 'admin'),
                 new OA\Property(property: 'password', type: 'string', format: 'password', maxLength: 255),
                 new OA\Property(property: 'device_name', type: 'string', maxLength: 255, example: 'web'),
             ],
@@ -100,22 +100,22 @@ class AuthController extends Controller
     )]
     public function login(LoginRequest $request): JsonResponse
     {
-        $login = $request->login();
+        $username = $request->username();
         $password = $request->string('password')->toString();
-        // Soft-deleted fica fora da consulta (= login inexistente).
-        $user = User::query()->where($request->isEmail() ? 'email' : 'username', $login)->first();
+        // Só username (v1.8): um e-mail digitado não acha ninguém. Soft-deleted fica fora da consulta.
+        $user = User::query()->where('username', $username)->first();
 
-        // Hash conferido mesmo sem usuário, para o tempo de resposta não revelar se o login existe.
+        // Hash conferido mesmo sem usuário, para o tempo de resposta não revelar se o username existe.
         $valid = Hash::check($password, $user?->password ?? (self::$dummyHash ??= Hash::make(bin2hex(random_bytes(16)))));
 
         if ($user === null || ! $valid) {
-            $this->audit->record(AuditAction::LoginFailed, null, null, null, ['login' => $login, 'reason' => 'invalid_credentials']);
+            $this->audit->record(AuditAction::LoginFailed, null, null, null, ['username' => $username, 'reason' => 'invalid_credentials']);
 
-            throw ValidationException::withMessages(['login' => __('auth.failed')]);
+            throw ValidationException::withMessages(['username' => __('auth.failed')]);
         }
 
         if (! $user->is_active) {
-            $this->audit->record(AuditAction::LoginFailed, null, null, null, ['login' => $login, 'reason' => 'inactive']);
+            $this->audit->record(AuditAction::LoginFailed, null, null, null, ['username' => $username, 'reason' => 'inactive']);
 
             return ApiResponse::error(__('auth.inactive'), 403);
         }

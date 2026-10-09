@@ -130,8 +130,8 @@ it('reset: token válido redefine, revoga TODOS os tokens, audita e não faz log
 
     expect(PersonalAccessToken::query()->count())->toBe(0)
         ->and(DB::table('password_reset_tokens')->count())->toBe(0);
-    api('POST', 'auth/login', ['login' => 'ana@example.com', 'password' => RESET_PASSWORD, 'device_name' => 'pest'])->assertOk();
-    api('POST', 'auth/login', ['login' => 'ana@example.com', 'password' => UserFactory::PASSWORD, 'device_name' => 'pest'])->assertStatus(422);
+    api('POST', 'auth/login', ['username' => $user->username, 'password' => RESET_PASSWORD, 'device_name' => 'pest'])->assertOk();
+    api('POST', 'auth/login', ['username' => $user->username, 'password' => UserFactory::PASSWORD, 'device_name' => 'pest'])->assertStatus(422);
 
     $log = AuditLog::query()->where('action', 'password_reset')->sole();
     expect($log->actor_id)->toBe($user->id)->and($log->auditable_id)->toBe($user->id)->and($log->metadata)->toBe(['revoked_tokens' => 2]);

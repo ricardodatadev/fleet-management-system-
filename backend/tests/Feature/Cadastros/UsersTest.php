@@ -269,7 +269,7 @@ it('auditoria sem senha nem token: nenhum log guarda password, remember_token, h
     api('POST', "users/{$id}/restore", token: $this->token)->assertOk();
 
     $hash = User::query()->findOrFail($id)->getAuthPassword();
-    $logs = AuditLog::query()->where('auditable_id', $id)->where('auditable_type', (new User)->getMorphClass())->get();
+    $logs = AuditLog::query()->where('auditable_id', $id)->where('auditable_type', (new User)->getMorphClass())->orderBy('id')->get();
     expect($logs->pluck('action')->all())->toBe(['created', 'updated', 'password_changed', 'deleted', 'restored']);
     foreach ($logs as $log) {
         $json = json_encode([$log->old_values, $log->new_values, $log->metadata]);

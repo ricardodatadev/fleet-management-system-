@@ -131,3 +131,16 @@ it('validação: code/name obrigatórios no create; branch_id inteiro', function
     api('POST', 'cost-centers', ['code' => 'A', 'name' => 'A', 'branch_id' => 'x'], $this->token)->assertStatus(422)->assertJsonValidationErrors(['branch_id'], 'errors');
     api('POST', 'cost-centers', ['code' => str_repeat('A', 31), 'name' => 'A'], $this->token)->assertStatus(422)->assertJsonValidationErrors(['code'], 'errors');
 });
+
+it('audit updated grava só os campos alterados (old/new), sem updated_at; PATCH sem mudança não gera evento', function () {
+    $cc = CostCenter::factory()->create(['code' => 'CC-01', 'name' => 'Antes', 'branch_id' => $this->x->id]);
+
+    api('PATCH', "cost-centers/{$cc->id}", ['name' => 'Depois', 'branch_id' => $this->y->id], $this->token)->assertOk();
+    api('PUT', "cost-centers/{$cc->id}", ['name' => 'Depois'], $this->token)->assertOk(); // sem mudança
+
+    $updated = AuditLog::query()->where('auditable_type', (new CostCenter)->getMorphClass())->where('auditable_id', $cc->id)->where('action', 'updated')->orderBy('id')->get();
+    expect($updated)->toHaveCount(1)
+        ->and($updated[0]->old_values)->toBe(['name' => 'Antes', 'branch_id' => $this->x->id])
+        ->and($updated[0]->new_values)->toBe(['name' => 'Depois', 'branch_id' => $this->y->id])
+        ->and($updated[0]->actor_id)->toBe($this->admin->id);
+});

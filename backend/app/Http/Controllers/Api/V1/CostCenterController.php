@@ -14,7 +14,6 @@ use Illuminate\Database\Eloquent\Model;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Gate;
-use Illuminate\Validation\ValidationException;
 use OpenApi\Attributes as OA;
 
 #[OA\Schema(
@@ -228,16 +227,5 @@ class CostCenterController extends Controller
         });
 
         return ApiResponse::item(new CostCenterResource($restored->load('branch')), __('api.restored'));
-    }
-
-    /**
-     * Trava a filial (FOR SHARE) e confirma que segue não excluída: a exclusão da filial trava a mesma
-     * linha (FOR UPDATE), então as duas operações não se cruzam.
-     */
-    private function lockBranch(mixed $branchId): void
-    {
-        if ($branchId !== null && Branch::query()->whereKey($branchId)->sharedLock()->first(['id']) === null) {
-            throw ValidationException::withMessages(['branch_id' => __('validation.exists', ['attribute' => 'branch_id'])]);
-        }
     }
 }

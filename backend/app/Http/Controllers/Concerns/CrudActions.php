@@ -3,6 +3,7 @@
 namespace App\Http\Controllers\Concerns;
 
 use App\Exceptions\DomainConflictException;
+use App\Models\Branch;
 use Closure;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\UniqueConstraintViolationException;
@@ -37,10 +38,19 @@ trait CrudActions
      * Soft delete com a regra de dependentes ativos (409). A linha é travada (FOR UPDATE) antes da
      * checagem: quem cria um filho trava a mesma linha (FOR SHARE) e, por isso, espera esta transação
      * e então vê o pai excluído.
+     *
+     * $before roda na mesma transação ANTES de travar a linha (ex.: travar outras linhas numa ordem fixa
+     * e lançar 409); $after roda depois da exclusão (ex.: revogar tokens).
+     *
+     * @param  (Closure(): void)|null  $before
+     * @param  (Closure(Model): void)|null  $after
      */
-    protected function softDeleteGuarded(Model $model): void
+    protected function softDeleteGuarded(Model $model, ?Closure $before = null, ?Closure $after = null): void
     {
-        DB::transaction(function () use ($model) {
+        DB::transaction(function () use ($model, $before, $after) {
+            if ($before !== null) {
+                $before();
+            }
             $locked = $model->newQueryWithoutScopes()->whereKey($model->getKey())->lockForUpdate()->firstOrFail();
 
             $dependents = $locked->activeDependents();
@@ -54,28 +64,33 @@ trait CrudActions
             }
 
             $locked->delete();
+            if ($after !== null) {
+                $after($locked);
+            }
         });
     }
 
     /**
-     * Restaura um registro excluído. 409 se não estiver excluído, se o código já foi reutilizado por um
-     * registro ativo, ou se $check (regra do recurso) devolver uma mensagem de conflito.
+     * Restaura um registro excluído. 409 se não estiver excluído, se o valor único ($uniqueField: `code`,
+     * ou `email` em usuários) já foi reutilizado por um registro ativo, ou se $check (regra do recurso)
+     * devolver uma mensagem de conflito.
      *
      * @param  (Closure(Model): ?string)|null  $check
      */
-    protected function restoreGuarded(Model $model, ?Closure $check = null): Model
+    protected function restoreGuarded(Model $model, ?Closure $check = null, string $uniqueField = 'code'): Model
     {
+        $taken = fn () => new DomainConflictException(__("api.restore_{$uniqueField}_taken"), [$uniqueField => [__("api.restore_{$uniqueField}_taken")]]);
+
         try {
-            return DB::transaction(function () use ($model, $check) {
+            return DB::transaction(function () use ($model, $check, $uniqueField, $taken) {
                 $locked = $model->newQueryWithoutScopes()->whereKey($model->getKey())->lockForUpdate()->firstOrFail();
 
                 if ($locked->getAttribute('deleted_at') === null) {
                     throw new DomainConflictException(__('api.restore_not_deleted'));
                 }
-                $code = $locked->getAttribute('code');
-                $codeTaken = $code !== null && $model->newQueryWithoutScopes()->whereNull('deleted_at')->where('code', $code)->exists();
-                if ($codeTaken) {
-                    throw new DomainConflictException(__('api.restore_code_taken'), ['code' => [__('api.restore_code_taken')]]);
+                $value = $locked->getAttribute($uniqueField);
+                if ($value !== null && $model->newQueryWithoutScopes()->whereNull('deleted_at')->where($uniqueField, $value)->exists()) {
+                    throw $taken();
                 }
                 if ($check !== null && ($message = $check($locked)) !== null) {
                     throw new DomainConflictException($message);
@@ -86,7 +101,19 @@ trait CrudActions
                 return $locked;
             });
         } catch (UniqueConstraintViolationException) {
-            throw new DomainConflictException(__('api.restore_code_taken'), ['code' => [__('api.restore_code_taken')]]);
+            throw $taken();
+        }
+    }
+
+    /**
+     * Trava a filial (FOR SHARE) e confirma que segue não excluída (senão 422 em branch_id): a exclusão
+     * da filial trava a mesma linha (FOR UPDATE), então as duas operações não se cruzam. Chamar dentro
+     * da transação da gravação.
+     */
+    protected function lockBranch(mixed $branchId): void
+    {
+        if ($branchId !== null && Branch::query()->whereKey($branchId)->sharedLock()->first(['id']) === null) {
+            throw ValidationException::withMessages(['branch_id' => __('validation.exists', ['attribute' => 'branch_id'])]);
         }
     }
 }

@@ -42,10 +42,13 @@ class ResetPasswordNotification extends Notification implements ShouldQueue
             ->salutation("Atenciosamente,\n{$app}");
     }
 
-    /** `${APP_FRONTEND_URL}/redefinir-senha?token=…&email=…` */
+    /**
+     * `${APP_FRONTEND_URL}/redefinir-senha#token=…&email=…` (spec v1.7a): o fragmento não é enviado ao
+     * servidor, então o token não aparece no log do nginx nem no Referer.
+     */
     public function url(object $notifiable): string
     {
-        return config('app.frontend_url').'/redefinir-senha?'.http_build_query([
+        return config('app.frontend_url').'/redefinir-senha#'.http_build_query([
             'token' => $this->token,
             'email' => $notifiable->getEmailForPasswordReset(),
         ]);

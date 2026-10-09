@@ -243,7 +243,7 @@ class AuthController extends Controller
         path: '/auth/forgot-password',
         operationId: 'authForgotPassword',
         summary: 'Pede o link de redefinição de senha',
-        description: 'Público. Sempre 200 com a mesma mensagem, exista ou não o e-mail (sem enumeração). Só usuário ativo e não excluído recebe o e-mail, enviado pela fila; o link é `${APP_FRONTEND_URL}/redefinir-senha?token=…&email=…`, vale 60 min e um pedido novo invalida o anterior. E-mail vazio ou malformado → 422. Rate limit: 3/min por e-mail + IP e 10/min por IP.',
+        description: 'Público. Sempre 200 com a mesma mensagem, exista ou não o e-mail (sem enumeração). Só usuário ativo e não excluído recebe o e-mail, enviado pela fila; o link é `${APP_FRONTEND_URL}/redefinir-senha#token=…&email=…` (fragmento: não vai ao servidor), vale 60 min e um pedido novo invalida o anterior. E-mail vazio ou malformado → 422. Rate limit: 3/min por e-mail + IP e 10/min por IP.',
         tags: ['Auth'],
         security: [],
         requestBody: new OA\RequestBody(required: true, content: new OA\JsonContent(

@@ -82,12 +82,15 @@ it('o e-mail vai pela fila, depois do commit, em pt_BR, com o nome de config(app
 
     $notification = new ResetPasswordNotification($token);
     expect($notification)->toBeInstanceOf(ShouldQueue::class)->and($notification->afterCommit)->toBeTrue();
-    expect($notification->url($user))->toBe('https://frota.exemplo.test/redefinir-senha?'.http_build_query(['token' => $token, 'email' => 'ana@example.com']));
+    $url = $notification->url($user);
+    expect($url)->toBe('https://frota.exemplo.test/redefinir-senha#'.http_build_query(['token' => $token, 'email' => 'ana@example.com']));
+    // token e e-mail só no fragmento (não vão ao servidor): sem query string
+    expect(parse_url($url, PHP_URL_QUERY))->toBeNull()->and(parse_url($url, PHP_URL_FRAGMENT))->toContain('token=')->toContain('email=');
 
     $mail = $notification->toMail($user);
     expect($mail->subject)->toBe('Redefinição de senha — Marca X')
         ->and($mail->actionText)->toBe('Redefinir senha')
-        ->and($mail->actionUrl)->toStartWith('https://frota.exemplo.test/redefinir-senha?token=')
+        ->and($mail->actionUrl)->toStartWith('https://frota.exemplo.test/redefinir-senha#token=')
         ->and(implode(' ', $mail->introLines))->toContain('Marca X');
     $html = (string) $mail->render();
     expect($html)->toContain('Marca X')->toContain('Redefinir senha')->not->toContain('Hello!')->not->toContain('Regards');

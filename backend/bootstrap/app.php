@@ -1,6 +1,7 @@
 <?php
 
 use App\Exceptions\DomainConflictException;
+use App\Http\Middleware\AuthorizePermission;
 use App\Http\Middleware\ForceJsonResponse;
 use App\Http\Middleware\RequestId;
 use App\Support\Api\ApiResponse;
@@ -11,6 +12,7 @@ use Illuminate\Foundation\Application;
 use Illuminate\Foundation\Configuration\Exceptions;
 use Illuminate\Foundation\Configuration\Middleware;
 use Illuminate\Http\Request;
+use Illuminate\Routing\Middleware\SubstituteBindings;
 use Illuminate\Validation\ValidationException;
 use Symfony\Component\HttpKernel\Exception\HttpExceptionInterface;
 use Symfony\Component\HttpKernel\Exception\TooManyRequestsHttpException;
@@ -26,6 +28,9 @@ return Application::configure(basePath: dirname(__DIR__))
         // Globais (rodam também em 404/405): RequestId primeiro, depois força JSON em /api/*.
         $middleware->prepend([RequestId::class, ForceJsonResponse::class]);
         $middleware->throttleApi('api');
+        // can: = permissão checada ANTES do binding (403 tem precedência sobre o 404 do escopo de filial).
+        $middleware->alias(['can' => AuthorizePermission::class]);
+        $middleware->prependToPriorityList(before: SubstituteBindings::class, prepend: AuthorizePermission::class);
     })
     ->withExceptions(function (Exceptions $exceptions): void {
         $exceptions->shouldRenderJsonWhen(

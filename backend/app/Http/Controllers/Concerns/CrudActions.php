@@ -87,26 +87,30 @@ trait CrudActions
     }
 
     /**
-     * Restaura um registro excluído. 409 se não estiver excluído, se o valor único ($uniqueField: `code`,
-     * ou `email` em usuários) já foi reutilizado por um registro ativo, ou se $check (regra do recurso)
-     * devolver uma mensagem de conflito.
+     * Restaura um registro excluído. 409 se não estiver excluído, se um valor único ($uniqueFields: `code`;
+     * `email` e `username` em usuários; `registration` em colaboradores) já foi reutilizado por um registro
+     * ativo, ou se $check (regra do recurso) devolver uma mensagem de conflito.
      *
      * @param  (Closure(Model): ?string)|null  $check
+     * @param  string|list<string>  $uniqueFields
      */
-    protected function restoreGuarded(Model $model, ?Closure $check = null, string $uniqueField = 'code'): Model
+    protected function restoreGuarded(Model $model, ?Closure $check = null, string|array $uniqueFields = 'code'): Model
     {
-        $taken = fn () => new DomainConflictException(__("api.restore_{$uniqueField}_taken"), [$uniqueField => [__("api.restore_{$uniqueField}_taken")]]);
+        $fields = (array) $uniqueFields;
+        $taken = fn (string $field) => new DomainConflictException(__("api.restore_{$field}_taken"), [$field => [__("api.restore_{$field}_taken")]]);
 
         try {
-            return DB::transaction(function () use ($model, $check, $uniqueField, $taken) {
+            return DB::transaction(function () use ($model, $check, $fields, $taken) {
                 $locked = $model->newQueryWithoutScopes()->whereKey($model->getKey())->lockForUpdate()->firstOrFail();
 
                 if ($locked->getAttribute('deleted_at') === null) {
                     throw new DomainConflictException(__('api.restore_not_deleted'));
                 }
-                $value = $locked->getAttribute($uniqueField);
-                if ($value !== null && $model->newQueryWithoutScopes()->whereNull('deleted_at')->where($uniqueField, $value)->exists()) {
-                    throw $taken();
+                foreach ($fields as $field) {
+                    $value = $locked->getAttribute($field);
+                    if ($value !== null && $model->newQueryWithoutScopes()->whereNull('deleted_at')->where($field, $value)->exists()) {
+                        throw $taken($field);
+                    }
                 }
                 if ($check !== null && ($message = $check($locked)) !== null) {
                     throw new DomainConflictException($message);
@@ -116,8 +120,11 @@ trait CrudActions
 
                 return $locked;
             });
-        } catch (UniqueConstraintViolationException) {
-            throw $taken();
+        } catch (UniqueConstraintViolationException $e) {
+            // corrida depois da checagem: aponta o campo cujo índice foi violado (o primeiro, se não achar)
+            $field = collect($fields)->first(fn (string $f) => str_contains($e->getMessage(), "_{$f}_unique")) ?? $fields[0];
+
+            throw $taken($field);
         }
     }
 

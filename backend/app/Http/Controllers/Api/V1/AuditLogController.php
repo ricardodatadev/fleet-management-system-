@@ -41,7 +41,7 @@ class AuditLogController extends Controller
             new OA\Parameter(name: 'auditable_type', in: 'query', description: 'Alias curto do registro auditado; desconhecido → 422.', schema: new OA\Schema(type: 'string', enum: ['branch', 'cost_center', 'employee', 'equipment_family', 'user'])),
             new OA\Parameter(name: 'auditable_id', in: 'query', schema: new OA\Schema(type: 'integer')),
             new OA\Parameter(name: 'actor_id', in: 'query', schema: new OA\Schema(type: 'integer')),
-            new OA\Parameter(name: 'action', in: 'query', schema: new OA\Schema(type: 'string', enum: ['created', 'updated', 'deleted', 'restored', 'login_succeeded', 'login_failed', 'logout', 'password_changed', 'setting_changed', 'setting_removed'])),
+            new OA\Parameter(name: 'action', in: 'query', schema: new OA\Schema(type: 'string', enum: ['created', 'updated', 'deleted', 'restored', 'login_succeeded', 'login_failed', 'logout', 'password_changed', 'password_reset_requested', 'password_reset', 'setting_changed', 'setting_removed'])),
             new OA\Parameter(name: 'from', in: 'query', description: 'ISO 8601 (date-time ou só a data, dia inteiro em UTC); inclusivo.', schema: new OA\Schema(type: 'string', example: '2026-10-01T00:00:00Z')),
             new OA\Parameter(name: 'to', in: 'query', description: 'ISO 8601 (date-time ou só a data, até 23:59:59.999999 UTC); inclusivo; menor que `from` → 422.', schema: new OA\Schema(type: 'string', example: '2026-10-31')),
             new OA\Parameter(name: 'request_id', in: 'query', schema: new OA\Schema(type: 'string', format: 'uuid')),

@@ -25,9 +25,10 @@ use OpenApi\Attributes as OA;
 
 #[OA\Schema(
     schema: 'UserInput',
-    description: 'Create: name, email, password e role obrigatórios. Update (PUT = PATCH): parcial. `email` é gravado em minúsculas e é único entre usuários não excluídos. `password`: mín. 10 caracteres, com maiúscula, minúscula e número. `branch_id` é obrigatório quando o perfil (enviado ou atual) não é admin, inclusive ao trocar de admin para outro perfil; filial existente e não excluída (inativa é aceita).',
+    description: 'Create: name, username, email, password e role obrigatórios. Update (PUT = PATCH): parcial. `username`: trim + minúsculas e depois `^[a-z0-9]{3,30}$` (acento, espaço, ponto, `_`, `-` ou `@` → 422, sem transliteração), único entre não excluídos. `email` é gravado em minúsculas e é único entre usuários não excluídos. `password`: mín. 10 caracteres, com maiúscula, minúscula e número. `branch_id` é obrigatório quando o perfil (enviado ou atual) não é admin, inclusive ao trocar de admin para outro perfil; filial existente e não excluída (inativa é aceita).',
     properties: [
         new OA\Property(property: 'name', type: 'string', maxLength: 120, example: 'Ana Souza'),
+        new OA\Property(property: 'username', type: 'string', pattern: '^[a-z0-9]{3,30}$', minLength: 3, maxLength: 30, example: 'anasouza'),
         new OA\Property(property: 'email', type: 'string', format: 'email', maxLength: 190, example: 'ana@example.com'),
         new OA\Property(property: 'password', type: 'string', format: 'password', minLength: 10, maxLength: 255, writeOnly: true),
         new OA\Property(property: 'role', type: 'string', enum: ['operator', 'mechanic', 'leader', 'admin']),
@@ -46,13 +47,16 @@ class UserController extends Controller
 {
     use CrudActions;
 
+    /** Índices únicos parciais → campo do 422 quando a corrida passa pela validação. */
+    private const UNIQUE_INDEXES = ['users_email_unique' => 'email', 'users_username_unique' => 'username'];
+
     public function __construct(private readonly AuditService $audit) {}
 
     #[OA\Get(
         path: '/users',
         operationId: 'usersIndex',
         summary: 'Lista usuários',
-        description: 'Permissão: users.view (A). Sem escopo de filial. Busca `q` em name e email. Ordenação: name, email, role, created_at, last_login_at (`-` = desc; padrão name).',
+        description: 'Permissão: users.view (A). Sem escopo de filial. Busca `q` em name, username e email. Ordenação: name, username, email, role, created_at, last_login_at (`-` = desc; padrão name).',
         tags: ['Usuários'],
         security: [['bearerAuth' => []]],
         parameters: [
@@ -80,9 +84,9 @@ class UserController extends Controller
     {
         // User nunca usa BranchScoped (alerta da F1-10): o filtro por filial é o parâmetro explícito.
         $paginator = ListQuery::for($request, User::query()->with('branch'))
-            ->search(['name', 'email'])
+            ->search(['name', 'username', 'email'])
             ->filters(['role' => ['string', Rule::enum(Role::class)], 'branch_id' => ['integer'], 'is_active' => ['boolean']])
-            ->sortable(['name', 'email', 'role', 'created_at', 'last_login_at'], 'name')
+            ->sortable(['name', 'username', 'email', 'role', 'created_at', 'last_login_at'], 'name')
             ->paginate();
 
         return ApiResponse::paginated($paginator, ManagedUserResource::class);
@@ -110,7 +114,7 @@ class UserController extends Controller
             $this->lockBranch($request->validated('branch_id'));
 
             return User::query()->create($request->validated());
-        }, 'email');
+        }, self::UNIQUE_INDEXES);
 
         return ApiResponse::item(new ManagedUserResource($user->refresh()->load('branch')), __('api.created'), 201);
     }
@@ -213,7 +217,7 @@ class UserController extends Controller
                 // A senha nunca entra no audit (updated ignora password): registra o evento com a revogação.
                 $this->audit->record(AuditAction::PasswordChanged, $user, null, null, ['revoked_tokens' => $revoked ?? 0]);
             }
-        }, 'email');
+        }, self::UNIQUE_INDEXES);
 
         return ApiResponse::item(new ManagedUserResource($user->refresh()->load('branch')), __('api.updated'));
     }
@@ -259,7 +263,7 @@ class UserController extends Controller
         path: '/users/{user}/restore',
         operationId: 'usersRestore',
         summary: 'Restaura usuário excluído',
-        description: 'Permissão: users.manage. 409 se não estiver excluído, se o e-mail já estiver em uso por um usuário ativo ou se a filial vinculada estiver excluída. Os tokens revogados na exclusão não voltam.',
+        description: 'Permissão: users.manage. 409 se não estiver excluído, se o e-mail ou o username já estiver em uso por um usuário ativo ou se a filial vinculada estiver excluída. Os tokens revogados na exclusão não voltam.',
         tags: ['Usuários'],
         security: [['bearerAuth' => []]],
         parameters: [new OA\Parameter(name: 'user', in: 'path', required: true, schema: new OA\Schema(type: 'integer'))],
@@ -281,7 +285,7 @@ class UserController extends Controller
             return $branchId !== null && Branch::query()->whereKey($branchId)->sharedLock()->first(['id']) === null
                 ? __('api.restore_branch_deleted')
                 : null;
-        }, 'email');
+        }, ['email', 'username']);
 
         return ApiResponse::item(new ManagedUserResource($restored->load('branch')), __('api.restored'));
     }

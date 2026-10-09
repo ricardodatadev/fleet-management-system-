@@ -31,7 +31,7 @@ use OpenApi\Attributes as OA;
                 new OA\Property(property: 'role', type: 'string', nullable: true, enum: ['operator', 'mechanic', 'leader', 'admin']),
             ],
         ),
-        new OA\Property(property: 'action', type: 'string', enum: ['created', 'updated', 'deleted', 'restored', 'login_succeeded', 'login_failed', 'logout', 'password_changed', 'setting_changed', 'setting_removed']),
+        new OA\Property(property: 'action', type: 'string', enum: ['created', 'updated', 'deleted', 'restored', 'login_succeeded', 'login_failed', 'logout', 'password_changed', 'password_reset_requested', 'password_reset', 'setting_changed', 'setting_removed']),
         new OA\Property(
             property: 'auditable',
             description: 'Registro afetado; null em eventos sem alvo (ex.: login_failed).',

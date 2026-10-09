@@ -64,7 +64,7 @@ it('um campo de cada cadastro: 422 com mensagem traduzida e atributo em pt_BR', 
         ->toBe('O valor selecionado para filial é inválido.');
     expect(api('POST', 'equipment-families', ['code' => 'F', 'name' => 'X', 'category' => 'truck', 'preventive_lead_pct' => 101], $this->token)->assertStatus(422)->json('errors.preventive_lead_pct.0'))
         ->toBe('O campo percentual de pré-alerta deve ser menor ou igual a 100.');
-    expect(api('POST', 'users', ['name' => 'X', 'email' => 'ANA@example.com', 'password' => 'SenhaForte2026', 'role' => 'admin'], $this->token)->assertStatus(422)->json('errors.email.0'))
+    expect(api('POST', 'users', ['name' => 'X', 'username' => 'outra', 'email' => 'ANA@example.com', 'password' => 'SenhaForte2026', 'role' => 'admin'], $this->token)->assertStatus(422)->json('errors.email.0'))
         ->toBe('O valor informado para e-mail já está em uso.');
     expect(api('POST', 'employees', ['registration' => 'M', 'name' => 'X', 'job_type' => 'mechanic', 'branch_id' => $branch->id, 'cnh_number' => '1'], $this->token)->assertStatus(422)->json('errors.cnh_number.0'))
         ->toBe('O campo número da CNH não se aplica à função mecânico.');
@@ -81,7 +81,7 @@ it('nenhum 422 dos cadastros traz chave crua nem nome de campo com sublinhado', 
         ['POST', 'equipment-families', ['preventive_lead_pct' => 0, 'tolerance_km' => -1, 'tolerance_hours' => 1.5, 'tolerance_days' => 'x', 'criticality' => 'x']],
         ['POST', 'equipment-families', ['code' => 'F', 'name' => 'X', 'category' => 'truck', 'preventive_lead_pct' => 50.123]],
         ['POST', 'users', ['email' => 'x', 'password' => 'curta', 'role' => 'root']],
-        ['POST', 'users', ['name' => 'X', 'email' => 'x@example.com', 'password' => 'SenhaForte2026', 'role' => 'leader']],
+        ['POST', 'users', ['name' => 'X', 'username' => 'xis', 'email' => 'x@example.com', 'password' => 'SenhaForte2026', 'role' => 'leader']],
         ['POST', 'employees', ['job_type' => 'mechanic', 'branch_id' => 999999, 'cost_center_id' => 'x', 'user_id' => 999999, 'hired_at' => '01/01/2024', 'cnh_category' => 'D', 'hourly_cost' => -1]],
         ['PATCH', "employees/{$driver->id}", ['job_type' => 'mechanic']],
         ['PATCH', "employees/{$driver->id}", ['user_id' => userWithRole(Role::Operator, $other)->id]],

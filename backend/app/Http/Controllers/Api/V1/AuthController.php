@@ -5,17 +5,21 @@ namespace App\Http\Controllers\Api\V1;
 use App\Enums\AuditAction;
 use App\Http\Controllers\Controller;
 use App\Http\Requests\Auth\ChangePasswordRequest;
+use App\Http\Requests\Auth\ForgotPasswordRequest;
 use App\Http\Requests\Auth\LoginRequest;
+use App\Http\Requests\Auth\ResetPasswordRequest;
 use App\Http\Resources\EmployeeResource;
 use App\Http\Resources\UserResource;
 use App\Models\User;
 use App\Support\Api\ApiResponse;
 use App\Support\Audit\AuditService;
+use Illuminate\Auth\Passwords\PasswordBroker;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Hash;
+use Illuminate\Support\Facades\Password;
 use Illuminate\Validation\ValidationException;
 use Laravel\Sanctum\PersonalAccessToken;
 use OpenApi\Attributes as OA;
@@ -68,13 +72,13 @@ class AuthController extends Controller
         path: '/auth/login',
         operationId: 'authLogin',
         summary: 'Login (emite token Bearer)',
-        description: 'Público. Credenciais inválidas → 422 com mensagem genérica (não revela se o e-mail existe). Usuário inativo → 403 (somente com a senha correta). Rate limit: 5/min por e-mail+IP e 20/min por IP (toda tentativa conta). Token expira em SANCTUM_EXPIRATION minutos (padrão 720).',
+        description: 'Público. `login` com `@` é e-mail; sem `@` é username (os dois com trim + minúsculas). Credenciais inválidas → 422 em `errors.login` com mensagem genérica, igual para e-mail e username (não revela se o login existe). Usuário inativo → 403 (somente com a senha correta). Rate limit: 5/min por login normalizado + IP e 20/min por IP (toda tentativa conta). Token expira em SANCTUM_EXPIRATION minutos (padrão 720).',
         tags: ['Auth'],
         security: [],
         requestBody: new OA\RequestBody(required: true, content: new OA\JsonContent(
-            required: ['email', 'password', 'device_name'],
+            required: ['login', 'password', 'device_name'],
             properties: [
-                new OA\Property(property: 'email', type: 'string', format: 'email', maxLength: 190, example: 'admin@example.com'),
+                new OA\Property(property: 'login', description: 'E-mail ou username.', type: 'string', maxLength: 190, example: 'admin@example.com'),
                 new OA\Property(property: 'password', type: 'string', format: 'password', maxLength: 255),
                 new OA\Property(property: 'device_name', type: 'string', maxLength: 255, example: 'web'),
             ],
@@ -96,22 +100,22 @@ class AuthController extends Controller
     )]
     public function login(LoginRequest $request): JsonResponse
     {
-        $email = $request->email();
+        $login = $request->login();
         $password = $request->string('password')->toString();
-        // Soft-deleted fica fora da consulta (= e-mail inexistente).
-        $user = User::query()->where('email', $email)->first();
+        // Soft-deleted fica fora da consulta (= login inexistente).
+        $user = User::query()->where($request->isEmail() ? 'email' : 'username', $login)->first();
 
-        // Hash conferido mesmo sem usuário, para o tempo de resposta não revelar se o e-mail existe.
+        // Hash conferido mesmo sem usuário, para o tempo de resposta não revelar se o login existe.
         $valid = Hash::check($password, $user?->password ?? (self::$dummyHash ??= Hash::make(bin2hex(random_bytes(16)))));
 
         if ($user === null || ! $valid) {
-            $this->audit->record(AuditAction::LoginFailed, null, null, null, ['email' => $email, 'reason' => 'invalid_credentials']);
+            $this->audit->record(AuditAction::LoginFailed, null, null, null, ['login' => $login, 'reason' => 'invalid_credentials']);
 
-            throw ValidationException::withMessages(['email' => __('auth.failed')]);
+            throw ValidationException::withMessages(['login' => __('auth.failed')]);
         }
 
         if (! $user->is_active) {
-            $this->audit->record(AuditAction::LoginFailed, null, null, null, ['email' => $email, 'reason' => 'inactive']);
+            $this->audit->record(AuditAction::LoginFailed, null, null, null, ['login' => $login, 'reason' => 'inactive']);
 
             return ApiResponse::error(__('auth.inactive'), 403);
         }
@@ -233,6 +237,98 @@ class AuthController extends Controller
         });
 
         return ApiResponse::success(null, __('auth.password_changed'));
+    }
+
+    #[OA\Post(
+        path: '/auth/forgot-password',
+        operationId: 'authForgotPassword',
+        summary: 'Pede o link de redefinição de senha',
+        description: 'Público. Sempre 200 com a mesma mensagem, exista ou não o e-mail (sem enumeração). Só usuário ativo e não excluído recebe o e-mail, enviado pela fila; o link é `${APP_FRONTEND_URL}/redefinir-senha?token=…&email=…`, vale 60 min e um pedido novo invalida o anterior. E-mail vazio ou malformado → 422. Rate limit: 3/min por e-mail + IP e 10/min por IP.',
+        tags: ['Auth'],
+        security: [],
+        requestBody: new OA\RequestBody(required: true, content: new OA\JsonContent(
+            required: ['email'],
+            properties: [new OA\Property(property: 'email', type: 'string', format: 'email', maxLength: 190, example: 'ana@example.com')],
+        )),
+        responses: [
+            new OA\Response(response: 200, description: 'Mensagem genérica (`data` null).', content: new OA\JsonContent(ref: '#/components/schemas/Envelope')),
+            new OA\Response(response: 422, ref: '#/components/responses/ValidationError'),
+            new OA\Response(response: 429, ref: '#/components/responses/TooManyRequests'),
+            new OA\Response(response: 500, ref: '#/components/responses/ServerError'),
+        ],
+    )]
+    public function forgotPassword(ForgotPasswordRequest $request): JsonResponse
+    {
+        $broker = $this->broker();
+        // Soft-deleted fica fora da consulta; inativo não recebe (e a resposta é a mesma).
+        $user = User::query()->where('email', $request->email())->where('is_active', true)->first();
+
+        if ($user !== null) {
+            DB::transaction(function () use ($user, $broker) {
+                // createToken substitui o token anterior do e-mail (uso único, 60 min).
+                $user->sendPasswordResetNotification($broker->createToken($user));
+                $this->audit->record(AuditAction::PasswordResetRequested, $user);
+            });
+        }
+
+        return ApiResponse::success(null, __('auth.reset_link_sent'));
+    }
+
+    #[OA\Post(
+        path: '/auth/reset-password',
+        operationId: 'authResetPassword',
+        summary: 'Redefine a senha com o link recebido por e-mail',
+        description: 'Público. Política de senha → 422 por campo (`password`, inclusive a confirmação). Link inválido, expirado, já usado, de outro e-mail ou de usuário inativo/excluído → 422 genérico em `errors.token`. Sucesso revoga todos os tokens de acesso do usuário e não faz login automático. Rate limit: 5/min por IP.',
+        tags: ['Auth'],
+        security: [],
+        requestBody: new OA\RequestBody(required: true, content: new OA\JsonContent(
+            required: ['email', 'token', 'password', 'password_confirmation'],
+            properties: [
+                new OA\Property(property: 'email', type: 'string', format: 'email', maxLength: 190),
+                new OA\Property(property: 'token', description: 'Token do link do e-mail.', type: 'string', maxLength: 255),
+                new OA\Property(property: 'password', type: 'string', format: 'password', minLength: 10, maxLength: 255),
+                new OA\Property(property: 'password_confirmation', type: 'string', format: 'password'),
+            ],
+        )),
+        responses: [
+            new OA\Response(response: 200, description: 'Senha redefinida (`data` null).', content: new OA\JsonContent(ref: '#/components/schemas/Envelope')),
+            new OA\Response(response: 422, ref: '#/components/responses/ValidationError'),
+            new OA\Response(response: 429, ref: '#/components/responses/TooManyRequests'),
+            new OA\Response(response: 500, ref: '#/components/responses/ServerError'),
+        ],
+    )]
+    public function resetPassword(ResetPasswordRequest $request): JsonResponse
+    {
+        $broker = $this->broker();
+        $invalid = fn () => ValidationException::withMessages(['token' => __('auth.reset_invalid')]);
+        $email = $request->email();
+
+        DB::transaction(function () use ($request, $broker, $email, $invalid) {
+            // A linha do usuário é travada: dois resets com o mesmo token não passam juntos (uso único).
+            $user = User::query()->where('email', $email)->where('is_active', true)->lockForUpdate()->first();
+            if ($user === null || ! $broker->tokenExists($user, $request->string('token')->toString())) {
+                throw $invalid();
+            }
+
+            Auth::setUser($user); // ainda não há usuário autenticado: ator do password_reset
+            $user->password = $request->string('password')->toString();
+            $user->save();
+            $broker->deleteToken($user);
+            $revoked = $user->tokens()->delete();
+
+            $this->audit->record(AuditAction::PasswordReset, $user, null, null, ['revoked_tokens' => $revoked]);
+        });
+
+        return ApiResponse::success(null, __('auth.password_reset'));
+    }
+
+    /** Broker de senhas do Laravel (tabela password_reset_tokens, expiração em config/auth.php). */
+    private function broker(): PasswordBroker
+    {
+        $broker = Password::broker();
+        assert($broker instanceof PasswordBroker);
+
+        return $broker;
     }
 
     private function currentToken(User $user): PersonalAccessToken

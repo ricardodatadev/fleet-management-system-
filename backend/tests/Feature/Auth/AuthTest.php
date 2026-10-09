@@ -12,9 +12,10 @@ use Laravel\Sanctum\PersonalAccessToken;
 
 uses(RefreshDatabase::class);
 
-function login(string $email, string $password = UserFactory::PASSWORD, string $device = 'pest'): TestResponse
+/** Login pelo contrato v1.7 (`login` = e-mail ou username). */
+function login(string $login, string $password = UserFactory::PASSWORD, string $device = 'pest'): TestResponse
 {
-    return api('POST', 'auth/login', ['email' => $email, 'password' => $password, 'device_name' => $device]);
+    return api('POST', 'auth/login', ['login' => $login, 'password' => $password, 'device_name' => $device]);
 }
 
 function tokenFor(User $user, string $device = 'pest'): string
@@ -39,6 +40,7 @@ it('login ok devolve token Bearer, expires_at (SANCTUM_EXPIRATION) e o usuário;
     expect($res->json('data.user'))->toBe([
         'id' => $user->id,
         'name' => $user->name,
+        'username' => $user->username,
         'email' => 'lider@example.com',
         'role' => 'leader',
         'branch' => ['id' => $user->branch->id, 'code' => $user->branch->code, 'name' => $user->branch->name],
@@ -76,14 +78,16 @@ it('senha errada → 422 genérico, idêntico ao de e-mail inexistente e ao de u
 
     $body = fn (TestResponse $r) => collect($r->json())->only(['status', 'message', 'errors', 'data'])->all();
     expect($body($wrong))->toBe($body($missing))->toBe($body($trashed));
-    expect($wrong->json('errors'))->toBe(['email' => [__('auth.failed')]]);
+    expect($wrong->json('errors'))->toBe(['login' => [__('auth.failed')]]);
     expect(PersonalAccessToken::count())->toBe(0);
 });
 
-it('payload inválido → 422 por campo', function () {
-    api('POST', 'auth/login', ['email' => 'nao-eh-email'])
-        ->assertStatus(422)
-        ->assertJsonValidationErrors(['email', 'password', 'device_name'], 'errors');
+it('payload inválido → 422 por campo; o contrato antigo {email} → login obrigatório', function () {
+    $user = User::factory()->create();
+
+    api('POST', 'auth/login', [])->assertStatus(422)->assertJsonValidationErrors(['login', 'password', 'device_name'], 'errors');
+    api('POST', 'auth/login', ['email' => $user->email, 'password' => UserFactory::PASSWORD, 'device_name' => 'pest'])
+        ->assertStatus(422)->assertJsonPath('errors.login.0', 'O campo e-mail ou usuário é obrigatório.')->assertJsonMissingPath('errors.email');
 });
 
 it('usuário inativo: 403 com senha correta, 422 genérico com senha errada', function () {
@@ -108,7 +112,7 @@ it('audita login_succeeded com actor = auditable = usuário (sem updated por las
         ->and($log->actor_role)->toBe('mechanic')->and($log->actor_name)->toBe($user->name);
 });
 
-it('audita login_failed com metadata {email, reason}, ator e auditable nulos e sem senha', function () {
+it('audita login_failed com metadata {login, reason}, ator e auditable nulos e sem senha', function () {
     User::factory()->create(['email' => 'a@example.com']);
     User::factory()->inactive()->create(['email' => 'b@example.com']);
 
@@ -118,9 +122,9 @@ it('audita login_failed com metadata {email, reason}, ator e auditable nulos e s
 
     $failed = authLogs('login_failed');
     expect($failed->map(fn ($l) => $l->metadata)->all())->toBe([
-        ['email' => 'a@example.com', 'reason' => 'invalid_credentials'],
-        ['email' => 'ninguem@example.com', 'reason' => 'invalid_credentials'],
-        ['email' => 'b@example.com', 'reason' => 'inactive'],
+        ['login' => 'a@example.com', 'reason' => 'invalid_credentials'],
+        ['login' => 'ninguem@example.com', 'reason' => 'invalid_credentials'],
+        ['login' => 'b@example.com', 'reason' => 'inactive'],
     ]);
     foreach ($failed as $log) {
         expect($log->actor_id)->toBeNull()->and($log->auditable_type)->toBeNull()->and($log->auditable_id)->toBeNull();

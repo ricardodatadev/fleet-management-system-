@@ -43,7 +43,7 @@ it('item no formato da F.1: actor {id,name,role}, auditable {type (alias), id} e
 });
 
 it('actor null e auditable null em login_failed (ação sem usuário)', function () {
-    api('POST', 'auth/login', ['email' => 'ninguem@example.com', 'password' => 'Errada12345', 'device_name' => 'pest'])->assertStatus(422);
+    api('POST', 'auth/login', ['login' => 'ninguem@example.com', 'password' => 'Errada12345', 'device_name' => 'pest'])->assertStatus(422);
 
     $item = api('GET', 'audit-logs?action=login_failed', token: $this->token)->assertOk()->json('data.0');
     expect($item['actor'])->toBeNull()->and($item['auditable'])->toBeNull()->and($item['metadata']['reason'])->toBe('invalid_credentials');

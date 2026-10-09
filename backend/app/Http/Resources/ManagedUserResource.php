@@ -14,10 +14,11 @@ use OpenApi\Attributes as OA;
  */
 #[OA\Schema(
     schema: 'User',
-    required: ['id', 'name', 'email', 'role', 'branch', 'is_active', 'last_login_at', 'created_at', 'updated_at', 'deleted_at'],
+    required: ['id', 'name', 'username', 'email', 'role', 'branch', 'is_active', 'last_login_at', 'created_at', 'updated_at', 'deleted_at'],
     properties: [
         new OA\Property(property: 'id', type: 'integer', example: 1),
         new OA\Property(property: 'name', type: 'string', maxLength: 120, example: 'Ana Souza'),
+        new OA\Property(property: 'username', type: 'string', pattern: '^[a-z0-9]{3,30}$', example: 'anasouza'),
         new OA\Property(property: 'email', type: 'string', format: 'email', maxLength: 190, example: 'ana@example.com'),
         new OA\Property(property: 'role', type: 'string', enum: ['operator', 'mechanic', 'leader', 'admin']),
         new OA\Property(
@@ -46,6 +47,7 @@ class ManagedUserResource extends ApiResource
         return [
             'id' => $this->id,
             'name' => $this->name,
+            'username' => $this->username,
             'email' => $this->email,
             'role' => $this->role->value,
             'branch' => BranchResource::ref($this->branch),

@@ -13,6 +13,8 @@ enum AuditAction: string
     case LoginFailed = 'login_failed';
     case Logout = 'logout';
     case PasswordChanged = 'password_changed';
+    case PasswordResetRequested = 'password_reset_requested';
+    case PasswordReset = 'password_reset';
     case SettingChanged = 'setting_changed';
     case SettingRemoved = 'setting_removed';
 }

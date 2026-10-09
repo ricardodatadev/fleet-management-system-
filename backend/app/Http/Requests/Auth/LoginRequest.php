@@ -4,20 +4,35 @@ namespace App\Http\Requests\Auth;
 
 use App\Http\Requests\ApiFormRequest;
 
+/**
+ * Login (D.2 v1.7): `login` é o e-mail (com `@`) ou o username (sem `@`). O contrato antigo `{email}` foi
+ * removido: sem `login` → 422.
+ */
 class LoginRequest extends ApiFormRequest
 {
     public function rules(): array
     {
         return [
-            'email' => ['required', 'string', 'email', 'max:190'],
+            'login' => ['required', 'string', 'max:190'],
             'password' => ['required', 'string', 'max:255'],
             'device_name' => ['required', 'string', 'max:255'],
         ];
     }
 
-    /** E-mail normalizado como é gravado (minúsculas, sem espaços). */
-    public function email(): string
+    /** Login normalizado como é gravado (minúsculas, sem espaços nas pontas). */
+    public function login(): string
     {
-        return mb_strtolower(trim($this->string('email')->toString()));
+        return self::normalize($this->input('login'));
+    }
+
+    public function isEmail(): bool
+    {
+        return str_contains($this->login(), '@');
+    }
+
+    /** Mesma normalização usada pelo throttle de login. */
+    public static function normalize(mixed $login): string
+    {
+        return is_string($login) ? mb_strtolower(trim($login)) : '';
     }
 }

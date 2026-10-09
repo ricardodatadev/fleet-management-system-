@@ -8,10 +8,10 @@ use Illuminate\Testing\TestResponse;
 
 uses(RefreshDatabase::class);
 
-function loginFrom(string $ip, string $email, string $password = 'SenhaErrada123'): TestResponse
+function loginFrom(string $ip, string $login, string $password = 'SenhaErrada123'): TestResponse
 {
     return test()->withServerVariables(['REMOTE_ADDR' => $ip])
-        ->postJson('/api/v1/auth/login', ['email' => $email, 'password' => $password, 'device_name' => 'pest']);
+        ->postJson('/api/v1/auth/login', ['login' => $login, 'password' => $password, 'device_name' => 'pest']);
 }
 
 it('6ª tentativa em 1 min com o mesmo e-mail+IP → 429 (envelope + Retry-After), sem audit do bloqueio', function () {

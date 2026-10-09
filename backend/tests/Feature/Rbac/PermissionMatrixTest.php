@@ -179,7 +179,7 @@ function routeMatrix(): array
         ['POST', 'employees/{employee}/restore', [], $adminOnly(200), ['employee' => 'trashed_employee']],
         // F1-11 — usuários (users.view/users.manage: A) e auditoria (audit.view: A, somente leitura)
         ['GET', 'users', [], $adminOnly(200)],
-        ['POST', 'users', ['name' => 'Novo', 'email' => 'novo@example.com', 'password' => 'NovaSenha2026', 'role' => 'admin'], $adminOnly(201)],
+        ['POST', 'users', ['name' => 'Novo', 'username' => 'novo', 'email' => 'novo@example.com', 'password' => 'NovaSenha2026', 'role' => 'admin'], $adminOnly(201)],
         ['GET', 'users/{user}', [], $adminOnly(200)],
         ['PUT', 'users/{user}', ['name' => 'Renomeado'], $adminOnly(200)],
         ['PATCH', 'users/{user}', ['name' => 'Renomeado'], $adminOnly(200)],

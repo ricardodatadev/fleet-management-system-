@@ -4,6 +4,7 @@ use App\Http\Controllers\Api\V1\AuditLogController;
 use App\Http\Controllers\Api\V1\AuthController;
 use App\Http\Controllers\Api\V1\BranchController;
 use App\Http\Controllers\Api\V1\CostCenterController;
+use App\Http\Controllers\Api\V1\EquipmentFamilyController;
 use App\Http\Controllers\Api\V1\HealthController;
 use App\Http\Controllers\Api\V1\MetaController;
 use App\Http\Controllers\Api\V1\UserController;
@@ -32,6 +33,7 @@ Route::middleware('auth:sanctum')->group(function () {
     foreach ([
         'branches' => [BranchController::class, 'branch', 'branches'],
         'cost-centers' => [CostCenterController::class, 'cost_center', 'cost_centers'],
+        'equipment-families' => [EquipmentFamilyController::class, 'equipment_family', 'equipment_families'],
         'users' => [UserController::class, 'user', 'users'],
     ] as $uri => [$controller, $param, $permission]) {
         $name = 'api.'.str_replace('-', '_', $uri);

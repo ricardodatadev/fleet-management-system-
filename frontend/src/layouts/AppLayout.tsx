@@ -1,42 +1,92 @@
-import { LogOut } from 'lucide-react';
+import { useState } from 'react';
+import type { MouseEvent } from 'react';
 import { Outlet, useNavigate } from 'react-router-dom';
-import { Button } from '@/components/ui';
-import { ROLE_LABELS, useAuth } from '@/features/auth';
+import { Drawer } from '@/components/ui';
+import { useAuth } from '@/features/auth';
+import { cn } from '@/lib/cn';
+import { useBreakpoint } from '@/lib/useMediaQuery';
+import { AppSidebar } from './AppSidebar';
+import { AssistantButton } from './AssistantButton';
+import { Topbar } from './Topbar';
+import { UserSummary } from './UserSummary';
+
+const MAIN_ID = 'conteudo';
 
 /**
- * Casca autenticada mínima: topbar com filial, usuário/perfil e logout.
- * A sidebar e o shell responsivo completos chegam na F1-24.
+ * Shell autenticado (G.1/G.3): <768 menu em drawer · 768–1023 sidebar em ícones ·
+ * ≥1024 sidebar fixa.
  */
 export function AppLayout() {
   const auth = useAuth();
   const navigate = useNavigate();
+  const breakpoint = useBreakpoint();
+  const [menuRequested, setMenuRequested] = useState(false);
+  // Trocar de breakpoint fecha o menu: ao voltar para o mobile ele começa fechado.
+  const [prevBreakpoint, setPrevBreakpoint] = useState(breakpoint);
+  if (prevBreakpoint !== breakpoint) {
+    setPrevBreakpoint(breakpoint);
+    setMenuRequested(false);
+  }
   if (auth.status !== 'authenticated') return null;
   const { user } = auth;
+  const mobile = breakpoint === 'mobile';
+  const menuOpen = mobile && menuRequested;
 
   async function onLogout() {
     await auth.logout();
     navigate('/login', { replace: true });
   }
 
+  function skipToContent(event: MouseEvent<HTMLAnchorElement>) {
+    event.preventDefault();
+    document.getElementById(MAIN_ID)?.focus();
+  }
+
   return (
     <div className="flex min-h-screen flex-col">
-      <header className="flex flex-wrap items-center justify-between gap-4 border-b border-border bg-surface px-4 py-2">
-        <p className="text-lg font-bold text-brand-600">SIGOF-M</p>
-        <div className="flex flex-wrap items-center gap-4">
-          <p className="text-ink-muted">{user.branch ? user.branch.name : 'Todas as filiais'}</p>
-          <p className="flex flex-col leading-tight">
-            <span className="font-semibold text-ink">{user.name}</span>
-            <span className="text-sm text-ink-muted">{ROLE_LABELS[user.role]}</span>
-          </p>
-          <Button variant="secondary" onClick={onLogout}>
-            <LogOut aria-hidden="true" className="size-5" />
-            Sair
-          </Button>
-        </div>
-      </header>
-      <main className="flex-1 p-4 sm:p-6">
-        <Outlet />
-      </main>
+      <a
+        href={`#${MAIN_ID}`}
+        onClick={skipToContent}
+        className="sr-only z-50 inline-flex min-h-12 min-w-12 items-center rounded-lg bg-brand-600 px-4 font-semibold text-white focus:not-sr-only focus:fixed focus:top-2 focus:left-2"
+      >
+        Ir para o conteúdo
+      </a>
+      <Topbar
+        user={user}
+        onLogout={onLogout}
+        compact={mobile}
+        menuOpen={menuOpen}
+        onOpenMenu={mobile ? () => setMenuRequested(true) : undefined}
+      />
+      <div className="flex flex-1">
+        {!mobile && (
+          <div
+            data-testid="sidebar-panel"
+            className={cn(
+              'sticky top-16 h-[calc(100vh-4rem)] shrink-0 overflow-y-auto border-r border-border bg-surface py-4',
+              breakpoint === 'tablet' ? 'w-20 px-2' : 'w-80 px-3',
+            )}
+          >
+            <AppSidebar collapsed={breakpoint === 'tablet'} />
+          </div>
+        )}
+        <main
+          id={MAIN_ID}
+          tabIndex={-1}
+          className="min-w-0 flex-1 p-4 pb-24 focus:outline-none sm:p-6"
+        >
+          <Outlet />
+        </main>
+      </div>
+      {mobile && (
+        <Drawer side="left" open={menuOpen} onOpenChange={setMenuRequested} title="Menu">
+          <div className="flex flex-col gap-6">
+            <UserSummary user={user} className="flex-col items-start gap-2" />
+            <AppSidebar onNavigate={() => setMenuRequested(false)} />
+          </div>
+        </Drawer>
+      )}
+      <AssistantButton />
     </div>
   );
 }

@@ -24,6 +24,9 @@ export default defineConfig({
     globals: true,
     setupFiles: ['./src/test/setup.ts'],
     css: false,
+    // Testes de integração do shell (sidebar completa + jest-axe) passam de 5s com todos os
+    // workers em paralelo no container.
+    testTimeout: 20_000,
     coverage: {
       provider: 'v8',
       include: ['src/**'],

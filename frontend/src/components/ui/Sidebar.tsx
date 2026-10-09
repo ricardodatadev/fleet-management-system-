@@ -1,28 +1,50 @@
-import { NavLink } from 'react-router-dom';
-import { useId } from 'react';
-import type { ReactNode } from 'react';
+import { NavLink, useMatch, useResolvedPath } from 'react-router-dom';
+import { forwardRef, useId } from 'react';
+import type { MouseEvent, ReactNode } from 'react';
 import { cn } from '@/lib/cn';
 import { TAP_MIN_CLASSES } from '@/lib/tokens';
 import { Badge } from './Badge';
 import { Tooltip } from './Tooltip';
 
-/** Contêiner de navegação lateral (a navegação real, por permissão, é a F1-24). */
-export function Sidebar({ children, className }: { children: ReactNode; className?: string }) {
+/** Contêiner de navegação lateral; a configuração por permissão fica em `layouts/navigation.ts`. */
+export function Sidebar({
+  children,
+  className,
+  label = 'Navegação principal',
+}: {
+  children: ReactNode;
+  className?: string;
+  label?: string;
+}) {
   return (
-    <nav aria-label="Navegação principal" className={cn('flex flex-col gap-4', className)}>
+    <nav aria-label={label} className={cn('flex flex-col gap-4', className)}>
       {children}
     </nav>
   );
 }
 
-export function NavGroup({ title, children }: { title: string; children: ReactNode }) {
+export interface NavGroupProps {
+  title: string;
+  children: ReactNode;
+  /** Modo ícones (768–1023px): título só para leitores de tela. */
+  collapsed?: boolean;
+}
+
+export function NavGroup({ title, children, collapsed = false }: NavGroupProps) {
   const id = useId();
   return (
-    <div role="group" aria-labelledby={id} className="flex flex-col gap-1">
-      <p id={id} className="px-3 text-xs font-bold tracking-wide text-ink-muted uppercase">
+    <div role="group" aria-labelledby={id} className="flex flex-col gap-2">
+      <p
+        id={id}
+        className={cn(
+          'px-3 text-xs font-bold tracking-wide text-ink-muted uppercase',
+          collapsed && 'sr-only',
+        )}
+      >
         {title}
       </p>
-      <ul className="flex flex-col gap-1">{children}</ul>
+      {/* gap-2: espaçamento mínimo de 8px entre alvos (G.1). */}
+      <ul className="flex flex-col gap-2">{children}</ul>
     </div>
   );
 }
@@ -33,44 +55,118 @@ export interface NavItemProps {
   icon?: ReactNode;
   /** Item de fase futura: `aria-disabled`, selo "Em breve", tooltip, sem navegação (foco permitido). */
   disabled?: boolean;
+  /** Modo ícones: rótulo e selo só para leitores de tela; o tooltip mostra o rótulo. */
+  collapsed?: boolean;
+  /** Chamado ao navegar (ex.: fechar o menu no mobile). */
+  onNavigate?: () => void;
 }
 
-const itemBase = cn(TAP_MIN_CLASSES, 'flex w-full items-center gap-3 rounded-lg px-3 text-left');
+const FUTURE_HINT = 'Disponível em fase futura';
 
-export function NavItem({ label, to, icon, disabled = false }: NavItemProps) {
+export function NavItem({
+  label,
+  to,
+  icon,
+  disabled = false,
+  collapsed = false,
+  onNavigate,
+}: NavItemProps) {
+  const itemBase = cn(
+    TAP_MIN_CLASSES,
+    'flex w-full items-center gap-3 rounded-lg text-left',
+    collapsed ? 'justify-center px-0' : 'px-3',
+  );
+  // Modo ícones, desabilitado: ícone esmaecido (único sinal visual além do tooltip; no modo
+  // completo o botão inteiro já fica com opacity-70 e o selo "Em breve").
+  // Habilitado: ícone na cor do texto (ink, 17:1), acima dos 3:1 da WCAG 1.4.11.
+  const iconNode = icon && (
+    <span
+      aria-hidden="true"
+      data-testid="nav-icon"
+      className={cn(
+        'inline-flex size-6 shrink-0 items-center justify-center',
+        disabled && collapsed && 'opacity-50',
+      )}
+    >
+      {icon}
+    </span>
+  );
+  const text = <span className={cn('flex-1', collapsed && 'sr-only')}>{label}</span>;
+
   if (disabled) {
     return (
       <li>
-        <Tooltip content="Disponível em fase futura" side="right">
+        <Tooltip content={collapsed ? `${label} · ${FUTURE_HINT}` : FUTURE_HINT} side="right">
           <button
             type="button"
             aria-disabled="true"
-            className={cn(itemBase, 'cursor-not-allowed text-ink-muted opacity-70')}
+            className={cn(
+              itemBase,
+              'cursor-not-allowed text-ink-muted',
+              !collapsed && 'opacity-70',
+            )}
             onClick={(event) => event.preventDefault()}
           >
-            {icon && <span aria-hidden="true">{icon}</span>}
-            <span className="flex-1">{label}</span>
-            <Badge>Em breve</Badge>
+            {iconNode}
+            {text}
+            {collapsed ? <span className="sr-only">Em breve</span> : <Badge>Em breve</Badge>}
           </button>
         </Tooltip>
       </li>
     );
   }
+
   return (
     <li>
-      <NavLink
-        to={to}
-        className={({ isActive }) =>
-          cn(
-            itemBase,
-            'font-semibold',
-            isActive ? 'bg-brand-600 text-white' : 'text-ink hover:bg-surface-muted',
-          )
-        }
-      >
-        {icon && <span aria-hidden="true">{icon}</span>}
-        <span className="flex-1">{label}</span>
-      </NavLink>
+      {collapsed ? (
+        <Tooltip content={label} side="right">
+          <ActiveLink to={to} onNavigate={onNavigate} className={itemBase}>
+            {iconNode}
+            {text}
+          </ActiveLink>
+        </Tooltip>
+      ) : (
+        <ActiveLink to={to} onNavigate={onNavigate} className={itemBase}>
+          {iconNode}
+          {text}
+        </ActiveLink>
+      )}
     </li>
   );
 }
+
+/**
+ * NavLink com `className` em string: o Slot do Tooltip (asChild) funde `className` e quebraria a
+ * forma de função do NavLink. O estado ativo segue a regra do NavLink (prefixo da rota).
+ */
+const ActiveLink = forwardRef<
+  HTMLAnchorElement,
+  {
+    to: string;
+    onNavigate?: () => void;
+    onClick?: (event: MouseEvent<HTMLAnchorElement>) => void;
+    className: string;
+    children: ReactNode;
+  }
+>(function ActiveLink({ to, onNavigate, onClick, className, children, ...slotProps }, ref) {
+  const resolved = useResolvedPath(to);
+  const active = useMatch({ path: resolved.pathname, end: false }) !== null;
+  return (
+    <NavLink
+      ref={ref}
+      to={to}
+      {...slotProps}
+      onClick={(event) => {
+        onClick?.(event);
+        onNavigate?.();
+      }}
+      className={cn(
+        className,
+        'font-semibold',
+        active ? 'bg-brand-600 text-white' : 'text-ink hover:bg-surface-muted',
+      )}
+    >
+      {children}
+    </NavLink>
+  );
+});

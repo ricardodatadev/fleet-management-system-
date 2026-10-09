@@ -78,8 +78,19 @@ export function Modal(props: OverlayPanelProps) {
   );
 }
 
-export function Drawer(props: OverlayPanelProps) {
+export interface DrawerProps extends OverlayPanelProps {
+  /** Lado de entrada (padrão: direita; o menu mobile usa a esquerda). */
+  side?: 'left' | 'right';
+}
+
+export function Drawer({ side = 'right', ...props }: DrawerProps) {
   return (
-    <DialogShell {...props} panelClassName="top-0 right-0 h-full w-full max-w-xl sm:rounded-l-xl" />
+    <DialogShell
+      {...props}
+      panelClassName={cn(
+        'top-0 h-full w-full',
+        side === 'right' ? 'right-0 max-w-xl sm:rounded-l-xl' : 'left-0 max-w-xs rounded-r-xl',
+      )}
+    />
   );
 }

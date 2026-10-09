@@ -17,7 +17,7 @@ class BranchFactory extends Factory
             'name' => 'Filial '.fake()->city(),
             'type' => 'filial',
             'city' => fake()->city(),
-            'state' => strtoupper(fake()->lexify('??')),
+            'state' => fake()->randomElement(Branch::STATES),
             'is_active' => true,
         ];
     }

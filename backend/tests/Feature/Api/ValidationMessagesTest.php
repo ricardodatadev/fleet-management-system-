@@ -90,6 +90,12 @@ it('nenhum 422 dos cadastros traz chave crua nem nome de campo com sublinhado', 
         ['GET', 'users?per_page=500&sort=x&role=x', []],
         ['POST', 'equipments', ['plate' => 'A-1', 'year' => 1900, 'status' => 'x', 'criticality_override' => 'x', 'odometer_km' => -1, 'hour_meter' => 1.25, 'acquisition_value' => 'x', 'acquisition_date' => '01/01/2024', 'family_id' => 'x', 'responsible_employee_id' => 999999, 'serial_number' => str_repeat('x', 61), 'manufacturer' => str_repeat('x', 81), 'model' => str_repeat('x', 81), 'notes' => str_repeat('x', 5001)]],
         ['GET', 'equipments?sort=x&status=x&cost_center_id=x&responsible_employee_id=x', []],
+        ['PUT', 'settings/warranty.alert_mode', ['scope_type' => 'branch', 'scope_id' => 999999, 'value' => 'x']],
+        ['PUT', 'settings/preventive.dispatch_mode', ['scope_type' => 'branch', 'scope_id' => $branch->id, 'value' => 'automatic']],
+        ['PUT', 'settings/nao.existe', ['scope_type' => 'global', 'scope_id' => null, 'value' => true]],
+        ['GET', 'settings/effective?key=x&branch_id=x&family_id=999999', []],
+        ['GET', 'settings?scope_id=1', []],
+        ['DELETE', 'settings/warranty.alert_mode?scope_type=global', []],
         ['GET', 'audit-logs?from=2026-10-09&to=2026-10-01&auditable_type=x&request_id=1', []],
     ];
 

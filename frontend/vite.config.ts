@@ -3,6 +3,19 @@ import { fileURLToPath, URL } from 'node:url';
 import tailwindcss from '@tailwindcss/vite';
 import react from '@vitejs/plugin-react';
 import { defineConfig } from 'vite';
+import { BRAND_DEFAULTS } from './src/config/brand.ts';
+
+// Marca (F1-33): as VITE_APP_* sempre existem no dev, no build e nos testes, para que
+// `%VITE_APP_NAME%` no index.html nunca saia cru. Precedência: VITE_APP_* > APP_* (compose/.env) >
+// defaults do src/config/brand.ts (único lugar com o literal).
+const brandEnv = {
+  VITE_APP_NAME: ['APP_NAME', BRAND_DEFAULTS.name],
+  VITE_APP_FULL_NAME: ['APP_FULL_NAME', BRAND_DEFAULTS.fullName],
+  VITE_APP_SLUG: ['APP_SLUG', BRAND_DEFAULTS.slug],
+} as const;
+for (const [key, [source, fallback]] of Object.entries(brandEnv)) {
+  process.env[key] ||= process.env[source] || fallback;
+}
 
 // Em dev o Vite faz proxy de /api para o nginx (mesma origem do ponto de vista do browser).
 // Host: http://localhost:8080 · Compose: VITE_API_PROXY_TARGET=http://nginx

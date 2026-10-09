@@ -4,6 +4,7 @@ import type { FormEvent } from 'react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
 import { ApiError, GENERIC_ERROR_MESSAGE } from '@/api';
 import { Button, FormField, IconButton, Input } from '@/components/ui';
+import { APP_FULL_NAME, APP_NAME } from '@/config/brand';
 import { useAuth } from './auth-context';
 import type { SignedOutReason } from './auth-context';
 import { safeNext } from './safeNext';
@@ -84,9 +85,9 @@ export function LoginPage() {
     <main className="flex min-h-screen items-center justify-center bg-surface-muted p-4">
       <div className="flex w-full max-w-md flex-col gap-6 rounded-xl bg-surface p-6 shadow-lg sm:p-8">
         <div className="flex flex-col gap-1 text-center">
-          <p className="text-sm font-bold tracking-wide text-brand-600 uppercase">SIGOF-M</p>
+          <p className="text-sm font-bold tracking-wide text-brand-600 uppercase">{APP_NAME}</p>
           <h1 className="text-2xl font-bold text-ink">Entrar</h1>
-          <p className="text-ink-muted">Gestão de Frota e Manutenção</p>
+          <p className="text-ink-muted">{APP_FULL_NAME}</p>
         </div>
 
         {notice && !formError && (

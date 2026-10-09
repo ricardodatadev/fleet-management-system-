@@ -1,5 +1,6 @@
 import { LogOut, Menu } from 'lucide-react';
 import { Button, IconButton } from '@/components/ui';
+import { APP_NAME } from '@/config/brand';
 import type { AuthUser } from '@/features/auth';
 import { UserSummary } from './UserSummary';
 
@@ -35,7 +36,7 @@ export function Topbar({
             onClick={onOpenMenu}
           />
         )}
-        <p className="px-2 text-lg font-bold text-brand-600">SIGOF-M</p>
+        <p className="px-2 text-lg font-bold text-brand-600">{APP_NAME}</p>
       </div>
       <div className="flex items-center gap-4">
         {!compact && <UserSummary user={user} />}

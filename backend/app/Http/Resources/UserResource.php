@@ -3,6 +3,7 @@
 namespace App\Http\Resources;
 
 use App\Models\User;
+use App\Support\Users\UsernameGenerator;
 use Illuminate\Http\Request;
 use OpenApi\Attributes as OA;
 
@@ -11,10 +12,11 @@ use OpenApi\Attributes as OA;
  */
 #[OA\Schema(
     schema: 'AuthUser',
-    required: ['id', 'name', 'email', 'role', 'branch'],
+    required: ['id', 'name', 'username', 'email', 'role', 'branch'],
     properties: [
         new OA\Property(property: 'id', type: 'integer', example: 1),
         new OA\Property(property: 'name', type: 'string', example: 'Ana Souza'),
+        new OA\Property(property: 'username', description: 'Minúsculas sem acento, números e ponto (não no início, no fim nem repetido), 3 a 30.', type: 'string', pattern: UsernameGenerator::REGEX, minLength: 3, maxLength: 30, example: 'ana.souza'),
         new OA\Property(property: 'email', type: 'string', format: 'email', example: 'ana@example.com'),
         new OA\Property(property: 'role', type: 'string', enum: ['operator', 'mechanic', 'leader', 'admin']),
         new OA\Property(
@@ -38,6 +40,7 @@ class UserResource extends ApiResource
         return [
             'id' => $this->id,
             'name' => $this->name,
+            'username' => $this->username,
             'email' => $this->email,
             'role' => $this->role->value,
             'branch' => $this->branch === null ? null : [

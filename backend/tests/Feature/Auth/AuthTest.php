@@ -12,14 +12,15 @@ use Laravel\Sanctum\PersonalAccessToken;
 
 uses(RefreshDatabase::class);
 
-function login(string $email, string $password = UserFactory::PASSWORD, string $device = 'pest'): TestResponse
+/** Login pelo contrato v1.8 (só username + senha). */
+function login(string $username, string $password = UserFactory::PASSWORD, string $device = 'pest'): TestResponse
 {
-    return api('POST', 'auth/login', ['email' => $email, 'password' => $password, 'device_name' => $device]);
+    return api('POST', 'auth/login', ['username' => $username, 'password' => $password, 'device_name' => $device]);
 }
 
 function tokenFor(User $user, string $device = 'pest'): string
 {
-    return login($user->email, UserFactory::PASSWORD, $device)->assertOk()->json('data.token');
+    return login($user->username, UserFactory::PASSWORD, $device)->assertOk()->json('data.token');
 }
 
 function authLogs(string $action): Collection
@@ -29,9 +30,9 @@ function authLogs(string $action): Collection
 
 it('login ok devolve token Bearer, expires_at (SANCTUM_EXPIRATION) e o usuário; grava last_login_at', function () {
     $this->freezeSecond();
-    $user = User::factory()->role(Role::Leader)->create(['email' => 'lider@example.com']);
+    $user = User::factory()->role(Role::Leader)->create(['username' => 'lider', 'email' => 'lider@example.com']);
 
-    $res = login('lider@example.com')->assertOk()->assertJsonPath('status', 'success');
+    $res = login('lider')->assertOk()->assertJsonPath('status', 'success');
 
     expect($res->json('data.token_type'))->toBe('Bearer');
     expect($res->json('data.token'))->toBeString()->toContain('|');
@@ -39,6 +40,7 @@ it('login ok devolve token Bearer, expires_at (SANCTUM_EXPIRATION) e o usuário;
     expect($res->json('data.user'))->toBe([
         'id' => $user->id,
         'name' => $user->name,
+        'username' => $user->username,
         'email' => 'lider@example.com',
         'role' => 'leader',
         'branch' => ['id' => $user->branch->id, 'code' => $user->branch->code, 'name' => $user->branch->name],
@@ -55,42 +57,47 @@ it('expiração do token segue SANCTUM_EXPIRATION (config sanctum.expiration)', 
     config(['sanctum.expiration' => 30]);
     $user = User::factory()->create();
 
-    expect(login($user->email)->json('data.expires_at'))->toBe(now()->addMinutes(30)->utc()->toJSON());
+    expect(login($user->username)->json('data.expires_at'))->toBe(now()->addMinutes(30)->utc()->toJSON());
 });
 
-it('e-mail é normalizado (maiúsculas/espaços) na gravação e no login', function () {
-    $user = User::factory()->create(['email' => '  Fulano@Example.COM ']);
-    expect($user->fresh()->email)->toBe('fulano@example.com');
+it('e-mail e username são normalizados na gravação; o login normaliza o username (caixa e espaços)', function () {
+    $user = User::factory()->create(['email' => '  Fulano@Example.COM ', 'username' => ' Fulano ']);
+    expect($user->fresh()->email)->toBe('fulano@example.com')->and($user->fresh()->username)->toBe('fulano');
 
-    login('FULANO@example.com ')->assertOk();
+    login(' FULANO ')->assertOk();
 });
 
-it('senha errada → 422 genérico, idêntico ao de e-mail inexistente e ao de usuário excluído', function () {
-    $user = User::factory()->create(['email' => 'existe@example.com']);
-    $deleted = User::factory()->create(['email' => 'removido@example.com']);
+it('senha errada → 422 genérico, idêntico ao de username inexistente, de usuário excluído e de e-mail digitado', function () {
+    User::factory()->create(['username' => 'existe', 'email' => 'existe@example.com']);
+    $deleted = User::factory()->create(['username' => 'removido']);
     $deleted->delete();
 
-    $wrong = login('existe@example.com', 'SenhaErrada123')->assertStatus(422);
-    $missing = login('naoexiste@example.com', 'SenhaErrada123')->assertStatus(422);
-    $trashed = login('removido@example.com')->assertStatus(422);
+    $wrong = login('existe', 'SenhaErrada123')->assertStatus(422);
+    $missing = login('naoexiste', 'SenhaErrada123')->assertStatus(422);
+    $trashed = login('removido')->assertStatus(422);
+    $email = login('existe@example.com')->assertStatus(422); // senha certa, mas o e-mail não entra no login (v1.8)
 
     $body = fn (TestResponse $r) => collect($r->json())->only(['status', 'message', 'errors', 'data'])->all();
-    expect($body($wrong))->toBe($body($missing))->toBe($body($trashed));
-    expect($wrong->json('errors'))->toBe(['email' => [__('auth.failed')]]);
+    expect($body($wrong))->toBe($body($missing))->toBe($body($trashed))->toBe($body($email));
+    expect($wrong->json('errors'))->toBe(['username' => [__('auth.failed')]]);
     expect(PersonalAccessToken::count())->toBe(0);
 });
 
-it('payload inválido → 422 por campo', function () {
-    api('POST', 'auth/login', ['email' => 'nao-eh-email'])
-        ->assertStatus(422)
-        ->assertJsonValidationErrors(['email', 'password', 'device_name'], 'errors');
+it('payload inválido → 422 por campo; os contratos antigos {email} e {login} → username obrigatório', function () {
+    $user = User::factory()->create();
+
+    api('POST', 'auth/login', [])->assertStatus(422)->assertJsonValidationErrors(['username', 'password', 'device_name'], 'errors');
+    foreach (['email' => $user->email, 'login' => $user->username] as $field => $value) {
+        api('POST', 'auth/login', [$field => $value, 'password' => UserFactory::PASSWORD, 'device_name' => 'pest'])
+            ->assertStatus(422)->assertJsonPath('errors.username.0', 'O campo usuário é obrigatório.')->assertJsonMissingPath("errors.{$field}");
+    }
 });
 
 it('usuário inativo: 403 com senha correta, 422 genérico com senha errada', function () {
-    User::factory()->inactive()->create(['email' => 'inativo@example.com']);
+    User::factory()->inactive()->create(['username' => 'inativo']);
 
-    login('inativo@example.com')->assertForbidden()->assertJsonPath('message', __('auth.inactive'));
-    login('inativo@example.com', 'SenhaErrada123')->assertStatus(422);
+    login('inativo')->assertForbidden()->assertJsonPath('message', __('auth.inactive'));
+    login('inativo', 'SenhaErrada123')->assertStatus(422);
     expect(PersonalAccessToken::count())->toBe(0);
 });
 
@@ -98,7 +105,7 @@ it('audita login_succeeded com actor = auditable = usuário (sem updated por las
     $user = User::factory()->role(Role::Mechanic)->create();
     $lastId = AuditLog::query()->max('id') ?? 0;
 
-    login($user->email)->assertOk();
+    login($user->username)->assertOk();
 
     $logs = AuditLog::query()->where('id', '>', $lastId)->orderBy('id')->get();
     expect($logs->pluck('action')->all())->toBe(['login_succeeded']);
@@ -108,19 +115,19 @@ it('audita login_succeeded com actor = auditable = usuário (sem updated por las
         ->and($log->actor_role)->toBe('mechanic')->and($log->actor_name)->toBe($user->name);
 });
 
-it('audita login_failed com metadata {email, reason}, ator e auditable nulos e sem senha', function () {
-    User::factory()->create(['email' => 'a@example.com']);
-    User::factory()->inactive()->create(['email' => 'b@example.com']);
+it('audita login_failed com metadata {username, reason}, ator e auditable nulos e sem senha', function () {
+    User::factory()->create(['username' => 'aaa']);
+    User::factory()->inactive()->create(['username' => 'bbb']);
 
-    login('A@example.com', 'SenhaErrada999');
-    login('ninguem@example.com', 'SenhaErrada999');
-    login('b@example.com');
+    login(' AAA ', 'SenhaErrada999');
+    login('ninguem', 'SenhaErrada999');
+    login('bbb');
 
     $failed = authLogs('login_failed');
     expect($failed->map(fn ($l) => $l->metadata)->all())->toBe([
-        ['email' => 'a@example.com', 'reason' => 'invalid_credentials'],
-        ['email' => 'ninguem@example.com', 'reason' => 'invalid_credentials'],
-        ['email' => 'b@example.com', 'reason' => 'inactive'],
+        ['reason' => 'invalid_credentials', 'username' => 'aaa'], // jsonb ordena as chaves
+        ['reason' => 'invalid_credentials', 'username' => 'ninguem'], // jsonb ordena as chaves
+        ['reason' => 'inactive', 'username' => 'bbb'], // jsonb ordena as chaves
     ]);
     foreach ($failed as $log) {
         expect($log->actor_id)->toBeNull()->and($log->auditable_type)->toBeNull()->and($log->auditable_id)->toBeNull();
@@ -207,8 +214,8 @@ it('troca de senha: aplica a nova, mantém o token atual, revoga os demais e aud
     api('GET', 'auth/me', token: $current)->assertOk();
     api('GET', 'auth/me', token: $other)->assertUnauthorized();
 
-    login($user->email)->assertStatus(422);
-    login($user->email, 'NovaSenha2026')->assertOk();
+    login($user->username)->assertStatus(422);
+    login($user->username, 'NovaSenha2026')->assertOk();
 
     $log = authLogs('password_changed')->sole();
     expect($log->actor_id)->toBe($user->id)->and($log->auditable_id)->toBe($user->id)
@@ -238,7 +245,7 @@ it('troca de senha valida a senha atual, a confirmação e a política de senha'
 
 it('a cadeia de auditoria continua íntegra após o fluxo de auth', function () {
     $user = User::factory()->create();
-    login($user->email, 'Errada123456');
+    login($user->username, 'Errada123456');
     $token = tokenFor($user);
     api('PUT', 'auth/password', ['current_password' => UserFactory::PASSWORD, 'password' => 'NovaSenha2026', 'password_confirmation' => 'NovaSenha2026'], $token)->assertOk();
     api('POST', 'auth/logout', token: $token)->assertOk();

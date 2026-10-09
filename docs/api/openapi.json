@@ -73,6 +73,8 @@
                                 "login_failed",
                                 "logout",
                                 "password_changed",
+                                "password_reset_requested",
+                                "password_reset",
                                 "setting_changed",
                                 "setting_removed"
                             ]
@@ -209,7 +211,7 @@
                     "Auth"
                 ],
                 "summary": "Login (emite token Bearer)",
-                "description": "Público. Credenciais inválidas → 422 com mensagem genérica (não revela se o e-mail existe). Usuário inativo → 403 (somente com a senha correta). Rate limit: 5/min por e-mail+IP e 20/min por IP (toda tentativa conta). Token expira em SANCTUM_EXPIRATION minutos (padrão 720).",
+                "description": "Público. Só username + senha (v1.8); o e-mail serve apenas para a recuperação de senha. `username` passa por trim + minúsculas, sem validação de formato. Username inexistente (inclusive um e-mail digitado), usuário excluído ou senha errada → 422 em `errors.username` com a mesma mensagem genérica. Campo vazio → 422 por campo. Usuário inativo → 403 (somente com a senha correta). Rate limit: 5/min por username normalizado + IP e 20/min por IP (toda tentativa conta). Token expira em SANCTUM_EXPIRATION minutos (padrão 720).",
                 "operationId": "authLogin",
                 "requestBody": {
                     "required": true,
@@ -217,15 +219,15 @@
                         "application/json": {
                             "schema": {
                                 "required": [
-                                    "email",
+                                    "username",
                                     "password",
                                     "device_name"
                                 ],
                                 "properties": {
-                                    "email": {
+                                    "username": {
+                                        "description": "Nome de usuário (trim + minúsculas no servidor).",
                                         "type": "string",
-                                        "format": "email",
-                                        "example": "admin@example.com",
+                                        "example": "admin",
                                         "maxLength": 190
                                     },
                                     "password": {
@@ -433,6 +435,129 @@
                         "bearerAuth": []
                     }
                 ]
+            }
+        },
+        "/auth/forgot-password": {
+            "post": {
+                "tags": [
+                    "Auth"
+                ],
+                "summary": "Pede o link de redefinição de senha",
+                "description": "Público. Sempre 200 com a mesma mensagem, exista ou não o e-mail (sem enumeração). Só usuário ativo e não excluído recebe o e-mail, enviado pela fila; o link é `${APP_FRONTEND_URL}/redefinir-senha#token=…&email=…` (fragmento: não vai ao servidor), vale 60 min e um pedido novo invalida o anterior. E-mail vazio ou malformado → 422. Rate limit: 3/min por e-mail + IP e 10/min por IP.",
+                "operationId": "authForgotPassword",
+                "requestBody": {
+                    "required": true,
+                    "content": {
+                        "application/json": {
+                            "schema": {
+                                "required": [
+                                    "email"
+                                ],
+                                "properties": {
+                                    "email": {
+                                        "type": "string",
+                                        "format": "email",
+                                        "example": "ana@example.com",
+                                        "maxLength": 190
+                                    }
+                                },
+                                "type": "object"
+                            }
+                        }
+                    }
+                },
+                "responses": {
+                    "200": {
+                        "description": "Mensagem genérica (`data` null).",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/Envelope"
+                                }
+                            }
+                        }
+                    },
+                    "422": {
+                        "$ref": "#/components/responses/ValidationError"
+                    },
+                    "429": {
+                        "$ref": "#/components/responses/TooManyRequests"
+                    },
+                    "500": {
+                        "$ref": "#/components/responses/ServerError"
+                    }
+                },
+                "security": []
+            }
+        },
+        "/auth/reset-password": {
+            "post": {
+                "tags": [
+                    "Auth"
+                ],
+                "summary": "Redefine a senha com o link recebido por e-mail",
+                "description": "Público. Política de senha → 422 por campo (`password`, inclusive a confirmação). Link inválido, expirado, já usado, de outro e-mail ou de usuário inativo/excluído → 422 genérico em `errors.token`. Sucesso revoga todos os tokens de acesso do usuário e não faz login automático. Rate limit: 5/min por IP.",
+                "operationId": "authResetPassword",
+                "requestBody": {
+                    "required": true,
+                    "content": {
+                        "application/json": {
+                            "schema": {
+                                "required": [
+                                    "email",
+                                    "token",
+                                    "password",
+                                    "password_confirmation"
+                                ],
+                                "properties": {
+                                    "email": {
+                                        "type": "string",
+                                        "format": "email",
+                                        "maxLength": 190
+                                    },
+                                    "token": {
+                                        "description": "Token do link do e-mail.",
+                                        "type": "string",
+                                        "maxLength": 255
+                                    },
+                                    "password": {
+                                        "type": "string",
+                                        "format": "password",
+                                        "maxLength": 255,
+                                        "minLength": 10
+                                    },
+                                    "password_confirmation": {
+                                        "type": "string",
+                                        "format": "password"
+                                    }
+                                },
+                                "type": "object"
+                            }
+                        }
+                    }
+                },
+                "responses": {
+                    "200": {
+                        "description": "Senha redefinida (`data` null).",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/Envelope"
+                                }
+                            }
+                        }
+                    },
+                    "422": {
+                        "$ref": "#/components/responses/ValidationError"
+                    },
+                    "429": {
+                        "$ref": "#/components/responses/TooManyRequests"
+                    },
+                    "500": {
+                        "$ref": "#/components/responses/ServerError"
+                    }
+                },
+                "security": []
             }
         },
         "/branches": {
@@ -2328,7 +2453,7 @@
                     "Usuários"
                 ],
                 "summary": "Lista usuários",
-                "description": "Permissão: users.view (A). Sem escopo de filial. Busca `q` em name e email. Ordenação: name, email, role, created_at, last_login_at (`-` = desc; padrão name).",
+                "description": "Permissão: users.view (A). Sem escopo de filial. Busca `q` em name, username e email. Ordenação: name, username, email, role, created_at, last_login_at (`-` = desc; padrão name).",
                 "operationId": "usersIndex",
                 "parameters": [
                     {
@@ -2701,7 +2826,7 @@
                     "Usuários"
                 ],
                 "summary": "Restaura usuário excluído",
-                "description": "Permissão: users.manage. 409 se não estiver excluído, se o e-mail já estiver em uso por um usuário ativo ou se a filial vinculada estiver excluída. Os tokens revogados na exclusão não voltam.",
+                "description": "Permissão: users.manage. 409 se não estiver excluído, se o e-mail ou o username já estiver em uso por um usuário ativo ou se a filial vinculada estiver excluída. Os tokens revogados na exclusão não voltam.",
                 "operationId": "usersRestore",
                 "parameters": [
                     {
@@ -3199,12 +3324,19 @@
                 "type": "object"
             },
             "UserInput": {
-                "description": "Create: name, email, password e role obrigatórios. Update (PUT = PATCH): parcial. `email` é gravado em minúsculas e é único entre usuários não excluídos. `password`: mín. 10 caracteres, com maiúscula, minúscula e número. `branch_id` é obrigatório quando o perfil (enviado ou atual) não é admin, inclusive ao trocar de admin para outro perfil; filial existente e não excluída (inativa é aceita).",
+                "description": "Create: name, username, email, password e role obrigatórios. Update (PUT = PATCH): parcial. `username`: trim + minúsculas e depois letras minúsculas sem acento, números e ponto (não no início, no fim nem repetido), 3 a 30 caracteres; fora disso (acento, espaço, `_`, `-`, `@`, `..`) → 422, sem transliteração; único entre não excluídos. `email` é gravado em minúsculas e é único entre usuários não excluídos. `password`: mín. 10 caracteres, com maiúscula, minúscula e número. `branch_id` é obrigatório quando o perfil (enviado ou atual) não é admin, inclusive ao trocar de admin para outro perfil; filial existente e não excluída (inativa é aceita).",
                 "properties": {
                     "name": {
                         "type": "string",
                         "example": "Ana Souza",
                         "maxLength": 120
+                    },
+                    "username": {
+                        "type": "string",
+                        "pattern": "^(?=.{3,30}$)[a-z0-9]+(\\.[a-z0-9]+)*$",
+                        "example": "ana.souza",
+                        "maxLength": 30,
+                        "minLength": 3
                     },
                     "email": {
                         "type": "string",
@@ -3327,6 +3459,8 @@
                             "login_failed",
                             "logout",
                             "password_changed",
+                            "password_reset_requested",
+                            "password_reset",
                             "setting_changed",
                             "setting_removed"
                         ]
@@ -3840,6 +3974,7 @@
                 "required": [
                     "id",
                     "name",
+                    "username",
                     "email",
                     "role",
                     "branch",
@@ -3859,6 +3994,14 @@
                         "type": "string",
                         "example": "Ana Souza",
                         "maxLength": 120
+                    },
+                    "username": {
+                        "description": "Minúsculas sem acento, números e ponto (não no início, no fim nem repetido), 3 a 30.",
+                        "type": "string",
+                        "pattern": "^(?=.{3,30}$)[a-z0-9]+(\\.[a-z0-9]+)*$",
+                        "example": "ana.souza",
+                        "maxLength": 30,
+                        "minLength": 3
                     },
                     "email": {
                         "type": "string",
@@ -3930,6 +4073,7 @@
                 "required": [
                     "id",
                     "name",
+                    "username",
                     "email",
                     "role",
                     "branch"
@@ -3942,6 +4086,14 @@
                     "name": {
                         "type": "string",
                         "example": "Ana Souza"
+                    },
+                    "username": {
+                        "description": "Minúsculas sem acento, números e ponto (não no início, no fim nem repetido), 3 a 30.",
+                        "type": "string",
+                        "pattern": "^(?=.{3,30}$)[a-z0-9]+(\\.[a-z0-9]+)*$",
+                        "example": "ana.souza",
+                        "maxLength": 30,
+                        "minLength": 3
                     },
                     "email": {
                         "type": "string",

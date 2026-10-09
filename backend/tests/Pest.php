@@ -11,7 +11,7 @@ use Tests\TestCase;
 pest()->extend(TestCase::class)->in('Feature');
 
 /** Únicas rotas de api/v1 sem autenticação/permissão (allowlist da spec E). */
-const RBAC_PUBLIC_ROUTES = ['api/v1/health', 'api/v1/auth/login'];
+const RBAC_PUBLIC_ROUTES = ['api/v1/health', 'api/v1/auth/login', 'api/v1/auth/forgot-password', 'api/v1/auth/reset-password'];
 
 /** Cada chamada simula uma requisição nova (os guards guardam o usuário entre requisições do mesmo teste). */
 function api(string $method, string $uri, array $data = [], ?string $token = null): TestResponse

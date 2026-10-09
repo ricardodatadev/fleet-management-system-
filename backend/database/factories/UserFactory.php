@@ -23,6 +23,8 @@ class UserFactory extends Factory
     {
         return [
             'name' => fake()->name(),
+            // formato da D.2 v1.9 (UsernameGenerator::REGEX)
+            'username' => fake()->unique()->bothify('user########'),
             'email' => fake()->unique()->safeEmail(),
             'password' => static::$password ??= Hash::make(self::PASSWORD),
             'role' => Role::Operator,

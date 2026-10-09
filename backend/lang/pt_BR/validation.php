@@ -162,7 +162,11 @@ return [
     'ulid' => 'O campo :attribute deve ser um ULID válido.',
     'uuid' => 'O campo :attribute deve ser um UUID válido.',
 
-    'custom' => [],
+    'custom' => [
+        'username' => [
+            'regex' => 'Use letras minúsculas sem acento, números e ponto (não no início, no fim nem repetido), de 3 a 30 caracteres.',
+        ],
+    ],
 
     // Nomes dos campos nas mensagens (cadastros, auth, listas e auditoria).
     'attributes' => [
@@ -186,6 +190,8 @@ return [
         'tolerance_days' => 'tolerância em dias',
         // usuários e auth
         'email' => 'e-mail',
+        'username' => 'usuário',
+        'token' => 'link de redefinição',
         'password' => 'senha',
         'current_password' => 'senha atual',
         'password_confirmation' => 'confirmação da senha',

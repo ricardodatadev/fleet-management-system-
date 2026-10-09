@@ -2,6 +2,7 @@
 
 namespace App\Providers;
 
+use App\Http\Requests\Auth\LoginRequest;
 use App\Models\AuditLog;
 use App\Models\Branch;
 use App\Models\CostCenter;
@@ -49,16 +50,26 @@ class AppServiceProvider extends ServiceProvider
         // 120 req/min por usuário (ou IP quando anônimo).
         RateLimiter::for('api', fn (Request $request) => Limit::perMinute(120)->by($request->user()?->getAuthIdentifier() ?: $request->ip()));
 
-        // Login: 5/min por (e-mail + IP) e 20/min por IP (spec D.1). Conta toda tentativa, inclusive as bem-sucedidas.
+        // Login: 5/min por (username normalizado + IP) e 20/min por IP (D.2 v1.7). Conta toda tentativa, inclusive as bem-sucedidas.
         RateLimiter::for('login', function (Request $request) {
-            $email = $request->input('email');
-            $email = is_string($email) ? mb_strtolower(trim($email)) : '';
+            $username = LoginRequest::normalize($request->input('username'));
 
             return [
-                Limit::perMinute(5)->by('login:email-ip:'.$email.'|'.$request->ip()),
+                Limit::perMinute(5)->by('login:username-ip:'.$username.'|'.$request->ip()),
                 Limit::perMinute(20)->by('login:ip:'.$request->ip()),
             ];
         });
+
+        // Redefinição de senha (D.2 v1.7): pedido 3/min por (e-mail + IP) e 10/min por IP; troca 5/min por IP.
+        RateLimiter::for('forgot-password', function (Request $request) {
+            $email = LoginRequest::normalize($request->input('email'));
+
+            return [
+                Limit::perMinute(3)->by('forgot:email-ip:'.$email.'|'.$request->ip()),
+                Limit::perMinute(10)->by('forgot:ip:'.$request->ip()),
+            ];
+        });
+        RateLimiter::for('reset-password', fn (Request $request) => Limit::perMinute(5)->by('reset:ip:'.$request->ip()));
 
         // Política de senha (spec D.2): mín. 10 caracteres, maiúscula, minúscula e número.
         Password::defaults(fn () => Password::min(10)->mixedCase()->numbers());

@@ -31,6 +31,13 @@ return [
     'slug' => env('APP_SLUG', 'laravel'),
 
     /*
+    | URL do frontend usada nos links enviados por e-mail (ex.: redefinição de senha). Padrão: APP_URL
+    | (a SPA é servida pelo nginx na mesma origem).
+    */
+
+    'frontend_url' => rtrim((string) (env('APP_FRONTEND_URL') ?: env('APP_URL', 'http://localhost')), '/'),
+
+    /*
     |--------------------------------------------------------------------------
     | Application Environment
     |--------------------------------------------------------------------------

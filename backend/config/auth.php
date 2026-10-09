@@ -96,8 +96,10 @@ return [
         'users' => [
             'provider' => 'users',
             'table' => env('AUTH_PASSWORD_RESET_TOKEN_TABLE', 'password_reset_tokens'),
+            // 60 min, uso único; um pedido novo substitui o token anterior (D.2 v1.7). O limite de pedidos
+            // é o throttle da rota (3/min por e-mail + IP e 10/min por IP), não o do broker.
             'expire' => 60,
-            'throttle' => 60,
+            'throttle' => 0,
         ],
     ],
 

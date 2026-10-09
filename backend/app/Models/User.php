@@ -3,6 +3,7 @@
 namespace App\Models;
 
 use App\Enums\Role;
+use App\Notifications\ResetPasswordNotification;
 use App\Support\Audit\Auditable;
 use Database\Factories\UserFactory;
 use Illuminate\Database\Eloquent\Attributes\Fillable;
@@ -20,7 +21,7 @@ use Laravel\Sanctum\HasApiTokens;
  * Usuário (spec C.1). NUNCA usa BranchScoped (alerta da F1-10): o BranchScope chama Auth::user() e o
  * Sanctum carrega o User durante a própria autenticação. Filtro por filial em /users é explícito.
  */
-#[Fillable(['name', 'email', 'password', 'role', 'branch_id', 'is_active'])]
+#[Fillable(['name', 'username', 'email', 'password', 'role', 'branch_id', 'is_active'])]
 #[Hidden(['password', 'remember_token'])]
 class User extends Authenticatable
 {
@@ -51,6 +52,18 @@ class User extends Authenticatable
     protected function email(): Attribute
     {
         return Attribute::set(fn (?string $value) => $value === null ? null : mb_strtolower(trim($value)));
+    }
+
+    /** Username em minúsculas e sem espaços nas pontas (sem transliterar: o formato é validado). */
+    protected function username(): Attribute
+    {
+        return Attribute::set(fn (?string $value) => $value === null ? null : mb_strtolower(trim($value)));
+    }
+
+    /** Redefinição de senha (D.2 v1.7): e-mail em pt_BR, pela fila, com link para o frontend. */
+    public function sendPasswordResetNotification(#[\SensitiveParameter] $token): void
+    {
+        $this->notify(new ResetPasswordNotification($token));
     }
 
     /** @return BelongsTo<Branch, $this> */

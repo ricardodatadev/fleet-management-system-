@@ -11,6 +11,14 @@ x-laravel-dev: &laravel-dev
     - ./docker/laravel/php-dev.ini:/usr/local/etc/php/conf.d/zzz-dev.ini:ro
     # docs/ do repositório (composer openapi grava docs/api/openapi.json aqui)
     - ./docs:/var/www/docs
+  # E-mail de dev vai para o Mailpit (UI em http://127.0.0.1:${MAILPIT_UI_PORT:-8025}); produção usa MAIL_*.
+  environment:
+    MAIL_MAILER: smtp
+    MAIL_HOST: mailpit
+    MAIL_PORT: 1025
+    MAIL_SCHEME: smtp
+    MAIL_FROM_ADDRESS: ${MAIL_FROM_ADDRESS:-no-reply@example.com}
+    APP_FRONTEND_URL: ${APP_FRONTEND_URL:-}
 
 services:
   app:
@@ -32,6 +40,23 @@ services:
   node:
     ports:
       - "127.0.0.1:${NODE_PORT:-3000}:${NODE_PORT:-3000}"
+  # Captura de e-mail em dev (SMTP interno :1025, sem autenticação); só existe no override.
+  mailpit:
+    image: axllent/mailpit:v1.31.4
+    restart: unless-stopped
+    environment:
+      MP_SMTP_AUTH_ACCEPT_ANY: 1
+      MP_SMTP_AUTH_ALLOW_INSECURE: 1
+    ports:
+      - "127.0.0.1:${MAILPIT_UI_PORT:-8025}:8025"
+    networks:
+      - internal
+    healthcheck:
+      test: ["CMD", "/mailpit", "readyz"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 5s
   # Vite com HMR (http://localhost:${FRONTEND_PORT:-5173}); /api é proxied para o nginx.
   frontend:
     image: node:24.21.0-alpine

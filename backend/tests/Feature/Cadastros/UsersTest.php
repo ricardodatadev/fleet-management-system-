@@ -25,6 +25,7 @@ function userPayload(array $overrides = []): array
 {
     return [
         'name' => 'Ana Souza',
+        'username' => 'anasouza',
         'email' => 'ana@example.com',
         'password' => 'SenhaForte2026',
         'role' => 'operator',
@@ -46,7 +47,7 @@ it('cria (201) com branch embutido, e-mail em minúsculas, sem password/remember
         'branch' => ['id' => $this->x->id, 'code' => 'X', 'name' => 'Filial X'],
         'last_login_at' => null, 'deleted_at' => null,
     ]);
-    expect(array_keys($res->json('data')))->toBe(['id', 'name', 'email', 'role', 'branch', 'is_active', 'last_login_at', 'created_at', 'updated_at', 'deleted_at']);
+    expect(array_keys($res->json('data')))->toBe(['id', 'name', 'username', 'email', 'role', 'branch', 'is_active', 'last_login_at', 'created_at', 'updated_at', 'deleted_at']);
 
     $log = AuditLog::query()->where('auditable_type', (new User)->getMorphClass())->where('auditable_id', $res->json('data.id'))->sole();
     expect($log->action)->toBe('created')->and($log->actor_id)->toBe($this->admin->id)
@@ -159,7 +160,7 @@ it('trocar a senha de outro usuário revoga TODOS os tokens dele e audita passwo
 
     expect($target->tokens()->count())->toBe(0);
     api('GET', 'auth/me', token: $t1)->assertUnauthorized();
-    api('POST', 'auth/login', ['email' => $target->email, 'password' => NEW_PASSWORD, 'device_name' => 'pest'])->assertOk();
+    api('POST', 'auth/login', ['username' => $target->username, 'password' => NEW_PASSWORD, 'device_name' => 'pest'])->assertOk();
 
     $log = AuditLog::query()->where('action', 'password_changed')->sole();
     expect($log->actor_id)->toBe($this->admin->id)->and($log->auditable_id)->toBe($target->id)

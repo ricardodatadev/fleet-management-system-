@@ -12,7 +12,8 @@ use App\Http\Controllers\Api\V1\UserController;
 use Illuminate\Support\Facades\Route;
 
 // Prefixo /api/v1 aplicado em bootstrap/app.php.
-// Convenção (F1-10): toda rota fora da allowlist [health, auth/login] declara auth:sanctum + can:<permissão>
+// Convenção (F1-10): toda rota fora da allowlist [health, auth/login, auth/forgot-password, auth/reset-password]
+// declara auth:sanctum + can:<permissão>
 // (Gates de config/rbac.php ou auth.session = qualquer autenticado). Coberto por tests/Feature/Rbac.
 
 // Health fora do throttle: o limiter usa o cache (Redis) e o health precisa responder 503 quando ele cai.
@@ -20,6 +21,9 @@ Route::get('health', HealthController::class)->name('api.health')->withoutMiddle
 
 // Auth (D.2). Login público com throttle próprio (5/min por e-mail+IP e 20/min por IP).
 Route::post('auth/login', [AuthController::class, 'login'])->middleware('throttle:login')->name('api.auth.login');
+// Redefinição de senha (D.2 v1.7): públicas, com throttle próprio.
+Route::post('auth/forgot-password', [AuthController::class, 'forgotPassword'])->middleware('throttle:forgot-password')->name('api.auth.forgot_password');
+Route::post('auth/reset-password', [AuthController::class, 'resetPassword'])->middleware('throttle:reset-password')->name('api.auth.reset_password');
 
 Route::middleware(['auth:sanctum', 'can:auth.session'])->group(function () {
     Route::post('auth/logout', [AuthController::class, 'logout'])->name('api.auth.logout');

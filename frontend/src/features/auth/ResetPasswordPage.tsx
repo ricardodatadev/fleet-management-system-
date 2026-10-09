@@ -1,12 +1,13 @@
 import { useEffect, useState } from 'react';
 import type { FormEvent } from 'react';
-import { useLocation, useNavigate, useSearchParams } from 'react-router-dom';
+import { useLocation, useNavigate } from 'react-router-dom';
 import { ApiError, GENERIC_ERROR_MESSAGE } from '@/api';
 import { Button, FormField } from '@/components/ui';
 import { authApi } from './api';
 import { AuthCard, AuthLink, FormAlert } from './AuthCard';
 import type { LoginLocationState } from './LoginPage';
 import { PasswordInput } from './PasswordInput';
+import { readResetLink } from './resetLink';
 import { retryText, useCountdown } from './useCountdown';
 
 export const INVALID_LINK_MESSAGE =
@@ -15,17 +16,14 @@ export const RESET_SUCCESS_FALLBACK = 'Senha redefinida. Entre com a nova senha.
 export const PASSWORD_POLICY_HELP = 'Mínimo de 10 caracteres, com maiúscula, minúscula e número.';
 
 /**
- * Redefinir senha (v1.7). O link do e-mail traz `?token&email`: a tela guarda os dois e os tira
- * da URL na abertura (replace no histórico), para não ficarem no histórico nem irem no referrer.
+ * Redefinir senha (v1.7a). O link do e-mail traz `#token=…&email=…` no fragmento: a tela guarda
+ * os dois e limpa o fragmento na abertura (replace no histórico), para não ficarem no histórico.
+ * A query string não é lida (um link antigo com `?token=` cai no aviso de link inválido).
  */
 export function ResetPasswordPage() {
   const navigate = useNavigate();
   const location = useLocation();
-  const [params] = useSearchParams();
-  const [link] = useState(() => ({
-    token: params.get('token') ?? '',
-    email: params.get('email') ?? '',
-  }));
+  const [link] = useState(() => readResetLink(location.hash));
   const [password, setPassword] = useState('');
   const [confirmation, setConfirmation] = useState('');
   const [passwordError, setPasswordError] = useState<string | undefined>();
@@ -36,10 +34,13 @@ export function ResetPasswordPage() {
   const [lockedFor, setLockedFor] = useCountdown();
   const locked = lockedFor > 0;
 
-  // React Router faz o replace via history.replaceState e mantém o roteador em sincronia.
+  // Replace pelo React Router: no browser é history.replaceState, e o roteador fica em sincronia.
+  // Também tira uma query antiga (`?token=`) que, mesmo não lida, não deve ficar no histórico.
   useEffect(() => {
-    if (location.search) navigate({ pathname: location.pathname, search: '' }, { replace: true });
-  }, [location.pathname, location.search, navigate]);
+    if (location.hash || location.search) {
+      navigate({ pathname: location.pathname, search: '', hash: '' }, { replace: true });
+    }
+  }, [location.pathname, location.hash, location.search, navigate]);
 
   async function onSubmit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();

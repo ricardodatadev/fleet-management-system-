@@ -5,12 +5,14 @@ import { http } from 'msw';
 import { API, INVALID_DATA, fail, mockAuthApi, ok, renderApp, storeSession } from '@/test/auth';
 import { server } from '@/test/server';
 import { INVALID_LINK_MESSAGE } from './ResetPasswordPage';
+import { readResetLink } from './resetLink';
 
 const FORGOT_OK =
   'Se o e-mail estiver cadastrado e ativo, você receberá um link para redefinir a senha.';
 const RESET_OK = 'Senha redefinida. Entre com a nova senha.';
 const TOKEN = 'a1b2c3d4e5f6';
-const RESET_PATH = `/redefinir-senha?token=${TOKEN}&email=ana%40example.com`;
+/** Link do e-mail (v1.7a): token e e-mail no fragmento, não na query. */
+const RESET_PATH = `/redefinir-senha#token=${TOKEN}&email=ana%40example.com`;
 const STRONG = 'NovaSenha123';
 
 /** Contrato v1.7 (F1-34): forgot sempre 200 genérico; e-mail vazio/malformado → errors.email. */
@@ -131,7 +133,29 @@ describe('Esqueci a senha (/esqueci-senha)', () => {
 });
 
 describe('Redefinir senha (/redefinir-senha)', () => {
-  it('lê token e e-mail e os tira da URL ao abrir', async () => {
+  it('readResetLink: lê do fragmento com URLSearchParams (sem o #)', () => {
+    expect(readResetLink('#token=abc123&email=ana%40example.com')).toEqual({
+      token: 'abc123',
+      email: 'ana@example.com',
+    });
+    expect(readResetLink('token=abc123&email=ana%2Bfrota%40example.com').email).toBe(
+      'ana+frota@example.com',
+    );
+    // `+` cru vira espaço: o backend precisa codificar o e-mail no link (rawurlencode).
+    expect(readResetLink('#email=ana+frota@example.com').email).toBe('ana frota@example.com');
+    expect(readResetLink('')).toEqual({ token: '', email: '' });
+  });
+
+  it('link antigo com query (?token=) não é lido: aviso de link inválido e URL limpa', async () => {
+    mockAuthApi();
+    const bodies = mockReset();
+    const { location } = renderApp(`/redefinir-senha?token=${TOKEN}&email=ana%40example.com`);
+    expect(await screen.findByRole('alert')).toHaveTextContent(INVALID_LINK_MESSAGE);
+    await waitFor(() => expect(location()).toBe('/redefinir-senha'));
+    expect(bodies).toHaveLength(0);
+  });
+
+  it('lê token e e-mail do fragmento e limpa o fragmento ao abrir', async () => {
     mockAuthApi();
     mockReset();
     const { location } = renderApp(RESET_PATH);
@@ -200,8 +224,9 @@ describe('Redefinir senha (/redefinir-senha)', () => {
   });
 
   it.each([
-    ['sem token', '/redefinir-senha?email=ana%40example.com'],
-    ['sem e-mail', `/redefinir-senha?token=${TOKEN}`],
+    ['sem token', '/redefinir-senha#email=ana%40example.com'],
+    ['sem e-mail', `/redefinir-senha#token=${TOKEN}`],
+    ['fragmento vazio', '/redefinir-senha#'],
     ['sem nada (ex.: recarregou depois de limpar a URL)', '/redefinir-senha'],
   ])('link incompleto (%s) já abre no aviso de link inválido', async (_case, path) => {
     mockAuthApi();

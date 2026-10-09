@@ -118,6 +118,8 @@ describe('Centros de Custo (F1-30)', () => {
       await user.type(within(dialog).getByRole('textbox', { name: /Código/ }), code);
       await user.type(within(dialog).getByRole('textbox', { name: /Nome/ }), name);
       const select = within(dialog).getByRole('combobox', { name: 'Filial' });
+      // O lookup de filiais pode chegar depois da lista sob carga ("Carregando…", desabilitado).
+      await waitFor(() => expect(select).toBeEnabled());
       expect(select).toHaveDisplayValue('Sem filial');
       if (branchId) await user.selectOptions(select, branchId);
       await user.click(within(dialog).getByRole('button', { name: 'Salvar' }));

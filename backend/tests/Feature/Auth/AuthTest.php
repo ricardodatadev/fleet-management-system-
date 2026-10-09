@@ -12,15 +12,6 @@ use Laravel\Sanctum\PersonalAccessToken;
 
 uses(RefreshDatabase::class);
 
-/** Cada chamada simula uma requisição nova (os guards guardam o usuário entre requisições do mesmo teste). */
-function api(string $method, string $uri, array $data = [], ?string $token = null): TestResponse
-{
-    app('auth')->forgetGuards();
-    $headers = $token === null ? [] : ['Authorization' => "Bearer {$token}"];
-
-    return test()->json($method, '/api/v1/'.$uri, $data, $headers);
-}
-
 function login(string $email, string $password = UserFactory::PASSWORD, string $device = 'pest'): TestResponse
 {
     return api('POST', 'auth/login', ['email' => $email, 'password' => $password, 'device_name' => $device]);

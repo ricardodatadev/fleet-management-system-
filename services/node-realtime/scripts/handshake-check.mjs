@@ -1,7 +1,8 @@
 // Verificação manual do handshake Socket.io autenticado (F1-18), de fora da stack, pela porta do nginx.
-// Uso (imagem de teste, que tem o socket.io-client):
+// Uso (imagem de teste, que tem o socket.io-client; <slug> = APP_SLUG do .env):
+//   docker build --target test -t <slug>/node-realtime:test services/node-realtime
 //   docker run --rm --network host -e WS_URL=ws://localhost:8080 -e TOKEN=... \
-//     -v "$PWD/services/node-realtime/scripts:/srv/scripts:ro" gof/node-realtime:test node scripts/handshake-check.mjs
+//     -v "$PWD/services/node-realtime/scripts:/srv/scripts:ro" <slug>/node-realtime:test node scripts/handshake-check.mjs
 // Sem TOKEN, conecta sem token. Imprime uma linha JSON: {"result":"ready",...} ou {"result":"error","message":...}.
 // Não imprime o token.
 import { io } from 'socket.io-client';

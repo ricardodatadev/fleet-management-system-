@@ -44,6 +44,10 @@ export default defineConfig({
       provider: 'v8',
       include: ['src/**'],
       exclude: ['src/api/schema.d.ts', 'src/test/**'],
+      // Gate da F1-29: linhas >= 70% em src/ (os demais no mesmo patamar). Abaixo disso, o
+      // `npm run test:coverage` (e o `npm run ci`) falha.
+      thresholds: { lines: 70, statements: 70, functions: 70, branches: 70 },
+      reporter: ['text-summary', 'json-summary', 'html'],
     },
   },
 });

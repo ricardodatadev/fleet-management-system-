@@ -205,7 +205,7 @@ export function CrudPage<T extends CrudRow>({ resource }: { resource: CrudResour
               <IconButton
                 label={`Editar ${name}`}
                 icon={<Pencil className="size-5" />}
-                onClick={() => setEditing({ row })}
+                onClick={() => (resource.onEdit ? resource.onEdit(row) : setEditing({ row }))}
               />
               {(resource.canDelete?.(row) ?? true) && (
                 <IconButton
@@ -257,7 +257,9 @@ export function CrudPage<T extends CrudRow>({ resource }: { resource: CrudResour
         description={resource.description}
         actions={
           canManage && (
-            <Button onClick={() => setEditing({ row: null })}>
+            <Button
+              onClick={() => (resource.onCreate ? resource.onCreate() : setEditing({ row: null }))}
+            >
               <Plus aria-hidden="true" className="size-5" />
               {labels.create}
             </Button>

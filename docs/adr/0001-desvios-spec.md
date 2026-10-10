@@ -153,6 +153,15 @@ Pesquisa de 2026-10-08. Versões do backend confirmadas no packagist/`composer s
 - **Mensagens de validação (adendo da F1-14, achado no smoke da F1-30):** `lang/pt_BR/validation.php` cobre todas as regras do Laravel, com todas as variantes (um teste compara as chaves com o arquivo `en` do framework) e traduz os nomes dos campos dos cadastros em `attributes` (ex.: `preventive_lead_pct` → "percentual de pré-alerta"). As mensagens montadas fora do Validator usam `App\Support\Api\FieldMessage`. Um teste garante que nenhum 422 dos cadastros sai com chave crua ou nome técnico com sublinhado.
 - `/auth/me` devolve `employee` = `{id, registration, name, job_type, branch_id}` ou null (relação `User::employee` sem o escopo de filial). `/meta/enums` ganha `job_types` e `cnh_categories`; alias de auditoria `employee`.
 
+## Notas de implementação (F1-18 — handshake Socket.io autenticado)
+
+- **Middleware `io.use`** (`services/node-realtime/src/auth.ts`): lê `handshake.auth.token` (string não vazia, até 512 caracteres; fora disso recusa sem consultar o Laravel) e chama `GET ${LARAVEL_INTERNAL_URL}/api/v1/auth/me` com Bearer, `AbortSignal.timeout(1800)` e `redirect: 'error'`. 200 com o contrato (`data.user.id` numérico e `role`) → `socket.data.user`; qualquer outra coisa (401/403, resposta fora do contrato, timeout, erro de rede) → `connect_error` com a mensagem fixa `unauthorized` (sem `data`, sem motivo, sem eco do token). O token não é logado. Sem consumo de eventos de OS.
+- **Salas:** `user:{id}`, `role:{role}` e `branch:{id}`. **Admin sem filial não entra em sala de filial** (admin com filial entra na dele). `session:ready` leva `{user: {id, name, username, role, branch_id}, rooms}`.
+- **Revogação:** o token apagado no logout é recusado no próximo handshake (o `/auth/me` responde 401). Sockets já conectados não são derrubados no logout; isso fica para quando houver eventos de negócio (fase de OS).
+- **Tempo de recusa:** o CA "recusa em ≤ 2 s" é medido no cliente. Com timeout de 2 s, o smoke com o app parado deu 2071 ms (timeout + handshake); por isso o timeout é de **1,8 s** (`AUTH_TIMEOUT_MS`). No Vitest, o Laravel lento é recusado entre 1,7 e 2,0 s no cliente, e o Laravel fora do ar na hora.
+- **nginx:** `/socket.io/` com `Upgrade`/`Connection`, `X-Forwarded-Proto`, `proxy_connect_timeout 5s`, `proxy_send_timeout`/`proxy_read_timeout 3600s` e `proxy_buffering off`. A CSP de `/` continua `default-src 'self'`: pelo CSP3, `'self'` cobre `ws://`/`wss://` da mesma origem (Chrome, Firefox, Safari 15.4+); não listamos o host para não refletir o cabeçalho `Host` (controlado pelo cliente) no CSP.
+- **Imagem:** sem mudança no modelo (tags fixas `node:24.21.0-alpine`, `USER node` no `prod`, dependências de teste fora da imagem final).
+
 ## Notas de implementação (F1-17 — seeders)
 
 - **`SettingsSeeder`** (todos os ambientes): cria o override global com o default do registry só nas chaves que ainda não têm global, via `SettingsService::put` (auditado como `setting_changed`); valor já alterado pelo admin é mantido.

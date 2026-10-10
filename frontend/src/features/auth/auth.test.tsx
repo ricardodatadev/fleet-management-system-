@@ -248,6 +248,37 @@ describe('Login', () => {
     expect(password).toHaveAttribute('type', 'password');
   });
 
+  it('/auth/me falhando logo após o login: revoga o token recém-emitido e mostra o erro', async () => {
+    mockAuthApi('admin');
+    let logoutAuth: string | null = null;
+    server.use(
+      http.get(API('/auth/me'), () => fail(500, 'Erro interno do servidor.')),
+      http.post(API('/auth/logout'), ({ request }) => {
+        logoutAuth = request.headers.get('Authorization');
+        return ok(null);
+      }),
+    );
+    const { location } = renderApp('/login');
+    await fillAndSubmit('anasouza', 'senha-correta');
+    expect(await screen.findByRole('alert')).toHaveTextContent('Erro interno do servidor.');
+    // O token do login (tok-novo) foi revogado e nada ficou salvo.
+    await waitFor(() => expect(logoutAuth).toBe('Bearer tok-novo'));
+    expect(storedSession()).toBeNull();
+    expect(location()).toBe('/login');
+  });
+
+  it('revogação best effort: se o logout também falhar, o erro do /auth/me continua aparecendo', async () => {
+    mockAuthApi('admin');
+    server.use(
+      http.get(API('/auth/me'), () => fail(503, 'Serviço indisponível.')),
+      http.post(API('/auth/logout'), () => Response.error()),
+    );
+    renderApp('/login');
+    await fillAndSubmit('anasouza', 'senha-correta');
+    expect(await screen.findByRole('alert')).toHaveTextContent('Serviço indisponível.');
+    expect(storedSession()).toBeNull();
+  });
+
   it('rede indisponível mostra mensagem do cliente', async () => {
     server.use(http.post(API('/auth/login'), () => Response.error()));
     renderApp('/login');

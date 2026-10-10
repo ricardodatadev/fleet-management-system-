@@ -14,7 +14,9 @@ export const authApi = {
       { token: null },
     ),
   me: (token?: string, signal?: AbortSignal) => api.get<MeData>('/auth/me', { token, signal }),
-  logout: () => api.post<null>('/auth/logout'),
+  /** Sem `token`, usa o da sessão; com ele, revoga aquele token (ex.: o recém-emitido no login). */
+  logout: (token?: string) =>
+    api.post<null>('/auth/logout', undefined, token ? { token } : undefined),
   /** Sempre 200 com mensagem genérica (sem enumeração); devolve a `message` do envelope. */
   forgotPassword: async (email: string) =>
     (await api.raw<null>('POST', '/auth/forgot-password', { body: { email }, token: null }))

@@ -2,7 +2,7 @@ import { pathToFileURL } from 'node:url';
 import Fastify, { type FastifyInstance } from 'fastify';
 import { Redis } from 'ioredis';
 import { Server } from 'socket.io';
-import { rejectAllConnections } from './auth.js';
+import { authenticateSockets } from './auth.js';
 import { checkRedis, type Pingable } from './health.js';
 
 const SERVICE_NAME = 'node-realtime';
@@ -10,9 +10,18 @@ const SERVICE_NAME = 'node-realtime';
 export interface ServerDeps {
   redis: Pingable;
   healthTimeoutMs?: number;
+  /** Base interna do Laravel para validar o token do handshake (LARAVEL_INTERNAL_URL). */
+  laravelUrl?: string;
+  /** Timeout da validação do token; padrão 2 s (AUTH_TIMEOUT_MS). */
+  authTimeoutMs?: number;
 }
 
-export function buildServer({ redis, healthTimeoutMs = 1000 }: ServerDeps): { app: FastifyInstance; io: Server } {
+export function buildServer({
+  redis,
+  healthTimeoutMs = 1000,
+  laravelUrl = process.env.LARAVEL_INTERNAL_URL ?? 'http://nginx',
+  authTimeoutMs,
+}: ServerDeps): { app: FastifyInstance; io: Server } {
   const app = Fastify({ logger: process.env.NODE_ENV !== 'test' });
 
   app.get('/health', async (_request, reply) => {
@@ -23,7 +32,7 @@ export function buildServer({ redis, healthTimeoutMs = 1000 }: ServerDeps): { ap
   });
 
   const io = new Server(app.server, { path: '/socket.io/', serveClient: false });
-  rejectAllConnections(io);
+  authenticateSockets(io, { laravelUrl, timeoutMs: authTimeoutMs });
 
   app.addHook('onClose', async () => {
     await io.close();

@@ -1,10 +1,12 @@
 import { Suspense, lazy, useState } from 'react';
+import { useSearchParams } from 'react-router-dom';
 import { Badge, StatusPill } from '@/components/ui';
 import { useAuth, useCan } from '@/features/auth';
 import { CrudPage } from '@/features/cadastros/crud/CrudPage';
 import type { CrudFilter, CrudResource } from '@/features/cadastros/crud/types';
 import { enumOptions } from '@/features/cadastros/labels';
 import { useBranchOptions, useFamilyOptions, useMetaEnums } from '@/features/cadastros/lookups';
+import { EquipmentDrawer } from './EquipmentDrawer';
 import { STATUS_LABELS } from './labels';
 import type { Equipment } from './types';
 
@@ -31,6 +33,20 @@ export function EquipmentsPage() {
 
   // `undefined` = fechado; `null` = cadastro; registro = edição.
   const [editing, setEditing] = useState<Equipment | null | undefined>(undefined);
+  // Drawer 360° pelo `?id=` da URL (deep-link); fechar remove o id e mantém os filtros.
+  const [params, setParams] = useSearchParams();
+  const drawerId = Number(params.get('id')) || null;
+  function setDrawer(id: number | null) {
+    setParams(
+      (current) => {
+        const next = new URLSearchParams(current);
+        if (id === null) next.delete('id');
+        else next.set('id', String(id));
+        return next;
+      },
+      { replace: true },
+    );
+  }
 
   const filters: CrudFilter[] = [];
   if (fixedBranch === null) {
@@ -73,6 +89,7 @@ export function EquipmentsPage() {
     describe: (row) => `${row.code} — ${row.name}`,
     onCreate: () => setEditing(null),
     onEdit: (row) => setEditing(row),
+    onRowClick: (row) => setDrawer(row.id),
     columns: [
       { key: 'code', header: 'Código', sortField: 'code', cell: (row) => row.code },
       { key: 'name', header: 'Nome', sortField: 'name', cell: (row) => row.name },
@@ -103,6 +120,21 @@ export function EquipmentsPage() {
   return (
     <>
       <CrudPage resource={resource} />
+      {drawerId !== null && (
+        <EquipmentDrawer
+          key={drawerId}
+          id={drawerId}
+          onClose={() => setDrawer(null)}
+          onEdit={
+            can('equipments.manage')
+              ? (equipment) => {
+                  setDrawer(null);
+                  setEditing(equipment);
+                }
+              : undefined
+          }
+        />
+      )}
       {editing !== undefined && (
         <Suspense fallback={null}>
           <EquipmentFormModal row={editing} onClose={() => setEditing(undefined)} />

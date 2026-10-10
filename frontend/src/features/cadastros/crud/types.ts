@@ -121,4 +121,6 @@ export interface CrudResource<T extends CrudRow> {
    */
   onCreate?: () => void;
   onEdit?: (row: T) => void;
+  /** Linha clicável (ex.: abre o Drawer 360°); o código da 1ª coluna vira botão para o teclado. */
+  onRowClick?: (row: T) => void;
 }

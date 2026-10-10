@@ -135,7 +135,10 @@ export function DataTable<T>({
                     onRowClick
                       ? (event) => {
                           const target = event.target as HTMLElement;
-                          if (!target.closest(INTERACTIVE)) onRowClick(row);
+                          if (target.closest(INTERACTIVE)) return;
+                          // Foca o botão da linha antes de abrir: o diálogo devolve o foco a ele.
+                          event.currentTarget.querySelector<HTMLElement>('td button')?.focus();
+                          onRowClick(row);
                         }
                       : undefined
                   }

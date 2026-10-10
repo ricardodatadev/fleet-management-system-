@@ -30,6 +30,8 @@ A spec Fase 1 (A.5) define a stack do frontend. Este ADR registra as versões ex
 | openapi-typescript | 7.13.0 |
 | radix-ui | 1.7.0 (F1-22) |
 | lucide-react | 1.53.0 (F1-22) |
+| react-hook-form / zod | 7.89.0 / 4.6.5 (F1-26; resolver próprio em `src/lib/zodResolver.ts`, sem `@hookform/resolvers`) |
+| @fontsource/roboto | 5.2.8 (F1-36; só latin 400/700) |
 
 ## Dependências adicionadas na F1-22 (componentes base)
 
@@ -55,9 +57,20 @@ Reavaliar ESLint 10 e TypeScript 6+ quando jsx-a11y, openapi-typescript e typesc
 
 ## Risco: react-router 6 (npm audit)
 
-`npm audit` reporta 2 vulnerabilidades moderadas em `react-router`/`react-router-dom` 6.x (open redirect via barra invertida em `<Link>`/`useNavigate`, bypass do CVE-2025-68470; e injeção de construtor em `deserializeErrors()` no hydration SSR — não aplicável, não usamos SSR). A correção existe apenas na v7 (mudança incompatível).
+`npm audit` reporta 2 vulnerabilidades **moderadas** em `react-router`/`react-router-dom` 6.x (0 high/critical no projeto):
 
-- **Decisão:** manter v6 na Fase 1.
-- **Mitigação obrigatória na F1-23:** o parâmetro `?next=` do login só é aceito se for path relativo iniciado por `/`, rejeitando `//` e `\` (fallback para `/`), com teste. Nenhum outro redirect deve usar entrada do usuário sem essa validação.
-- **Implementado (F1-23):** `frontend/src/features/auth/safeNext.ts`, usado no login e no redirect de quem já está logado; testes em `safeNext.test.ts` (inclui `//`, `\`, URL absoluta, `javascript:`, caracteres de controle e `/login`) e `auth.test.tsx`.
-- **Revisão:** avaliar upgrade para React Router v7 em fase futura (junto com a revisão do PWA/offline, D15).
+| Alerta | Alcance | Aplica ao projeto? |
+|---|---|---|
+| [GHSA-wrjc-x8rr-h8h6](https://github.com/advisories/GHSA-wrjc-x8rr-h8h6): open redirect via barra invertida em `<Link>`/`useNavigate` (bypass do CVE-2025-68470) | `>=6.0.0 <7.18.0` | Só se um destino de navegação vier de entrada do usuário. |
+| [GHSA-337j-9hxr-rhxg](https://github.com/advisories/GHSA-337j-9hxr-rhxg): injeção de construtor em `deserializeErrors()` no hydration de SSR | `>=6.4.0 <7.18.0` | Não: a SPA não tem SSR. O `createBrowserRouter` só leria `window.__staticRouterHydrationData`, que nada no projeto define; injetar esse global já exigiria XSS, barrado pela CSP estrita (A.4/Q6). |
+
+- **Não há versão corrigida na linha 6** (conferido em 2026-10-10: a última é a 6.30.6, a que usamos; a correção só existe a partir da 7.18). A spec fixa React Router 6 (A.5), então a decisão da F1-29 é **manter a 6.30.6** com a mitigação abaixo.
+- **Mitigação (F1-23, revalidada na F1-29):** o único destino de navegação vindo de fora é o `?next=` do login. Ele passa sempre por `safeNext` (`frontend/src/features/auth/safeNext.ts`), que aceita só path relativo iniciado por `/` e rejeita `//`, `\`, URL absoluta, `javascript:`, caracteres de controle e `/login`, com testes em `safeNext.test.ts` e `auth.test.tsx` (inclui `/\evil.example`). Auditoria dos destinos na F1-29: os demais `navigate`/`<Navigate>`/`<Link>` usam constantes (`/login`, `/403`, rota padrão, itens de `navigation.ts`) ou a própria `location` (`loginPath`, limpeza da URL na redefinição de senha).
+- **Regra para as próximas fases:** nenhum destino de navegação novo pode usar entrada do usuário sem passar por `safeNext` (ou validação equivalente com teste).
+- **Revisão:** avaliar o React Router 7 em fase futura, junto com a revisão do PWA/offline (D15).
+
+## Gates de qualidade do frontend (F1-29)
+
+- **Cobertura:** `npm run test:coverage` (parte do `npm run ci`) roda o Vitest com `thresholds` de 70% (linhas, statements, funções e branches) em `src/`; abaixo disso, falha. Relatório em `frontend/coverage/` (html e json-summary, fora do git).
+- **Bundle inicial:** `npm run check:bundle` (no fim do `npm run ci`) soma o gzip dos assets que o `index.html` carrega e das fontes woff2 do CSS, com limite de 500 kB. Chunks sob demanda (ex.: o formulário de equipamento) ficam de fora.
+- **Acessibilidade e toque:** `src/quality/a11y.test.tsx` (axe em Login, Equipamentos com o Drawer e Parâmetros), `src/quality/spacing.test.tsx` (≥ 8px entre alvos, G.1) e `tap-min.test.tsx` (48px).

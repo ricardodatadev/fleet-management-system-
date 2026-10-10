@@ -107,7 +107,7 @@ class AuthController extends Controller
         $user = User::query()->where('username', $username)->first();
 
         // Hash conferido mesmo sem usuário, para o tempo de resposta não revelar se o username existe.
-        $valid = Hash::check($password, $user?->password ?? (self::$dummyHash ??= Hash::make(bin2hex(random_bytes(16)))));
+        $valid = Hash::check($password, $user === null ? (self::$dummyHash ??= Hash::make(bin2hex(random_bytes(16)))) : $user->password);
 
         if ($user === null || ! $valid) {
             $this->audit->record(AuditAction::LoginFailed, null, null, null, ['username' => $username, 'reason' => 'invalid_credentials']);
@@ -134,7 +134,7 @@ class AuthController extends Controller
             return [
                 'token' => $token->plainTextToken,
                 'token_type' => 'Bearer',
-                'expires_at' => $token->accessToken->expires_at->utc()->toJSON(),
+                'expires_at' => $expiresAt->copy()->utc()->toJSON(), // o mesmo instante gravado no token
                 'user' => (new UserResource($user->load('branch')))->resolve($request),
             ];
         });
@@ -338,9 +338,6 @@ class AuthController extends Controller
 
     private function currentToken(User $user): PersonalAccessToken
     {
-        $token = $user->currentAccessToken();
-        assert($token instanceof PersonalAccessToken);
-
-        return $token;
+        return $user->currentAccessToken();
     }
 }

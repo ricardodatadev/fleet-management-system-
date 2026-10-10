@@ -1,0 +1,12 @@
+# Larastan (F1-19): nível 5, sem baseline. Entra no `make lint`.
+includes:
+    - vendor/larastan/larastan/extension.neon
+
+parameters:
+    level: 5
+    paths:
+        - app
+        - config
+        - database
+        - routes
+    tmpDir: storage/framework/cache/phpstan

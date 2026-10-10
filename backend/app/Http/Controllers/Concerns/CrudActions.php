@@ -4,6 +4,7 @@ namespace App\Http\Controllers\Concerns;
 
 use App\Exceptions\DomainConflictException;
 use App\Models\Branch;
+use App\Models\Contracts\CrudModel;
 use App\Support\Api\FieldMessage;
 use Closure;
 use Illuminate\Database\Eloquent\Model;
@@ -58,12 +59,13 @@ trait CrudActions
      * @param  (Closure(): void)|null  $before
      * @param  (Closure(Model): void)|null  $after
      */
-    protected function softDeleteGuarded(Model $model, ?Closure $before = null, ?Closure $after = null): void
+    protected function softDeleteGuarded(Model&CrudModel $model, ?Closure $before = null, ?Closure $after = null): void
     {
         DB::transaction(function () use ($model, $before, $after) {
             if ($before !== null) {
                 $before();
             }
+            /** @var Model&CrudModel $locked */
             $locked = $model->newQueryWithoutScopes()->whereKey($model->getKey())->lockForUpdate()->firstOrFail();
             if ($locked->getAttribute('deleted_at') !== null) {
                 throw (new ModelNotFoundException)->setModel($model::class, [$model->getKey()]);
@@ -94,13 +96,14 @@ trait CrudActions
      * @param  (Closure(Model): ?string)|null  $check
      * @param  string|list<string>  $uniqueFields
      */
-    protected function restoreGuarded(Model $model, ?Closure $check = null, string|array $uniqueFields = 'code'): Model
+    protected function restoreGuarded(Model&CrudModel $model, ?Closure $check = null, string|array $uniqueFields = 'code'): Model
     {
         $fields = (array) $uniqueFields;
         $taken = fn (string $field) => new DomainConflictException(__("api.restore_{$field}_taken"), [$field => [__("api.restore_{$field}_taken")]]);
 
         try {
             return DB::transaction(function () use ($model, $check, $fields, $taken) {
+                /** @var Model&CrudModel $locked */
                 $locked = $model->newQueryWithoutScopes()->whereKey($model->getKey())->lockForUpdate()->firstOrFail();
 
                 if ($locked->getAttribute('deleted_at') === null) {

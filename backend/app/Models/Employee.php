@@ -3,6 +3,7 @@
 namespace App\Models;
 
 use App\Models\Concerns\BranchScoped;
+use App\Models\Contracts\CrudModel;
 use App\Support\Audit\Auditable;
 use Database\Factories\EmployeeFactory;
 use Illuminate\Database\Eloquent\Casts\Attribute;
@@ -10,12 +11,35 @@ use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\SoftDeletes;
+use Illuminate\Support\Carbon;
 
 /**
  * Colaborador (spec C.5). Escopo de filial: não-admin vê só a própria filial. Vínculo 1:1 opcional
  * com User. Campos de CNH só para motorista; especialidade e custo/hora só para mecânico.
+ *
+ * @property int $id
+ * @property int|null $user_id
+ * @property string $registration
+ * @property string $name
+ * @property string $job_type
+ * @property int $branch_id
+ * @property int|null $cost_center_id
+ * @property string|null $phone
+ * @property Carbon|null $hired_at
+ * @property string|null $cnh_number
+ * @property string|null $cnh_category
+ * @property Carbon|null $cnh_expires_at
+ * @property string|null $specialty
+ * @property float|null $hourly_cost
+ * @property bool $is_active
+ * @property-read Branch|null $branch
+ * @property-read CostCenter|null $costCenter
+ * @property-read User|null $user
+ * @property Carbon|null $created_at
+ * @property Carbon|null $updated_at
+ * @property Carbon|null $deleted_at
  */
-class Employee extends Model
+class Employee extends Model implements CrudModel
 {
     use Auditable, BranchScoped, SoftDeletes;
 

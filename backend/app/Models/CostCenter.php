@@ -4,6 +4,7 @@ namespace App\Models;
 
 use App\Models\Concerns\BranchScoped;
 use App\Models\Concerns\HasNormalizedCode;
+use App\Models\Contracts\CrudModel;
 use App\Support\Audit\Auditable;
 use Database\Factories\CostCenterFactory;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
@@ -11,11 +12,22 @@ use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Database\Eloquent\SoftDeletes;
+use Illuminate\Support\Carbon;
 
 /**
  * Centro de custo (spec C.3). Não-admin vê os da própria filial + os sem filial.
+ *
+ * @property int $id
+ * @property string $code
+ * @property string $name
+ * @property int|null $branch_id
+ * @property bool $is_active
+ * @property-read Branch|null $branch
+ * @property Carbon|null $created_at
+ * @property Carbon|null $updated_at
+ * @property Carbon|null $deleted_at
  */
-class CostCenter extends Model
+class CostCenter extends Model implements CrudModel
 {
     use Auditable, BranchScoped, HasNormalizedCode, SoftDeletes;
 

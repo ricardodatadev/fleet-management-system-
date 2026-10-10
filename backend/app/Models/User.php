@@ -3,6 +3,7 @@
 namespace App\Models;
 
 use App\Enums\Role;
+use App\Models\Contracts\CrudModel;
 use App\Notifications\ResetPasswordNotification;
 use App\Support\Audit\Auditable;
 use Database\Factories\UserFactory;
@@ -15,15 +16,32 @@ use Illuminate\Database\Eloquent\Relations\HasOne;
 use Illuminate\Database\Eloquent\SoftDeletes;
 use Illuminate\Foundation\Auth\User as Authenticatable;
 use Illuminate\Notifications\Notifiable;
+use Illuminate\Support\Carbon;
 use Laravel\Sanctum\HasApiTokens;
 
 /**
  * Usuário (spec C.1). NUNCA usa BranchScoped (alerta da F1-10): o BranchScope chama Auth::user() e o
  * Sanctum carrega o User durante a própria autenticação. Filtro por filial em /users é explícito.
+ *
+ * @property int $id
+ * @property string $name
+ * @property string $username
+ * @property string $email
+ * @property string $password
+ * @property Role $role
+ * @property int|null $branch_id
+ * @property bool $is_active
+ * @property Carbon|null $last_login_at
+ * @property string|null $remember_token
+ * @property-read Branch|null $branch
+ * @property-read Employee|null $employee
+ * @property Carbon|null $created_at
+ * @property Carbon|null $updated_at
+ * @property Carbon|null $deleted_at
  */
 #[Fillable(['name', 'username', 'email', 'password', 'role', 'branch_id', 'is_active'])]
 #[Hidden(['password', 'remember_token'])]
-class User extends Authenticatable
+class User extends Authenticatable implements CrudModel
 {
     /** @use HasFactory<UserFactory> */
     use Auditable, HasApiTokens, HasFactory, Notifiable, SoftDeletes;

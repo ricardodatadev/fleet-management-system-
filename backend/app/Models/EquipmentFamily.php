@@ -3,18 +3,34 @@
 namespace App\Models;
 
 use App\Models\Concerns\HasNormalizedCode;
+use App\Models\Contracts\CrudModel;
 use App\Support\Audit\Auditable;
 use Database\Factories\EquipmentFamilyFactory;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Database\Eloquent\SoftDeletes;
+use Illuminate\Support\Carbon;
 
 /**
  * Família/Classe de equipamento (spec C.4). Sem escopo de filial (cadastro global). Os campos da
  * RN-001 (preventive_lead_pct, tolerance_*) são só persistidos; não há motor de regra na Fase 1.
+ *
+ * @property int $id
+ * @property string $code
+ * @property string $name
+ * @property string $category
+ * @property string $criticality
+ * @property float $preventive_lead_pct
+ * @property int|null $tolerance_km
+ * @property int|null $tolerance_hours
+ * @property int|null $tolerance_days
+ * @property bool $is_active
+ * @property Carbon|null $created_at
+ * @property Carbon|null $updated_at
+ * @property Carbon|null $deleted_at
  */
-class EquipmentFamily extends Model
+class EquipmentFamily extends Model implements CrudModel
 {
     use Auditable, HasNormalizedCode, SoftDeletes;
 

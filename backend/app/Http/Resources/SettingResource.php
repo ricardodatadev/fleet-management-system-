@@ -5,6 +5,7 @@ namespace App\Http\Resources;
 use App\Models\Branch;
 use App\Models\EquipmentFamily;
 use App\Models\Setting;
+use Illuminate\Database\Eloquent\Model;
 use Illuminate\Http\Request;
 use Illuminate\Support\Collection;
 use OpenApi\Attributes as OA;
@@ -71,10 +72,11 @@ class SettingResource extends ApiResource
     /**
      * Carrega a entidade do escopo de vários overrides em 2 queries (filiais e famílias), sem N+1.
      *
-     * @param  Collection<int, Setting>  $settings
+     * @param  Collection<int, Model>  $settings
      */
     public static function preloadScopes(Collection $settings): void
     {
+        $settings = $settings->filter(fn ($s) => $s instanceof Setting);
         $ids = fn (string $type) => $settings->where('scope_type', $type)->pluck('scope_id')->unique()->all();
         $branches = Branch::withTrashed()->findMany($ids('branch'))->keyBy('id');
         $families = EquipmentFamily::withTrashed()->findMany($ids('family'))->keyBy('id');

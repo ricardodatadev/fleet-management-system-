@@ -20,6 +20,6 @@ class SettingsSeeder extends Seeder
                 $created++;
             }
         }
-        $this->command?->info("Parâmetros globais: {$created} criado(s), ".(count(SettingsService::registry()) - $created).' já existia(m) (mantidos).');
+        $this->command->info("Parâmetros globais: {$created} criado(s), ".(count(SettingsService::registry()) - $created).' já existia(m) (mantidos).');
     }
 }

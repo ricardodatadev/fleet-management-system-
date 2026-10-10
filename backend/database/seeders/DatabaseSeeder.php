@@ -17,7 +17,7 @@ class DatabaseSeeder extends Seeder
         if (app()->environment(DemoSeeder::ENVIRONMENTS)) {
             $this->call(DemoSeeder::class);
         } else {
-            $this->command?->info('DemoSeeder ignorado: só roda em '.implode('/', DemoSeeder::ENVIRONMENTS).'.');
+            $this->command->info('DemoSeeder ignorado: só roda em '.implode('/', DemoSeeder::ENVIRONMENTS).'.');
         }
     }
 }

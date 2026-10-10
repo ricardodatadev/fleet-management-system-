@@ -48,4 +48,29 @@ describe('Wizard', () => {
     const { container } = render(<Wizard steps={steps} onFinish={() => {}} />);
     expect(await axe(container)).toHaveNoViolations();
   });
+
+  it('teclado: do primeiro passo ao Concluir só com Tab, Enter e Espaço, sem perder o foco', async () => {
+    const user = userEvent.setup();
+    const onFinish = vi.fn();
+    render(<Wizard steps={steps} onFinish={onFinish} />);
+    // Voltar começa desabilitado: o primeiro Tab já cai no Avançar.
+    await user.tab();
+    expect(screen.getByRole('button', { name: 'Avançar' })).toHaveFocus();
+    await user.keyboard('{Enter}');
+    expect(screen.getByText('Passo financeiro')).toBeInTheDocument();
+    // O foco continua num botão do wizard (não volta para o body).
+    expect(document.activeElement?.tagName).toBe('BUTTON');
+    await user.tab({ shift: true });
+    expect(screen.getByRole('button', { name: 'Voltar' })).toHaveFocus();
+    await user.keyboard(' ');
+    expect(screen.getByText('Passo gerais')).toBeInTheDocument();
+    await user.tab();
+    expect(screen.getByRole('button', { name: 'Avançar' })).toHaveFocus();
+    await user.keyboard('{Enter}');
+    // No último passo o Avançar vira Concluir sem perder o foco.
+    const finish = screen.getByRole('button', { name: 'Concluir' });
+    expect(finish).toHaveFocus();
+    await user.keyboard('{Enter}');
+    expect(onFinish).toHaveBeenCalledTimes(1);
+  });
 });

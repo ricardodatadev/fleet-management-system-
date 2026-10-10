@@ -36,6 +36,12 @@ x-laravel-env: &laravel-env
   CORS_ALLOWED_ORIGINS: ${CORS_ALLOWED_ORIGINS:-}
   PYTHON_SERVICE_URL: ${PYTHON_SERVICE_URL:-http://python:8000}
   LARAVEL_INTERNAL_URL: ${LARAVEL_INTERNAL_URL:-http://nginx}
+  # Seeders (F1-17): sem padrão de senha; vazio → o db:seed falha com mensagem clara.
+  SEED_ADMIN_USERNAME: ${SEED_ADMIN_USERNAME:-}
+  SEED_ADMIN_EMAIL: ${SEED_ADMIN_EMAIL:-}
+  SEED_ADMIN_PASSWORD: ${SEED_ADMIN_PASSWORD:-}
+  SEED_ADMIN_NAME: ${SEED_ADMIN_NAME:-}
+  SEED_DEMO_PASSWORD: ${SEED_DEMO_PASSWORD:-}
 
 services:
   db:

@@ -21,8 +21,9 @@ init:
 migrate:
 	docker compose exec app php artisan migrate --force
 
+# Parametros globais + admin (todos os ambientes) + demonstracao (so local/testing). Idempotente.
 seed:
-	@echo "ERRO: 'make seed' ainda nao implementado (disponivel a partir de F1-17 (seeders))." >&2; exit 1
+	docker compose exec -T app php artisan db:seed --force
 
 # Cria o banco <POSTGRES_DB>_test (idempotente) — necessário em volumes criados antes da F1-06.
 test-db:

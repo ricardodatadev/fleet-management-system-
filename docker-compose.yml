@@ -111,6 +111,9 @@ services:
 
   worker:
     image: ${APP_SLUG:-gof}/app:local
+    # A imagem é construída pelo serviço app; nunca tentar o registro (num clone limpo ela ainda não existe
+    # quando o compose resolve as imagens, e o pull de <slug>/app:local seria negado).
+    pull_policy: never
     restart: unless-stopped
     command: ["php", "artisan", "horizon"]
     environment: *laravel-env
@@ -136,6 +139,7 @@ services:
   # continua só com o Horizon. Mesma imagem e ambiente do app, sem porta, usuário não-root da imagem.
   scheduler:
     image: ${APP_SLUG:-gof}/app:local
+    pull_policy: never  # imagem construída pelo serviço app (ver worker)
     restart: unless-stopped
     command: ["php", "artisan", "schedule:work"]
     environment: *laravel-env

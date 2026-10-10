@@ -28,6 +28,12 @@ if "schedule-heartbeat" not in json.dumps(sch.get("healthcheck", {})):
     fail.append("scheduler sem healthcheck por batimento")
 if sch.get("image") != services["app"].get("image"):
     fail.append("scheduler com imagem diferente do app")
+# serviço que só reusa a imagem local de outro (sem build próprio) não pode tentar o registro
+local_images = {s.get("image") for s in services.values() if s.get("build")}
+for name, s in services.items():
+    image = s.get("image")
+    if not s.get("build") and image in local_images and s.get("pull_policy") != "never":
+        fail.append(name + " usa a imagem local " + str(image) + " sem build e sem pull_policy: never")
 if "schedule" in json.dumps(services["worker"].get("command")):
     fail.append("worker roda o schedule (deve rodar só o Horizon)")
 for line in fail:

@@ -46,3 +46,15 @@ USER www-data
 EXPOSE 9000
 ENTRYPOINT ["entrypoint.sh"]
 CMD ["php-fpm"]
+
+# ---- dev/teste: app + pcov (cobertura do Pest). Só o docker-compose.override.yml usa este alvo; a imagem
+# de produção (alvo app) não leva o pcov.
+FROM app AS dev
+USER root
+RUN apk add --no-cache --virtual .build-deps $PHPIZE_DEPS \
+    && pecl install pcov-1.0.12 \
+    && docker-php-ext-enable pcov \
+    && apk del .build-deps \
+    && rm -rf /tmp/pear \
+    && printf 'pcov.enabled=1\npcov.directory=/var/www/html/app\n' > /usr/local/etc/php/conf.d/zz-pcov.ini
+USER www-data

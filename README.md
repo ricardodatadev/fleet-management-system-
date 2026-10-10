@@ -12,7 +12,8 @@ Monólito modular Laravel + 2 serviços, tudo em Docker Compose (projeto = `APP_
 |---|---|---|
 | nginx | Único ponto público; serve a SPA, `/api/` → PHP-FPM, `/socket.io/` → node | `docker/nginx` |
 | app | Laravel (PHP-FPM) | `backend`, `docker/laravel` |
-| worker | Laravel Horizon | `backend` |
+| worker | Laravel Horizon (filas) | `backend` |
+| scheduler | Agendador do Laravel (`schedule:work`): prune diário de tokens e batimento do healthcheck | `backend` |
 | db | PostgreSQL 16 + pgvector | `docker/postgres` |
 | redis | Redis 7 (filas, cache, sessão, pub/sub) | — |
 | python | FastAPI (`/health`; interno) | `services/python-ai` |
@@ -31,7 +32,7 @@ bash scripts/smoke.sh     # verificação ponta a ponta (F1-20)
 
 Acesse `http://localhost:${WEB_HTTP_PORT}/` (padrão 80; use ex. 8080 se a porta 80 estiver ocupada ou sem privilégio). Health do nginx: `/healthz`. Documentação da API: `/api/documentation` apenas com `L5_SWAGGER_ENABLED=true`.
 
-Alvos do Makefile: `up, down, init, migrate, seed, test, test-db, openapi, openapi-lint, brand, lint, ci, vendor-reset`. `lint` = guarda de marca + teste da guarda + Pint (Larastan chega na F1-19); `ci` = `lint` + `test`; `seed` é stub até a F1-17.
+Alvos do Makefile: `up, down, init, migrate, seed, test, test-db, test-python, test-node, openapi, openapi-lint, brand, lint, ci, vendor-reset`. `lint` = guarda de marca + teste da guarda + teste do compose + Pint + Larastan (nível 5, sem baseline). `test` = Pest com cobertura (pcov, imagem de dev) e mínimo de 80% em `app/`. `ci` = `lint` + `test` + pytest + Vitest do node: é o gate local. O workflow `.github/workflows/ci.yml` faz o mesmo numa máquina limpa, mas está inativo (só disparo manual).
 
 ## Desenvolvimento
 

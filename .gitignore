@@ -31,10 +31,15 @@ __pycache__/
 
 # Laravel
 backend/storage/*.key
-backend/storage/logs/
+# logs, sessões e views compiladas: só o conteúdo é ignorado; o .gitignore de cada pasta é versionado
+# para a pasta existir num clone limpo (o bind mount do dev esconde as pastas que a imagem cria).
+backend/storage/logs/*
+!backend/storage/logs/.gitignore
 backend/storage/framework/cache/data/
-backend/storage/framework/sessions/
-backend/storage/framework/views/
+backend/storage/framework/sessions/*
+!backend/storage/framework/sessions/.gitignore
+backend/storage/framework/views/*
+!backend/storage/framework/views/.gitignore
 backend/bootstrap/cache/*.php
 backend/.phpunit.cache/
 backend/public/storage

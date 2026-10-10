@@ -22,7 +22,6 @@ use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Gate;
 use Illuminate\Validation\Rule;
 use Illuminate\Validation\ValidationException;
-use Laravel\Sanctum\PersonalAccessToken;
 use OpenApi\Attributes as OA;
 
 #[OA\Schema(
@@ -222,8 +221,9 @@ class UserController extends Controller
             if ($deactivates || ($passwordChanged && ! $self)) {
                 $revoked = $user->tokens()->delete();
             } elseif ($passwordChanged) {
-                $current = $actor->currentAccessToken();
-                $revoked = $user->tokens()->when($current instanceof PersonalAccessToken, fn ($q) => $q->whereKeyNot($current->getKey()))->delete();
+                // id do token atual; um TransientToken (ex.: Sanctum::actingAs) não tem id e nada é poupado
+                $currentId = data_get($actor->currentAccessToken(), 'id');
+                $revoked = $user->tokens()->when($currentId !== null, fn ($q) => $q->whereKeyNot($currentId))->delete();
             }
             if ($passwordChanged) {
                 // A senha nunca entra no audit (updated ignora password): registra o evento com a revogação.

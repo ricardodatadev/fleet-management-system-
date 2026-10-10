@@ -39,7 +39,7 @@ class DemoSeeder extends Seeder
     public function run(): void
     {
         if (! app()->environment(self::ENVIRONMENTS)) {
-            $this->command?->warn('DemoSeeder recusado: só roda em '.implode('/', self::ENVIRONMENTS).'.');
+            $this->command->warn('DemoSeeder recusado: só roda em '.implode('/', self::ENVIRONMENTS).'.');
 
             return;
         }
@@ -53,7 +53,7 @@ class DemoSeeder extends Seeder
             $this->equipments([$main, $north], $costCenters, $families, $employees);
         });
 
-        $this->command?->info('Dados de demonstração prontos (prefixo DEMO; registros existentes mantidos).');
+        $this->command->info('Dados de demonstração prontos (prefixo DEMO; registros existentes mantidos).');
     }
 
     private function demoPassword(): string

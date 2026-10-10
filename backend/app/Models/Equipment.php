@@ -4,6 +4,7 @@ namespace App\Models;
 
 use App\Models\Concerns\BranchScoped;
 use App\Models\Concerns\HasNormalizedCode;
+use App\Models\Contracts\CrudModel;
 use App\Support\Audit\Auditable;
 use Database\Factories\EquipmentFactory;
 use Illuminate\Database\Eloquent\Casts\Attribute;
@@ -11,12 +12,40 @@ use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\SoftDeletes;
+use Illuminate\Support\Carbon;
 
 /**
  * Equipamento/frota (spec C.6). Escopo de filial: não-admin vê só a própria filial. Criticidade efetiva
  * = override ?? família. Odômetro e horímetro são valores manuais (sem telemetria na Fase 1).
+ *
+ * @property int $id
+ * @property string $code
+ * @property string $name
+ * @property int $family_id
+ * @property int $branch_id
+ * @property int $cost_center_id
+ * @property int|null $responsible_employee_id
+ * @property string|null $plate
+ * @property string|null $serial_number
+ * @property string|null $manufacturer
+ * @property string|null $model
+ * @property int|null $year
+ * @property string $status
+ * @property string|null $criticality_override
+ * @property float $odometer_km
+ * @property float $hour_meter
+ * @property Carbon|null $acquisition_date
+ * @property float|null $acquisition_value
+ * @property string|null $notes
+ * @property-read EquipmentFamily|null $family
+ * @property-read Branch|null $branch
+ * @property-read CostCenter|null $costCenter
+ * @property-read Employee|null $responsibleEmployee
+ * @property Carbon|null $created_at
+ * @property Carbon|null $updated_at
+ * @property Carbon|null $deleted_at
  */
-class Equipment extends Model
+class Equipment extends Model implements CrudModel
 {
     use Auditable, BranchScoped, HasNormalizedCode, SoftDeletes;
 

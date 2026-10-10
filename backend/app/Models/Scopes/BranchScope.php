@@ -37,7 +37,8 @@ class BranchScope implements Scope
     /** Mesmo critério para um registro já carregado (usado pelas policies). Model sem BranchScoped: sem escopo. */
     public static function allows(User $user, Model $model): bool
     {
-        if ($user->isAdmin() || ! in_array(BranchScoped::class, class_uses_recursive($model), true)) {
+        // Só models com o trait BranchScoped (é ele que define branchScopeIncludesNull) têm escopo.
+        if ($user->isAdmin() || ! in_array(BranchScoped::class, class_uses_recursive($model), true) || ! method_exists($model, 'branchScopeIncludesNull')) {
             return true;
         }
         $branchId = $model->getAttribute('branch_id');

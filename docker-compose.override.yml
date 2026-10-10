@@ -23,7 +23,14 @@ x-laravel-dev: &laravel-dev
 services:
   app:
     <<: *laravel-dev
+    # alvo dev da imagem: app + pcov (cobertura); worker e scheduler usam a mesma imagem
+    build:
+      context: .
+      dockerfile: docker/laravel/Dockerfile
+      target: dev
   worker:
+    <<: *laravel-dev
+  scheduler:
     <<: *laravel-dev
   db:
     ports:

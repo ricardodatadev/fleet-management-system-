@@ -4,10 +4,30 @@ namespace App\Models;
 
 use App\Exceptions\AuditImmutableException;
 use App\Models\Builders\AuditLogBuilder;
+use Carbon\CarbonImmutable;
 use Illuminate\Database\Eloquent\Model;
 
 /**
  * Registro de auditoria: somente leitura após criado (escrita só via AuditService).
+ *
+ * @property int $id
+ * @property string $uuid
+ * @property CarbonImmutable $event_at
+ * @property string $source
+ * @property int|null $actor_id
+ * @property string|null $actor_name
+ * @property string|null $actor_role
+ * @property string $action
+ * @property string|null $auditable_type
+ * @property int|null $auditable_id
+ * @property array<string, mixed>|null $old_values
+ * @property array<string, mixed>|null $new_values
+ * @property array<string, mixed>|null $metadata
+ * @property string|null $ip
+ * @property string|null $user_agent
+ * @property string|null $request_id
+ * @property string $prev_hash
+ * @property string $hash
  */
 class AuditLog extends Model
 {

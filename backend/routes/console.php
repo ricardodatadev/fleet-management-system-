@@ -1,8 +1,15 @@
 <?php
 
-use Illuminate\Foundation\Inspiring;
-use Illuminate\Support\Facades\Artisan;
+use App\Console\Commands\SchedulerHeartbeat;
+use Illuminate\Support\Facades\Schedule;
 
-Artisan::command('inspire', function () {
-    $this->comment(Inspiring::quote());
-})->purpose('Display an inspiring quote');
+/*
+ * Agendamentos (F1-19). Executados pelo serviço `scheduler` do compose (`php artisan schedule:work`); o
+ * worker roda só o Horizon. Todas as tarefas com withoutOverlapping().
+ */
+
+// Batimento do scheduler: o healthcheck do serviço falha se o arquivo ficar mais de 150 s sem atualizar.
+Schedule::command(SchedulerHeartbeat::class)->everyMinute()->withoutOverlapping();
+
+// Tokens Sanctum expirados há mais de 24 h são apagados (pendência da F1-09).
+Schedule::command('sanctum:prune-expired --hours=24')->daily()->withoutOverlapping();

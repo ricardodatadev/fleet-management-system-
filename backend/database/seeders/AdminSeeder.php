@@ -32,7 +32,7 @@ class AdminSeeder extends Seeder
         $email = mb_strtolower(trim($config['email']));
 
         if (User::withTrashed()->where('username', $username)->exists()) {
-            $this->command?->info("Administrador '{$username}' já existe: mantido (a senha não é alterada).");
+            $this->command->info("Administrador '{$username}' já existe: mantido (a senha não é alterada).");
 
             return;
         }
@@ -57,6 +57,6 @@ class AdminSeeder extends Seeder
             'name' => $config['name'], 'username' => $username, 'email' => $email,
             'password' => $config['password'], 'role' => Role::Admin, 'branch_id' => null, 'is_active' => true,
         ]));
-        $this->command?->info("Administrador '{$username}' criado.");
+        $this->command->info("Administrador '{$username}' criado.");
     }
 }

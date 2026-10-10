@@ -24,8 +24,9 @@ final class AuditContext
         if (! app()->bound('request')) {
             return null;
         }
+        /** @var Request $request */
         $request = app('request');
 
-        return $request instanceof Request && $request->attributes->has('request_id') ? $request : null;
+        return $request->attributes->has('request_id') ? $request : null;
     }
 }

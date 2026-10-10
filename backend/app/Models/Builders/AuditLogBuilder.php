@@ -3,9 +3,14 @@
 namespace App\Models\Builders;
 
 use App\Exceptions\AuditImmutableException;
+use App\Models\AuditLog;
 use Illuminate\Database\Eloquent\Builder;
 
-/** Bloqueia UPDATE/DELETE em massa via Eloquent (o banco também bloqueia por trigger). */
+/**
+ * Bloqueia UPDATE/DELETE em massa via Eloquent (o banco também bloqueia por trigger).
+ *
+ * @extends Builder<AuditLog>
+ */
 class AuditLogBuilder extends Builder
 {
     public function update(array $values): int

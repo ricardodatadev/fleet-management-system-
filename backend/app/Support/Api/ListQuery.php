@@ -2,10 +2,11 @@
 
 namespace App\Support\Api;
 
-use Illuminate\Contracts\Pagination\LengthAwarePaginator;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\SoftDeletes;
+use Illuminate\Database\Eloquent\SoftDeletingScope;
 use Illuminate\Http\Request;
+use Illuminate\Pagination\LengthAwarePaginator;
 use Illuminate\Support\Facades\Gate;
 use Illuminate\Support\Facades\Validator;
 
@@ -55,8 +56,10 @@ class ListQuery
     private function __construct(private readonly Request $request, private readonly Builder $query) {}
 
     /**
-     * @param  Builder<TModel>  $query
-     * @return self<TModel>
+     * @template TFor of \Illuminate\Database\Eloquent\Model
+     *
+     * @param  Builder<TFor>  $query
+     * @return self<TFor>
      */
     public static function for(Request $request, Builder $query): self
     {
@@ -116,7 +119,7 @@ class ListQuery
 
         if (! empty($input['with_trashed'])) {
             Gate::authorize('viewTrashed', $model::class);
-            $query->withTrashed(); // macro do SoftDeletes (models de cadastro)
+            $query->withoutGlobalScope(SoftDeletingScope::class); // = withTrashed() do SoftDeletes
         }
 
         foreach ($this->filterRules as $name => $rules) {

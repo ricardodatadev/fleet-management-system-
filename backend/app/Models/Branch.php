@@ -3,17 +3,30 @@
 namespace App\Models;
 
 use App\Models\Concerns\HasNormalizedCode;
+use App\Models\Contracts\CrudModel;
 use App\Support\Audit\Auditable;
 use Database\Factories\BranchFactory;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Database\Eloquent\SoftDeletes;
+use Illuminate\Support\Carbon;
 
 /**
  * Unidade/Filial (spec C.2). Sem escopo de filial: lookup visível a quem tem branches.view.
+ *
+ * @property int $id
+ * @property string $code
+ * @property string $name
+ * @property string $type
+ * @property string|null $city
+ * @property string|null $state
+ * @property bool $is_active
+ * @property Carbon|null $created_at
+ * @property Carbon|null $updated_at
+ * @property Carbon|null $deleted_at
  */
-class Branch extends Model
+class Branch extends Model implements CrudModel
 {
     use Auditable, HasNormalizedCode, SoftDeletes;
 

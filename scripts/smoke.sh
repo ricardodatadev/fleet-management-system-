@@ -129,6 +129,25 @@ else
   record FAIL "health da API (nginx)" "$H"
 fi
 
+# 7b. SPA pelo nginx: index.html do build (title = APP_NAME do .env, CSP) e fallback da SPA (try_files)
+APP_NAME_ENV="$(sed -n 's/^APP_NAME=//p' "$CLONE/.env" | tail -n 1 | tr -d "\"'")"
+ROOT_HTML="$(curl -s -D "$WORK/root.h" "$BASE/")"
+ROOT_STATUS="$(head -n 1 "$WORK/root.h" | awk '{print $2}')"
+CSP="$(grep -i '^content-security-policy:' "$WORK/root.h" | cut -d' ' -f2- | tr -d '\r')"
+TITLE="$(echo "$ROOT_HTML" | sed -n 's:.*<title>\(.*\)</title>.*:\1:p' | head -n 1)"
+if [ "$ROOT_STATUS" = 200 ] && [ -n "$APP_NAME_ENV" ] && [ "$TITLE" = "$APP_NAME_ENV" ] && [ -n "$CSP" ] \
+  && echo "$ROOT_HTML" | grep -q 'src="/assets/' && ! echo "$ROOT_HTML" | grep -q '/src/main'; then
+  record PASS "SPA: index.html do build" "GET / → 200, <title> = APP_NAME do .env ($TITLE), bundle em /assets/, CSP: $CSP"
+else
+  record FAIL "SPA: index.html do build" "status $ROOT_STATUS, title [$TITLE] vs APP_NAME [$APP_NAME_ENV], CSP [$CSP]"
+fi
+DEEP_STATUS="$(curl -s -o "$WORK/deep.html" -w '%{http_code}' "$BASE/ativos/equipamentos")"
+if [ "$DEEP_STATUS" = 200 ] && [ -n "$ROOT_HTML" ] && [ "$(cat "$WORK/deep.html")" = "$ROOT_HTML" ]; then
+  record PASS "SPA: rota profunda (try_files)" "GET /ativos/equipamentos → 200 com o mesmo index.html"
+else
+  record FAIL "SPA: rota profunda (try_files)" "status $DEEP_STATUS ou corpo diferente do index.html"
+fi
+
 # 8. login por username
 LOGIN="$(curl -s "${J[@]}" -X POST "$API/auth/login" -d "{\"username\":\"  ${ADMIN_USER^^} \",\"password\":\"$ADMIN_PASS\",\"device_name\":\"smoke\"}")"
 TOKEN="$(echo "$LOGIN" | json 'd["data"]["token"]' 2>/dev/null)"

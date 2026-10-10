@@ -11,15 +11,20 @@ Gerado em 2026-10-10, na branch `feat/f1-20-smoke-evidence-docs` (base develop `
 
 | Item | Evidência |
 |---|---|
+| 1. Tarefas | Checklist da fase (`.maestri/specs/fase-1/checklist.md`, do planejamento, fora do git; fonte única do status): F1-01..31 e F1-33..36 com `[x]` (hash do merge, data, push ok), cada uma auditada pelo Claudão e testada pelo usuário; F1-32 `[~]` adiada para a Fase 2 (decisão Q1). A F1-20 fecha a lista ao entrar em `develop` |
 | 2. Execução do zero | Smoke E2E abaixo: clone limpo + `.env` do `.env.example` + só o compose base, sai 0 |
 | 3. Containers | `docker compose ps` (8 healthy), `docker compose -f docker-compose.yml config` (só nginx com `ports`), `\dx` (vector 0.8.1); smoke passos 2, 5 e 6 |
 | 4. Segurança de configuração | Varredura de segredos e `.env` ignorado; compose sem `version` e sem credencial literal; tags fixas; smoke passos 15 (APP_DEBUG=false não vaza) e 16 (não-root) |
 | 5. API | `EnvelopeTest` (401/403/404/405/409/422/429/500 no envelope, 500 sem trace com APP_DEBUG=false), `OpenApiTest` (OpenAPI 3.0.x, 100% das rotas `api/v1` documentadas, sem rota inexistente, JSON versionado igual ao gerado) e `make openapi-lint` (0 erros) |
+| 6. RBAC | Matriz da seção E em 2 camadas: `PermissionMatrixTest` (Gates: cada perfil O/M/L/A × cada linha da matriz, transcrita literalmente e independente do `config/rbac.php`, que tem de ser exatamente igual) e as rotas: `RouteAuthorizationSweepTest` varre toda rota `api/v1` e exige `auth:sanctum` + `can:<permissão da matriz>` (fora a allowlist pública), com prova negativa de que uma rota sem permissão reprova; mais os 403 por perfil nos testes HTTP de cada CRUD. Escopo de filial: `BranchScopeTest` (L/M/O só a própria filial e 404 na outra, admin vê tudo, 403 antes do 404, policy por instância com o mesmo escopo) |
 | 7. Audit trail | `AuditTrailTest`, `AuditImmutabilityTest` (UPDATE/DELETE/TRUNCATE via SQL cru falham), `AuditVerifyTest`; `audit:verify` = 0 no dev e no smoke (passos 10 e 11) |
+| 8. Settings | `SettingsTest`: as 4 chaves RN-001..004 no registry (RN-002 placeholder, D14), precedência family > branch > global > default com a origem, unicidade por escopo, global não removível; "sem motor de regra" é um teste: as chaves e o `SettingsService` só são usados pela API de parâmetros. Tela: Painel de Parâmetros (F1-28, seção Frontend) |
 | 9. Frontend via nginx | Seção Frontend abaixo; no smoke, a SPA e a API saem pelo mesmo nginx (único serviço publicado) |
 | 10. Node/Python | Smoke passos 12 (Socket.io pela porta pública do nginx: válido → `session:ready`; sem token e inválido → `unauthorized`), 13 e 14 (`/health`); Vitest do node 17/17 e pytest 3/3 |
 | 11. Qualidade (backend) | `make ci` abaixo: Pint, Larastan nível 5, Pest 696 testes com 96,6% de cobertura, pytest, Vitest, openapi-lint |
 | 12. Documentação | README (quickstart, arquitetura, alvos, troubleshooting), [ADR-0001](adr/0001-desvios-spec.md) (D1–D17 + versões reais reconferidas na F1-20), [`docs/renaming.md`](renaming.md), este arquivo |
+| 13. Higiene git (D16) | Branches `feat/f1-XX-slug` saem de `develop` e entram por `merge --no-ff` feito pelo Escrivão, com `git push origin develop` (nunca force) só após a aprovação do Claudão e o OK do usuário ao roteiro de teste (registrado no checklist como "push ok"); commits convencionais, sem menção a ferramentas de IA nem linhas de co-autoria. `main` + tag `v0.1.0-phase1` só depois da auditoria final e do OK do usuário |
+| 14. Fora de escopo | O banco da fase tem só as 12 migrations da F1 (tabelas `audit_logs`, `branches`, `users`, `personal_access_tokens`, `cost_centers`, `equipment_families`, `employees`, `password_reset_tokens`, `equipments` e `settings`, mais 2 alterações em `users` para o username); nenhuma tabela, rota ou tela de OS, preventiva, estoque, pneus, checklist, solver, RAG, BI ou telemetria. A `RouteAuthorizationSweepTest` e o `OpenApiTest` amarram as rotas existentes às documentadas; os itens futuros da sidebar ficam desabilitados ("Em breve") |
 | 15. Nome do sistema | `check-brand: ok` (primeira etapa do `make ci`) |
 
 ### `make ci` (gate local)

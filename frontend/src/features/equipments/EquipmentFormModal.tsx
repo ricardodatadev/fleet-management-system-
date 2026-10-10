@@ -1,5 +1,5 @@
 import { useMutation, useQueryClient } from '@tanstack/react-query';
-import { useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { useForm, useWatch } from 'react-hook-form';
 import type { FieldPath } from 'react-hook-form';
 import { ApiError, GENERIC_ERROR_MESSAGE, api } from '@/api';
@@ -61,12 +61,17 @@ export function EquipmentFormModal({ row, onClose }: EquipmentFormModalProps) {
   const queryClient = useQueryClient();
   const [tab, setTab] = useState<Tab>('gerais');
   const [formError, setFormError] = useState<string | null>(null);
+  // Campo a focar depois que a aba dele estiver visível (no browser, a aba inativa é display:none
+  // e focar antes do commit falha em silêncio).
+  const pendingFocus = useRef<Field | null>(null);
 
   const form = useForm<EquipmentFormValues, unknown, EquipmentPayload>({
     defaultValues: equipmentDefaults(row),
     resolver: zodResolver(equipmentSchema()),
     mode: 'onSubmit',
     reValidateMode: 'onChange',
+    // O foco no erro é nosso (sabe das abas); o do RHF focaria campo de aba escondida.
+    shouldFocusError: false,
   });
   const { control, register, handleSubmit, formState, setError, setFocus, setValue } = form;
   const errors = formState.errors;
@@ -94,14 +99,25 @@ export function EquipmentFormModal({ row, onClose }: EquipmentFormModalProps) {
       : null,
   );
 
-  /** Leva o usuário à aba do primeiro campo com erro e foca o campo. */
+  /** Leva o usuário à aba do primeiro campo com erro; o foco vem no efeito abaixo. */
   function revealFirstError(fields: Field[]) {
     const first = FORM_FIELDS.find((field) => fields.includes(field));
     if (!first) return;
+    if (FIELD_TAB[first] === tab) {
+      setFocus(first); // a aba já está visível
+      return;
+    }
+    pendingFocus.current = first;
     setTab(FIELD_TAB[first]);
-    // Espera a aba aparecer antes de focar.
-    setTimeout(() => setFocus(first), 0);
   }
+
+  useEffect(() => {
+    const field = pendingFocus.current;
+    if (field && FIELD_TAB[field] === tab) {
+      pendingFocus.current = null;
+      setFocus(field);
+    }
+  }, [tab, setFocus]);
 
   const save = useMutation({
     mutationFn: (payload: EquipmentPayload) =>
@@ -181,7 +197,8 @@ export function EquipmentFormModal({ row, onClose }: EquipmentFormModalProps) {
       <form
         id="equipment-form"
         noValidate
-        onSubmit={handleSubmit(onValid, onInvalid)}
+        // handleSubmit dentro do evento: os callbacks mexem em ref (foco pendente), nunca no render.
+        onSubmit={(event) => void handleSubmit(onValid, onInvalid)(event)}
         className="flex flex-col gap-4"
       >
         {formError && (

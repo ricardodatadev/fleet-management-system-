@@ -1,6 +1,7 @@
-# Workflow de CI mantido no repositório porém INATIVO (só dispara manualmente) até haver remoto
-# configurado (Q7). O gate é o `make ci` local. A F1-19 completa com compose, Pest, Pint,
-# Larastan, pytest e Vitest.
+# Workflow de CI mantido no repositório porém INATIVO: só dispara manualmente (workflow_dispatch).
+# Existe remoto no GitHub, mas ativar a CI (push/pull_request) é decisão do usuário. O gate é o
+# `make ci` local; este job faz o mesmo numa máquina limpa: sobe a stack de dev (compose + override),
+# inicializa e roda lint (marca, compose, Pint, Larastan) + Pest com cobertura ≥ 80% + pytest + Vitest.
 name: ci
 
 on:
@@ -10,12 +11,32 @@ permissions:
   contents: read
 
 jobs:
-  brand:
-    name: Guarda de marca
+  ci:
+    name: make ci
     runs-on: ubuntu-24.04
+    timeout-minutes: 45
     steps:
       - uses: actions/checkout@v4
-      - name: check-brand
-        run: bash scripts/check-brand.sh
-      - name: teste da guarda
-        run: bash scripts/check-brand.test.sh
+
+      - name: .env de CI (segredos aleatórios, só para esta execução)
+        run: |
+          cp .env.example .env
+          for var in POSTGRES_PASSWORD REDIS_PASSWORD SEED_ADMIN_PASSWORD SEED_DEMO_PASSWORD; do
+            sed -i "s|^${var}=.*|${var}=Ci$(openssl rand -hex 12)A1|" .env
+          done
+          echo "HOST_UID=$(id -u)" >> "$GITHUB_ENV"
+          echo "HOST_GID=$(id -g)" >> "$GITHUB_ENV"
+
+      - name: Subir a stack e inicializar (APP_KEY + migrations)
+        run: make up init
+
+      - name: make ci
+        run: make ci
+
+      - name: Logs da stack em caso de falha
+        if: failure()
+        run: docker compose logs --no-color --tail=200
+
+      - name: Derrubar a stack
+        if: always()
+        run: docker compose down -v

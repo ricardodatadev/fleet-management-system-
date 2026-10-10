@@ -153,6 +153,14 @@ Pesquisa de 2026-10-08. Versões do backend confirmadas no packagist/`composer s
 - **Mensagens de validação (adendo da F1-14, achado no smoke da F1-30):** `lang/pt_BR/validation.php` cobre todas as regras do Laravel, com todas as variantes (um teste compara as chaves com o arquivo `en` do framework) e traduz os nomes dos campos dos cadastros em `attributes` (ex.: `preventive_lead_pct` → "percentual de pré-alerta"). As mensagens montadas fora do Validator usam `App\Support\Api\FieldMessage`. Um teste garante que nenhum 422 dos cadastros sai com chave crua ou nome técnico com sublinhado.
 - `/auth/me` devolve `employee` = `{id, registration, name, job_type, branch_id}` ou null (relação `User::employee` sem o escopo de filial). `/meta/enums` ganha `job_types` e `cnh_categories`; alias de auditoria `employee`.
 
+## Notas de implementação (F1-17 — seeders)
+
+- **`SettingsSeeder`** (todos os ambientes): cria o override global com o default do registry só nas chaves que ainda não têm global, via `SettingsService::put` (auditado como `setting_changed`); valor já alterado pelo admin é mantido.
+- **`AdminSeeder`** (todos os ambientes): `config/seed.php` lê `SEED_ADMIN_USERNAME/EMAIL/PASSWORD/NAME`; falta alguma → `SeedInputException` com a lista. Se o username já existe (inclusive excluído), nada muda, nem a senha; senão valida username (regra v1.9), e-mail e senha (política da D.2) e cria o admin sem filial. E-mail já usado por outro usuário → mensagem clara.
+- **`DemoSeeder`** (só `local`/`testing`, checado no `DatabaseSeeder` e no próprio seeder): prefixo `DEMO`, procura pelo código/username antes de criar e nunca altera um registro existente. 2 filiais, 3 centros de custo (um por filial e um sem filial), 5 famílias, 32 equipamentos (centro de custo da filial ou sem filial; responsável da mesma filial), 8 colaboradores (3 vinculados aos usuários demo da mesma filial) e 1 usuário por perfil com `SEED_DEMO_PASSWORD` (validada pela política).
+- **Compose:** as `SEED_*` passam a ser repassadas ao `app`/`worker` no compose base, com padrão vazio (sem senha padrão; vazio → o seed falha com mensagem clara). `make seed` deixou de ser stub.
+- **Validação da convivência sem tocar no banco de dev:** cópia do `gof` (`pg_dump`) num banco temporário, `db:seed` 2× → contagens iguais na 1ª e na 2ª execução e o mesmo hash das linhas pré-existentes das 6 tabelas de cadastro; a cópia foi removida em seguida.
+
 ## Notas de implementação (F1-16 — parâmetros por escopo)
 
 - **Tabela** `settings` (C.7): `scope_type` com CHECK (`global|branch|family`), CHECK `(scope_type = 'global') = (scope_id IS NULL)` e unicidade `(key, scope_type, COALESCE(scope_id, 0))` em índice único, o que vale também para o global (scope_id NULL). Índice `(scope_type, scope_id)`. Sem soft delete e sem FK polimórfica: o `scope_id` é validado na aplicação contra filiais/famílias não excluídas.

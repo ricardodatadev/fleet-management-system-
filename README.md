@@ -41,6 +41,14 @@ O `docker-compose.override.yml` (dev) monta `./backend` nos containers `app`/`wo
 
 Contrato da API: `docs/api/openapi.json` (OpenAPI 3.0, versionado), gerado dos atributos PHP (swagger-php): `make openapi` (= `composer openapi` no container). Lint: `make openapi-lint` (Redocly em container node efêmero; 0 erros, avisos justificados no ADR). Os testes Pest falham se uma rota `api/v1` não estiver documentada ou se o JSON versionado estiver desatualizado. Swagger UI: `L5_SWAGGER_ENABLED=true` no `.env` e recriar `nginx`/`app` → `/api/documentation` (com `false` a rota não existe e responde 404). A CSP do Swagger UI é própria desse location; `/` mantém `default-src 'self'`.
 
+## Dados iniciais (seeders)
+
+`make seed` (= `php artisan db:seed --force` no container) é idempotente: rodar de novo não duplica nem altera o que já existe.
+
+- **Todos os ambientes:** os 4 parâmetros globais com o default do registry (um valor já alterado pelo admin é mantido) e o administrador inicial de `SEED_ADMIN_USERNAME`/`SEED_ADMIN_EMAIL`/`SEED_ADMIN_PASSWORD` (+ `SEED_ADMIN_NAME` opcional). Sem alguma delas, o seed falha com a lista do que falta; username pela regra de usuário e senha pela política. Se o username já existir, nada muda (nem a senha).
+- **Só `local`/`testing`:** dados de demonstração com prefixo `DEMO` (2 filiais, 3 centros de custo, 5 famílias, 32 equipamentos, colaboradores) e 1 usuário por perfil (`demo.admin`, `demo.lider`, `demo.mecanico`, `demo.operador`) com a senha `SEED_DEMO_PASSWORD`. Em `production` o DemoSeeder não roda.
+- Nenhuma senha fica no código: tudo vem do `.env` (o `.env.example` traz `change-me`, que a política recusa de propósito).
+
 ## Autenticação e e-mail
 
 - **Login só por usuário (username) + senha** (`POST /api/v1/auth/login` com `{username, password, device_name}`); o username passa por trim + minúsculas no servidor. O e-mail serve apenas para a recuperação de senha.

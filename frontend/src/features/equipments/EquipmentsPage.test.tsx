@@ -4,7 +4,6 @@ import { axe } from 'jest-axe';
 import { mockAuthApi, renderApp, storeSession } from '@/test/auth';
 import { branch, mockCrudApi, mockMetaEnums } from '@/test/crud';
 import type { Role } from '@/features/auth';
-import { FORM_SOON } from './labels';
 
 type Ref = { id: number; code: string; name: string };
 const MATRIZ: Ref = { id: 1, code: 'FIL-001', name: 'Matriz' };
@@ -258,18 +257,19 @@ describe('Frotas & Equipamentos: listagem (F1-25)', () => {
     },
   );
 
-  it('Cadastrar Nova Frota e Editar estão preparados: avisam que o formulário chega em breve', async () => {
+  it('Cadastrar Nova Frota e Editar abrem o formulário por abas (F1-26)', async () => {
     mockApis();
     const user = userEvent.setup();
     await renderPage();
     await user.click(await screen.findByRole('button', { name: 'Cadastrar Nova Frota' }));
-    expect(await screen.findByText(FORM_SOON)).toBeInTheDocument();
-    expect(screen.queryByRole('dialog')).toBeNull();
+    expect(await screen.findByRole('dialog', { name: 'Cadastrar Nova Frota' })).toBeInTheDocument();
+    await user.click(screen.getByRole('button', { name: 'Cancelar' }));
+    await waitFor(() => expect(screen.queryByRole('dialog')).toBeNull());
     await user.click(
       screen.getByRole('button', { name: 'Editar CAM-001 — Caminhão basculante 01' }),
     );
-    expect(screen.getAllByText(FORM_SOON).length).toBeGreaterThanOrEqual(1);
-    expect(screen.queryByRole('dialog')).toBeNull();
+    const dialog = await screen.findByRole('dialog', { name: 'Editar frota' });
+    expect(within(dialog).getByRole('textbox', { name: /Código/ })).toHaveValue('CAM-001');
   });
 
   it('Excluir pede confirmação e remove da lista', async () => {

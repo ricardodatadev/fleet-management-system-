@@ -132,6 +132,32 @@ services:
       retries: 5
       start_period: 30s
 
+  # Agendador do Laravel (F1-19): tarefas de routes/console.php (prune de tokens, batimento). O worker
+  # continua só com o Horizon. Mesma imagem e ambiente do app, sem porta, usuário não-root da imagem.
+  scheduler:
+    image: ${APP_SLUG:-gof}/app:local
+    restart: unless-stopped
+    command: ["php", "artisan", "schedule:work"]
+    environment: *laravel-env
+    networks:
+      - internal
+    depends_on:
+      app:
+        condition: service_healthy
+      db:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    stop_signal: SIGTERM
+    stop_grace_period: 30s
+    # Saudável se o batimento (tarefa everyMinute) tiver menos de 150 s.
+    healthcheck:
+      test: ["CMD-SHELL", "f=storage/framework/schedule-heartbeat; test -f $$f && test $$(( $$(date +%s) - $$(stat -c %Y $$f) )) -lt 150"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+      start_period: 90s
+
   python:
     build:
       context: ./services/python-ai

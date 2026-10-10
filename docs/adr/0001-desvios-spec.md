@@ -35,7 +35,7 @@ CSP estrita (`default-src 'self'`) em `/`; `/api/documentation*` e `/vendor/l5-s
 
 ## Versões
 
-Pesquisa de 2026-10-08. Versões do backend confirmadas no packagist/`composer show` na F1-03; Node conforme decisão do Claudão (D11).
+Pesquisa de 2026-10-08. Versões do backend confirmadas no packagist/`composer show` na F1-03 e reconferidas com `composer show -D` e `php -v` no container `app` na F1-20 (2026-10-10); Node conforme decisão do Claudão (D11). Todas as imagens (compose base, override e `FROM` dos Dockerfiles) usam tag exata.
 
 | Componente | Registro atual | Confirmação |
 |---|---|---|
@@ -55,7 +55,9 @@ Pesquisa de 2026-10-08. Versões do backend confirmadas no packagist/`composer s
 | Python (F1-04) | `python:3.12.15-slim`; FastAPI 0.143.0, Uvicorn 0.54.0 (dependências transitivas pinadas em `requirements.txt`); pytest 9.1.1, httpx 0.28.1 em `requirements-dev.txt` | confirmado (PyPI) |
 | PostgreSQL 16 + pgvector | `pgvector/pgvector:0.8.1-pg16` (F1-02) | fixado |
 | Redis 7 | `redis:7.4.6-alpine` (F1-02) | fixado |
-| Python 3.12, React 18 | conforme spec | tags exatas a fixar em F1-04/F1-21 |
+| Frontend (F1-21, ADR-0002) | React 18.3.1, Vite 8.3.4, TypeScript 5.9.3, Tailwind 4.3.3, TanStack Query 5.104.1, Vitest 5.0.3; build em `node:24.21.0-alpine` | confirmado (npm; versões exatas + `package-lock.json`) |
+| Mailpit (só override) | `axllent/mailpit:v1.31.4` (F1-34) | fixado |
+| Lint da OpenAPI | `@redocly/cli@2.60.0` em `node:24.21.0-alpine` (`make openapi-lint`, no `make ci` desde a F1-20) | fixado |
 
 ## Pendências de decisão registradas
 
@@ -216,3 +218,9 @@ Pesquisa de 2026-10-08. Versões do backend confirmadas no packagist/`composer s
 - **Infra:** `name: ${APP_SLUG:-…}` no compose, imagens `${APP_SLUG:-…}/<svc>:local`, rede `internal` e volumes sem `name:` (prefixo do projeto). As três variáveis vão para `app`, `worker`, `python`, `node` e como build args do nginx (o `vite.config.ts` mapeia `APP_*` → `VITE_APP_*`). No override, o `frontend` recebe `APP_*` vazios por padrão, caindo nos defaults do `brand.ts`. `create-test-db.sh` cria `${POSTGRES_DB}_test`; o `backend/phpunit.xml` força esse nome como literal (o XML não interpola) e por isso está na allowlist. O Makefile lê o slug do `.env` (`vendor-reset`).
 - **Serviços:** título do FastAPI = `${APP_NAME} python-ai`; `package.json` do node-realtime = `<slug>-node-realtime`.
 - **Guarda:** `scripts/check-brand.sh` lê os três valores do `.env.example` e varre os arquivos versionados: nome curto por palavra inteira com caixa, nome completo exato, slug por palavra inteira sem caixa (pega `<slug>_`, `<slug>-`, `<slug>/`, `<slug>.`). Fora da allowlist, sai 1. O nome anterior (padrão montado sem o literal) só é aceito na linha D17 deste ADR. Também falha se uma entrada da allowlist não existir mais. `scripts/check-brand.test.sh` cobre os casos negativos (slug, nome curto, nome completo e nome antigo injetados fora da allowlist → exit ≠ 0) e o positivo. Ligada em `make brand`/`make lint`/`make ci` e no workflow inativo `.github/workflows/ci.yml` (`workflow_dispatch`, completado na F1-19).
+
+## Notas de implementação (F1-20 — smoke E2E, evidências e docs)
+
+- **`scripts/smoke.sh`** (também `make smoke`): `git clone` do HEAD num diretório temporário, `.env` a partir do `.env.example` com segredos aleatórios, `APP_ENV=production` e `APP_DEBUG=false`, só o compose base (o de produção), num projeto do compose próprio (`<slug>smoke<pid>`) e com o nginx numa porta livre do host. Não toca na stack nem no banco de dev. Verifica, nesta ordem: os 8 serviços `healthy`; `migrate`/`db:seed`; batimento do `scheduler` (< 150 s) e o prune agendado; `pgvector`; só o nginx publicando porta (na config e nos containers em execução); health da API pelo nginx; login **por username** (com caixa mista e espaços); criação de filial, centro de custo, família e equipamento pela API; os eventos correspondentes em `/audit-logs`; `audit:verify` = 0; handshake Socket.io pela porta pública do nginx (token válido → `session:ready`; sem token e token inválido → `unauthorized`); `/health` do python e do node; erro 404 no envelope sem trace; uid ≠ 0 nos containers de aplicação. Imprime uma tabela PASS/FAIL e sai 0 só com tudo PASS. No fim remove containers, volumes, rede, imagens do projeto e o clone (`SMOKE_KEEP=1` mantém a stack para inspeção).
+- **Gate:** `make ci` passa a incluir `openapi-lint` (gate I.5). Os 2 avisos do Redocly continuam aceitos: `info.license.url` ausente e `/health` sem resposta 4xx.
+- **Fixture de teste:** `UserFactory::PASSWORD` é a senha das factories (só testes; nunca usada no seed nem em ambiente real) e é o único literal de senha que a varredura de segredos encontra.

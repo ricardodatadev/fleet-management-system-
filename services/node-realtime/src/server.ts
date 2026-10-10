@@ -12,7 +12,7 @@ export interface ServerDeps {
   healthTimeoutMs?: number;
   /** Base interna do Laravel para validar o token do handshake (LARAVEL_INTERNAL_URL). */
   laravelUrl?: string;
-  /** Timeout da validação do token; padrão 2 s (AUTH_TIMEOUT_MS). */
+  /** Timeout da validação do token; padrão 1,8 s (AUTH_TIMEOUT_MS). */
   authTimeoutMs?: number;
 }
 

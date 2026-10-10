@@ -2,7 +2,7 @@ import { createServer, type IncomingMessage, type Server as HttpServer, type Ser
 import type { AddressInfo } from 'node:net';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { io as client, type Socket } from 'socket.io-client';
-import { roomsFor, type SessionUser } from '../src/auth.js';
+import { AUTH_TIMEOUT_MS, roomsFor, type SessionUser } from '../src/auth.js';
 import { buildServer } from '../src/server.js';
 
 /*
@@ -132,7 +132,7 @@ describe('handshake Socket.io autenticado (F1-18)', () => {
     expect(seenAuth).toHaveLength(1);
   });
 
-  it('Laravel lento → recusa (fail-closed) em ≤ 2 s', async () => {
+  it('Laravel lento → recusa (fail-closed) em ≤ 2 s no cliente (timeout de 1,8 s)', async () => {
     const { port } = await start();
 
     const t0 = performance.now();
@@ -140,8 +140,8 @@ describe('handshake Socket.io autenticado (F1-18)', () => {
     const elapsed = performance.now() - t0;
 
     expect(outcome).toEqual({ kind: 'error', message: 'unauthorized', data: undefined });
-    expect(elapsed).toBeGreaterThanOrEqual(1900);
-    expect(elapsed).toBeLessThan(2500);
+    expect(elapsed).toBeGreaterThanOrEqual(AUTH_TIMEOUT_MS - 100);
+    expect(elapsed).toBeLessThanOrEqual(2000);
   }, 10_000);
 
   it('Laravel fora do ar → recusa na hora (fail-closed)', async () => {

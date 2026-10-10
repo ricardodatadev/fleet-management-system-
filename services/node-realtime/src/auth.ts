@@ -17,7 +17,11 @@ export interface AuthOptions {
   fetchImpl?: typeof fetch;
 }
 
-export const AUTH_TIMEOUT_MS = 2000;
+/**
+ * Timeout da consulta ao /auth/me. 1,8 s para a recusa chegar ao CLIENTE em ≤ 2 s (CA da F1-18), já
+ * contando o handshake e a ida e volta do connect_error.
+ */
+export const AUTH_TIMEOUT_MS = 1800;
 
 /** Único erro exposto ao cliente: nada sobre o motivo nem eco do token. */
 export const UNAUTHORIZED = 'unauthorized';
@@ -27,7 +31,7 @@ const MAX_TOKEN_LENGTH = 512;
 
 /**
  * Handshake autenticado (F1-18): lê `handshake.auth.token`, valida com GET /api/v1/auth/me (Bearer,
- * timeout de 2 s) e, se ok, guarda o usuário em `socket.data.user`, entra nas salas `user:{id}`,
+ * timeout de 1,8 s) e, se ok, guarda o usuário em `socket.data.user`, entra nas salas `user:{id}`,
  * `role:{role}` e `branch:{id}` (só quando o usuário tem filial; admin sem filial não entra em sala de
  * filial) e emite `session:ready`. Qualquer falha (sem token, 401/403, resposta inválida, timeout,
  * Laravel fora) → `connect_error` com a mensagem `unauthorized`. O token nunca é logado nem ecoado.

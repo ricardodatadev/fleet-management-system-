@@ -43,7 +43,7 @@ Contrato da API: `docs/api/openapi.json` (OpenAPI 3.0, versionado), gerado dos a
 
 ## Tempo real (Socket.io)
 
-O cliente conecta em `/socket.io/` na mesma origem (o nginx faz o upgrade para WebSocket) enviando o token da API em `auth: { token }`. O node valida o token com `GET ${LARAVEL_INTERNAL_URL}/api/v1/auth/me` (timeout de 2 s): se ok, o socket entra nas salas `user:{id}`, `role:{perfil}` e `branch:{id}` (só quando o usuário tem filial; admin sem filial não entra em sala de filial) e recebe `session:ready` com o usuário. Sem token, token inválido ou revogado, Laravel fora ou lento → `connect_error` com a mensagem `unauthorized` (fail-closed). O token não é logado. Verificação manual: `services/node-realtime/scripts/handshake-check.mjs` (instruções no próprio arquivo).
+O cliente conecta em `/socket.io/` na mesma origem (o nginx faz o upgrade para WebSocket) enviando o token da API em `auth: { token }`. O node valida o token com `GET ${LARAVEL_INTERNAL_URL}/api/v1/auth/me` (timeout de 1,8 s, para a recusa chegar ao cliente em ≤ 2 s): se ok, o socket entra nas salas `user:{id}`, `role:{perfil}` e `branch:{id}` (só quando o usuário tem filial; admin sem filial não entra em sala de filial) e recebe `session:ready` com o usuário. Sem token, token inválido ou revogado, Laravel fora ou lento → `connect_error` com a mensagem `unauthorized` (fail-closed). O token não é logado. Verificação manual: `services/node-realtime/scripts/handshake-check.mjs` (instruções no próprio arquivo).
 
 ## Dados iniciais (seeders)
 

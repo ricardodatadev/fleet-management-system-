@@ -6,6 +6,9 @@ use Illuminate\Console\Scheduling\Event;
 use Illuminate\Console\Scheduling\Schedule;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 
+// RefreshDatabase no arquivo: em um teste só (->uses) ele não vale no Pest, e o prune gravaria no banco.
+uses(RefreshDatabase::class);
+
 /** Evento agendado cujo comando contém $needle. */
 function scheduledEvent(string $needle): ?Event
 {
@@ -56,4 +59,4 @@ it('o prune remove tokens expirados há mais de 24 h e mantém os demais', funct
     $this->artisan('sanctum:prune-expired --hours=24')->assertSuccessful();
 
     expect($user->tokens()->pluck('name')->sort()->values()->all())->toBe(['recente', 'valido']);
-})->uses(RefreshDatabase::class);
+});

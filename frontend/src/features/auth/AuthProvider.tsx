@@ -97,7 +97,15 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const login = useCallback(
     async (credentials: LoginCredentials) => {
       const data = await authApi.login(credentials);
-      const me = await authApi.me(data.token);
+      let me: Awaited<ReturnType<typeof authApi.me>>;
+      try {
+        me = await authApi.me(data.token);
+      } catch (error) {
+        // O login emitiu um token, mas a sessão não foi montada: revoga esse token (best effort)
+        // para não deixar um token válido órfão, e só então mostra o erro.
+        await authApi.logout(data.token).catch(() => undefined);
+        throw error;
+      }
       const session = { token: data.token, expiresAt: data.expires_at };
       writeSession(session);
       tokenRef.current = session.token;

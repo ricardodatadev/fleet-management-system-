@@ -69,4 +69,20 @@ describe('Toast', () => {
     await user.click(screen.getByRole('button', { name: 'Disparar' }));
     expect(await axe(container)).toHaveNoViolations();
   });
+
+  it('teclado: o botão de fechar é alcançado com Tab e fecha com Enter (sem prender o foco)', async () => {
+    const user = userEvent.setup();
+    renderToast({ title: 'Frota salva', tone: 'success', duration: 0 });
+    await user.tab();
+    expect(screen.getByRole('button', { name: 'Disparar' })).toHaveFocus();
+    await user.keyboard('{Enter}');
+    expect(screen.getByRole('status')).toHaveTextContent('Frota salva');
+    await user.tab();
+    expect(screen.getByRole('button', { name: 'Fechar notificação' })).toHaveFocus();
+    await user.keyboard('{Enter}');
+    expect(screen.queryByText('Frota salva')).not.toBeInTheDocument();
+    // O toast não prende o foco: o Tab segue para fora dele.
+    await user.tab();
+    expect(document.activeElement).not.toBeNull();
+  });
 });

@@ -44,4 +44,28 @@ describe('Select', () => {
     );
     expect(await axe(container)).toHaveNoViolations();
   });
+
+  it('teclado: nativo na ordem do Tab; desabilitado fica fora; operável depois do foco', async () => {
+    const user = userEvent.setup();
+    const onChange = vi.fn();
+    render(
+      <>
+        <Select aria-label="Desabilitado" options={options} disabled />
+        <Select aria-label="Filial" options={options} onChange={onChange} />
+      </>,
+    );
+    const select = screen.getByRole('combobox', { name: 'Filial' });
+    // Nativo: o teclado do SO (setas, letras, Enter) funciona; nada de tabIndex fora da ordem.
+    expect(select.tagName).toBe('SELECT');
+    expect(select).not.toHaveAttribute('tabindex');
+    await user.tab();
+    expect(select).toHaveFocus();
+    await user.selectOptions(select, 'rj');
+    expect(select).toHaveValue('rj');
+    expect(select).toHaveFocus();
+    expect(onChange).toHaveBeenCalledTimes(1);
+    // Opção desabilitada não é selecionável.
+    await user.selectOptions(select, 'mg').catch(() => undefined);
+    expect(select).toHaveValue('rj');
+  });
 });

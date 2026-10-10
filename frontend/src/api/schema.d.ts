@@ -563,6 +563,90 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/settings/definitions": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Registry dos parâmetros (RN-001..004)
+         * @description Permissão: settings.view (L e A). Chave, regra de origem, rótulo, tipo, valores permitidos, default e escopos permitidos.
+         */
+        get: operations["settingsDefinitions"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/settings": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Lista os overrides gravados
+         * @description Permissão: settings.view (L e A). Filtros `key`, `scope_type` e `scope_id` (este exige `scope_type`). O líder vê os globais, os de família e os da própria filial; `scope_type=branch` com `scope_id` de outra filial → 403. Ordem: key, scope_type, scope_id.
+         */
+        get: operations["settingsIndex"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/settings/effective": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Valor efetivo de um parâmetro e a sua origem
+         * @description Permissão: settings.view (L e A). Precedência family > branch > global > default do registry, só entre os escopos permitidos da chave. `branch_id`/`family_id` existentes e não excluídos (422). O líder só consulta a própria filial (outra → 403); famílias são livres.
+         */
+        get: operations["settingsEffective"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/settings/{key}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        /**
+         * Grava o override de um parâmetro (upsert idempotente)
+         * @description Permissão: settings.manage (A). Valida contra o registry (422): chave inexistente, escopo não permitido para a chave, `scope_id` ausente/inexistente/excluído (ou presente no global) e valor fora do tipo (enum: um dos valores; bool: true/false). O mesmo valor de novo não muda nada nem gera auditoria; mudança → `setting_changed` com old/new e escopo.
+         */
+        put: operations["settingsUpdate"];
+        post?: never;
+        /**
+         * Remove o override de um parâmetro
+         * @description Permissão: settings.manage (A). `scope_type` (branch ou family) e `scope_id` na query. O global não pode ser removido (422). Override inexistente → 404. Remoção → `setting_removed` com o valor anterior e o escopo.
+         */
+        delete: operations["settingsDestroy"];
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/users": {
         parameters: {
             query?: never;
@@ -827,6 +911,50 @@ export interface components {
             redis: "up" | "down";
             /** @example 0.1.0 */
             version: string;
+        };
+        SettingDefinition: {
+            /** @example warranty.alert_mode */
+            key: string;
+            /**
+             * @description Regra de negócio de origem.
+             * @example RN-004
+             */
+            rule: string;
+            /** @example Tratamento de peça ou serviço em garantia */
+            label: string;
+            description: string;
+            /** @enum {string} */
+            type: "enum" | "bool";
+            /** @description Valores permitidos (só enum); null em bool. */
+            values: {
+                /** @example warning */
+                value: string;
+                /** @example Apenas alertar */
+                label: string;
+            }[] | null;
+            /**
+             * @description Valor padrão (string do enum ou boolean).
+             * @example warning
+             */
+            default: unknown;
+            scopes: ("global" | "branch" | "family")[];
+            /** @description Chave provisória (D14: RN-002). */
+            placeholder: boolean;
+        };
+        SettingEffective: {
+            /** @example warranty.alert_mode */
+            key: string;
+            /**
+             * @description Valor efetivo (string do enum ou boolean).
+             * @example hard_block
+             */
+            value: unknown;
+            /** @description Override que definiu o valor `{scope_type, scope_id}` ou "default" (registry). */
+            source: "default" | {
+                /** @enum {string} */
+                scope_type: "global" | "branch" | "family";
+                scope_id: number | null;
+            };
         };
         /** @description Create: name, username, email, password e role obrigatórios. Update (PUT = PATCH): parcial. `username`: trim + minúsculas e depois letras minúsculas sem acento, números e ponto (não no início, no fim nem repetido), 3 a 30 caracteres; fora disso (acento, espaço, `_`, `-`, `@`, `..`) → 422, sem transliteração; único entre não excluídos. `email` é gravado em minúsculas e é único entre usuários não excluídos. `password`: mín. 10 caracteres, com maiúscula, minúscula e número. `branch_id` é obrigatório quando o perfil (enviado ou atual) não é admin, inclusive ao trocar de admin para outro perfil; filial existente e não excluída (inativa é aceita). */
         UserInput: {
@@ -1188,6 +1316,42 @@ export interface components {
              */
             deleted_at: string | null;
         };
+        Setting: {
+            /**
+             * @description Override gravado de um parâmetro. `scope` é a filial/família do escopo `{id, code, name}` (null no global).
+             * @example 1
+             */
+            id: number;
+            /** @example warranty.alert_mode */
+            key: string;
+            /** @enum {string} */
+            scope_type: "global" | "branch" | "family";
+            scope_id: number | null;
+            /** @description Filial ou família do escopo; null no global. */
+            scope: {
+                /** @example 1 */
+                id: number;
+                /** @example FIL-001 */
+                code: string;
+                /** @example Matriz */
+                name: string;
+            } | null;
+            /**
+             * @description Valor do tipo da chave (string do enum ou boolean).
+             * @example hard_block
+             */
+            value: unknown;
+            updated_by: {
+                /** @example 1 */
+                id: number;
+                /** @example Ana Souza */
+                name: string;
+            } | null;
+            /** Format: date-time */
+            created_at: string | null;
+            /** Format: date-time */
+            updated_at: string | null;
+        };
         AuthUser: {
             /** @example 1 */
             id: number;
@@ -1394,7 +1558,7 @@ export interface operations {
                 /** @description Itens por página: máx. 100; até 200 com `is_active=1` (selects). */
                 per_page?: components["parameters"]["PerPage"];
                 /** @description Alias curto do registro auditado; desconhecido → 422. */
-                auditable_type?: "branch" | "cost_center" | "employee" | "equipment" | "equipment_family" | "user";
+                auditable_type?: "branch" | "cost_center" | "employee" | "equipment" | "equipment_family" | "setting" | "user";
                 auditable_id?: number;
                 actor_id?: number;
                 action?: "created" | "updated" | "deleted" | "restored" | "login_succeeded" | "login_failed" | "logout" | "password_changed" | "password_reset_requested" | "password_reset" | "setting_changed" | "setting_removed";
@@ -2792,6 +2956,167 @@ export interface operations {
             401: components["responses"]["Unauthenticated"];
             429: components["responses"]["TooManyRequests"];
             500: components["responses"]["ServerError"];
+        };
+    };
+    settingsDefinitions: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Definições. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Envelope"] & {
+                        data?: components["schemas"]["SettingDefinition"][];
+                    };
+                };
+            };
+            401: components["responses"]["Unauthenticated"];
+            403: components["responses"]["Forbidden"];
+            429: components["responses"]["TooManyRequests"];
+        };
+    };
+    settingsIndex: {
+        parameters: {
+            query?: {
+                /** @description Página (1..n). */
+                page?: components["parameters"]["Page"];
+                /** @description Itens por página: máx. 100; até 200 com `is_active=1` (selects). */
+                per_page?: components["parameters"]["PerPage"];
+                key?: string;
+                scope_type?: "global" | "branch" | "family";
+                scope_id?: number;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Lista paginada. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Envelope"] & {
+                        data?: components["schemas"]["Setting"][];
+                    };
+                };
+            };
+            401: components["responses"]["Unauthenticated"];
+            403: components["responses"]["Forbidden"];
+            422: components["responses"]["ValidationError"];
+            429: components["responses"]["TooManyRequests"];
+        };
+    };
+    settingsEffective: {
+        parameters: {
+            query: {
+                key: string;
+                branch_id?: number;
+                family_id?: number;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Valor efetivo. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Envelope"] & {
+                        data?: components["schemas"]["SettingEffective"];
+                    };
+                };
+            };
+            401: components["responses"]["Unauthenticated"];
+            403: components["responses"]["Forbidden"];
+            422: components["responses"]["ValidationError"];
+            429: components["responses"]["TooManyRequests"];
+        };
+    };
+    settingsUpdate: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                key: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": {
+                    /** @enum {string} */
+                    scope_type: "global" | "branch" | "family";
+                    /** @description null no global; id da filial ou da família. */
+                    scope_id: number | null;
+                    /**
+                     * @description String do enum ou boolean, conforme a chave.
+                     * @example hard_block
+                     */
+                    value: unknown;
+                };
+            };
+        };
+        responses: {
+            /** @description Gravado. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Envelope"] & {
+                        data?: components["schemas"]["Setting"];
+                    };
+                };
+            };
+            401: components["responses"]["Unauthenticated"];
+            403: components["responses"]["Forbidden"];
+            422: components["responses"]["ValidationError"];
+            429: components["responses"]["TooManyRequests"];
+        };
+    };
+    settingsDestroy: {
+        parameters: {
+            query: {
+                scope_type: "global" | "branch" | "family";
+                scope_id?: number;
+            };
+            header?: never;
+            path: {
+                key: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Removido (`data` null). */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Envelope"];
+                };
+            };
+            401: components["responses"]["Unauthenticated"];
+            403: components["responses"]["Forbidden"];
+            404: components["responses"]["NotFound"];
+            422: components["responses"]["ValidationError"];
+            429: components["responses"]["TooManyRequests"];
         };
     };
     usersIndex: {

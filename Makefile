@@ -1,6 +1,6 @@
 # Alvos do projeto; os que ainda nao existem chegam nas tarefas indicadas e falham com mensagem clara.
 # Sem nome do sistema aqui: o slug (projeto do compose, prefixo dos volumes) vem do .env.
-.PHONY: up down init migrate seed test test-db test-python test-node openapi openapi-lint brand lint ci vendor-reset
+.PHONY: up down init migrate seed test test-db test-python test-node openapi openapi-lint brand lint ci vendor-reset smoke
 
 APP_SLUG := $(shell sed -n 's/^APP_SLUG=//p' .env 2>/dev/null | tail -n 1 | tr -d "\"'")
 # Prefixo das imagens de teste (python/node); sem APP_SLUG no .env, usa um nome neutro.
@@ -63,8 +63,8 @@ lint: brand
 	docker compose exec -T app vendor/bin/pint --test
 	docker compose exec -T app vendor/bin/phpstan analyse --memory-limit=1G --no-progress
 
-# Gate local: lint + Pest com cobertura + pytest + Vitest do node.
-ci: lint test test-python test-node
+# Gate local: lint + Pest com cobertura + pytest + Vitest do node + lint da OpenAPI.
+ci: lint test test-python test-node openapi-lint
 
 # Apos mudar composer.json/lock: rebuild e troca o volume do vendor (<projeto>_app_vendor) pelo da imagem nova.
 vendor-reset:
@@ -73,3 +73,7 @@ vendor-reset:
 	docker compose down
 	docker volume rm $(APP_SLUG)_app_vendor
 
+
+# Smoke E2E num clone limpo isolado (projeto próprio do compose, porta livre); não toca na stack de dev.
+smoke:
+	bash scripts/smoke.sh

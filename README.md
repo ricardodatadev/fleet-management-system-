@@ -1,8 +1,8 @@
 # GOF — Gestão Operacional de Frotas
 
-Monorepo da Fase 1 (fundação + cadastros). Fonte de verdade da fase: especificação `fase-1-especificacao` v1.1.
+Monorepo da Fase 1 (fundação + cadastros). Fonte de verdade da fase: especificação `fase-1-especificacao` (v1.14). Evidências do gate: [`docs/phase-1-evidence.md`](docs/phase-1-evidence.md).
 
-> **Estado atual (F1-04):** compose com nginx, app (Laravel 13 / PHP 8.4), worker (Horizon), db, redis, python-ai (interno) e node-realtime (Socket.io com handshake autenticado pelo token da API). O frontend chega nas próximas tarefas; alvos `make` ainda não implementados falham com mensagem clara.
+> **Estado (Fase 1 concluída na F1-20):** API Laravel com autenticação por username, RBAC, auditoria encadeada, cadastros (filiais, centros de custo, famílias, equipamentos, colaboradores, usuários) e parâmetros por escopo; SPA React servida pelo nginx; tempo real com handshake autenticado; serviço python interno. Fora de escopo nesta fase: OS, preventiva, estoque, pneus, checklist, telemetria, BI, RAG.
 
 ## Arquitetura
 
@@ -20,19 +20,44 @@ Monólito modular Laravel + 2 serviços, tudo em Docker Compose (projeto = `APP_
 | node | Fastify + Socket.io (handshake: token Bearer validado no `/auth/me`) | `services/node-realtime` |
 | frontend | Vite HMR (somente no override de dev) | `frontend` |
 
-## Quickstart (quando F1-02..F1-17 estiverem prontas)
+## Quickstart (subir do zero)
+
+Requisitos no host: Docker com Compose v2, `make`, `git`, `curl` e `python3` (este último só para o smoke). Nada de PHP/Node/Python no host.
 
 ```bash
-cp .env.example .env      # preencha TODOS os valores "change-me"
-make up                   # sobe os containers
-make init                 # gera APP_KEY no .env (se vazia) + migrate
-make seed                 # admin + parâmetros (+ demo em local/testing)
-bash scripts/smoke.sh     # verificação ponta a ponta (F1-20)
+cp .env.example .env      # preencha TODOS os "change-me" (senhas do banco/redis/seed) e, se precisar, WEB_HTTP_PORT
+make up                   # build + sobe os containers (espera ficarem healthy)
+make init                 # gera APP_KEY no .env (se vazia), recria e roda as migrations
+make seed                 # parâmetros globais + admin (+ dados demo em local/testing)
+make smoke                # = bash scripts/smoke.sh: verificação ponta a ponta num clone limpo isolado
 ```
 
-Acesse `http://localhost:${WEB_HTTP_PORT}/` (padrão 80; use ex. 8080 se a porta 80 estiver ocupada ou sem privilégio). Health do nginx: `/healthz`. Documentação da API: `/api/documentation` apenas com `L5_SWAGGER_ENABLED=true`.
+Acesse `http://localhost:${WEB_HTTP_PORT}/` (padrão 80; use ex. 8080 se a porta 80 estiver ocupada ou sem privilégio) e entre com o **username** do admin (`SEED_ADMIN_USERNAME`) e a senha `SEED_ADMIN_PASSWORD`. Health do nginx: `/healthz`; da API: `/api/v1/health`. Documentação da API: `/api/documentation` apenas com `L5_SWAGGER_ENABLED=true`.
 
-Alvos do Makefile: `up, down, init, migrate, seed, test, test-db, test-python, test-node, openapi, openapi-lint, brand, lint, ci, vendor-reset`. `lint` = guarda de marca + teste da guarda + teste do compose + Pint + Larastan (nível 5, sem baseline). `test` = Pest com cobertura (pcov, imagem de dev) e mínimo de 80% em `app/`. `ci` = `lint` + `test` + pytest + Vitest do node: é o gate local. O workflow `.github/workflows/ci.yml` faz o mesmo numa máquina limpa, mas está inativo (só disparo manual).
+**Usuários de demonstração** (só com `APP_ENV=local`/`testing`, criados pelo `make seed`), todos com a senha `SEED_DEMO_PASSWORD`: `demo.admin` (administrador, sem filial), `demo.lider` (líder), `demo.mecanico` (mecânico) e `demo.operador` (operador), estes na filial `DEMO-01`.
+
+### Smoke E2E
+
+`make smoke` (ou `bash scripts/smoke.sh`) não usa a sua stack: clona o commit atual (HEAD; mudanças não commitadas ficam de fora) num diretório temporário, gera um `.env` de produção com segredos aleatórios e sobe só o `docker-compose.yml` num projeto do compose próprio, com o nginx numa porta livre. Verifica os 8 serviços healthy, migrate/seed, batimento do scheduler, pgvector, que só o nginx publica porta, a SPA servida pelo nginx (o `index.html` do build com o `<title>` do `APP_NAME` e CSP, também numa rota profunda), login por username, criação de família e equipamento pela API, os eventos no audit log, `audit:verify`, o handshake Socket.io pelo nginx, o `/health` do python e do node, erro sem vazamento de stack e containers não-root. Imprime uma tabela PASS por verificação, sai 0 só se tudo passar e limpa containers, volumes, imagens e o clone no fim (`SMOKE_KEEP=1` mantém a stack para inspeção). Leva alguns minutos (build das imagens).
+
+### Alvos do Makefile
+
+| Alvo | O que faz |
+|---|---|
+| `up` / `down` | sobe (build + espera healthy) / derruba a stack |
+| `init` | gera `APP_KEY` se faltar, sobe e migra |
+| `migrate` / `seed` | `migrate --force` / `db:seed --force` (idempotente) |
+| `test-db` | cria o banco `<POSTGRES_DB>_test` (idempotente) |
+| `test` | Pest com cobertura (pcov, imagem de dev), mínimo de 80% em `app/` |
+| `test-python` / `test-node` | pytest / Vitest na imagem `test` de cada serviço |
+| `openapi` / `openapi-lint` | gera `docs/api/openapi.json` / lint com Redocly |
+| `brand` | guarda do nome do sistema (`scripts/check-brand.sh`) |
+| `lint` | guarda de marca + teste da guarda + teste do compose + Pint + Larastan (nível 5, sem baseline) |
+| `ci` | **gate local:** `lint` + `test` + `test-python` + `test-node` + `openapi-lint` |
+| `smoke` | smoke E2E num clone limpo isolado |
+| `vendor-reset` | após mudar `composer.json/lock`: rebuild e troca do volume do vendor |
+
+O frontend tem o próprio gate (`npm run ci` em `frontend/`, num container `node:24.21.0-alpine`). O workflow `.github/workflows/ci.yml` faz o mesmo que o `make ci` numa máquina limpa, mas está inativo (só disparo manual) até haver remoto.
 
 ## Desenvolvimento
 
@@ -84,4 +109,13 @@ Resumo; detalhes em [`docs/adr/0001-desvios-spec.md`](docs/adr/0001-desvios-spec
 
 ## Troubleshooting
 
-A preencher conforme as tarefas F1-02..F1-20 forem entregues.
+- **Porta 80 ocupada ou sem privilégio:** defina `WEB_HTTP_PORT=8080` (ou outra) no `.env` e rode `make up`.
+- **`db:seed` falha com "Defina SEED_..." ou "senha inválida":** preencha `SEED_ADMIN_USERNAME`/`SEED_ADMIN_EMAIL`/`SEED_ADMIN_PASSWORD` (e `SEED_DEMO_PASSWORD` em local) com uma senha que passe na política; `change-me` é recusada de propósito.
+- **Login recusado ao usar o e-mail:** o login é só por **username**; o e-mail serve apenas para "esqueci a senha".
+- **Erro 500 "No application encryption key":** falta `APP_KEY=base64:...` no `.env`; rode `make init` (gera a chave e recria os containers).
+- **`worker`/`scheduler` tentando baixar `<slug>/app:local`:** a imagem é construída pelo serviço `app` (`pull_policy: never`); rode `make up` (que faz o build) em vez de subir só esses serviços.
+- **`scheduler` unhealthy:** o healthcheck exige batimento com menos de 150 s em `storage/framework/schedule-heartbeat`; veja `docker compose logs scheduler` (normalmente banco ou redis fora).
+- **Testes reclamam do banco `_test`:** `make test-db` cria o banco de testes em volumes antigos; os testes nunca rodam no banco de dev.
+- **Depois de mudar `composer.json`/`composer.lock`:** `make vendor-reset`.
+- **Socket.io recusa a conexão (`unauthorized`):** o token precisa ser válido e ainda não expirado (12 h); o node valida no `/api/v1/auth/me` com timeout de 1,8 s.
+- **E-mail de redefinição não chega:** em dev, veja o Mailpit (`http://127.0.0.1:8025`); fora do override o padrão é `MAIL_MAILER=log` (o e-mail vai para o log do `worker`).

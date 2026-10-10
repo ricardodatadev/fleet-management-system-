@@ -2,7 +2,7 @@
 
 Monorepo da Fase 1 (fundação + cadastros). Fonte de verdade da fase: especificação `fase-1-especificacao` v1.1.
 
-> **Estado atual (F1-04):** compose com nginx, app (Laravel 13 / PHP 8.4), worker (Horizon), db, redis, python-ai (interno) e node-realtime (Socket.io recusa conexões até a F1-18). O frontend chega nas próximas tarefas; alvos `make` ainda não implementados falham com mensagem clara.
+> **Estado atual (F1-04):** compose com nginx, app (Laravel 13 / PHP 8.4), worker (Horizon), db, redis, python-ai (interno) e node-realtime (Socket.io com handshake autenticado pelo token da API). O frontend chega nas próximas tarefas; alvos `make` ainda não implementados falham com mensagem clara.
 
 ## Arquitetura
 
@@ -16,7 +16,7 @@ Monólito modular Laravel + 2 serviços, tudo em Docker Compose (projeto = `APP_
 | db | PostgreSQL 16 + pgvector | `docker/postgres` |
 | redis | Redis 7 (filas, cache, sessão, pub/sub) | — |
 | python | FastAPI (`/health`; interno) | `services/python-ai` |
-| node | Fastify + Socket.io | `services/node-realtime` |
+| node | Fastify + Socket.io (handshake: token Bearer validado no `/auth/me`) | `services/node-realtime` |
 | frontend | Vite HMR (somente no override de dev) | `frontend` |
 
 ## Quickstart (quando F1-02..F1-17 estiverem prontas)
@@ -40,6 +40,10 @@ O `docker-compose.override.yml` (dev) monta `./backend` nos containers `app`/`wo
 ## OpenAPI
 
 Contrato da API: `docs/api/openapi.json` (OpenAPI 3.0, versionado), gerado dos atributos PHP (swagger-php): `make openapi` (= `composer openapi` no container). Lint: `make openapi-lint` (Redocly em container node efêmero; 0 erros, avisos justificados no ADR). Os testes Pest falham se uma rota `api/v1` não estiver documentada ou se o JSON versionado estiver desatualizado. Swagger UI: `L5_SWAGGER_ENABLED=true` no `.env` e recriar `nginx`/`app` → `/api/documentation` (com `false` a rota não existe e responde 404). A CSP do Swagger UI é própria desse location; `/` mantém `default-src 'self'`.
+
+## Tempo real (Socket.io)
+
+O cliente conecta em `/socket.io/` na mesma origem (o nginx faz o upgrade para WebSocket) enviando o token da API em `auth: { token }`. O node valida o token com `GET ${LARAVEL_INTERNAL_URL}/api/v1/auth/me` (timeout de 2 s): se ok, o socket entra nas salas `user:{id}`, `role:{perfil}` e `branch:{id}` (só quando o usuário tem filial; admin sem filial não entra em sala de filial) e recebe `session:ready` com o usuário. Sem token, token inválido ou revogado, Laravel fora ou lento → `connect_error` com a mensagem `unauthorized` (fail-closed). O token não é logado. Verificação manual: `services/node-realtime/scripts/handshake-check.mjs` (instruções no próprio arquivo).
 
 ## Dados iniciais (seeders)
 

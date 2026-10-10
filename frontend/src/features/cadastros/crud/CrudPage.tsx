@@ -239,6 +239,7 @@ export function CrudPage<T extends CrudRow>({ resource }: { resource: CrudResour
       loading={list.isPending || outOfRange}
       error={list.isError ? errorMessage(list.error) : null}
       onRetry={() => void list.refetch()}
+      onRowClick={resource.onRowClick}
       emptyTitle={hasFilters ? 'Nenhum resultado para os filtros' : 'Nenhum registro cadastrado'}
       emptyDescription={
         hasFilters

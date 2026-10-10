@@ -158,6 +158,12 @@ export function mockCrudApi<T extends FakeRecord>(
         },
       });
     }),
+    // Show: excluído ou inexistente → 404, como na API (o escopo de filial também vira 404).
+    http.get(API(`${endpoint}/:id`), ({ params }) => {
+      const current = byId(params.id);
+      if (!current || current.deleted_at) return fail(404, 'Registro não encontrado.');
+      return ok(current);
+    }),
     http.post(API(endpoint), async ({ request }) => {
       const body = (await request.json()) as Record<string, unknown>;
       fake.writes.push({ method: 'POST', body });

@@ -1,0 +1,50 @@
+/** Perfis (spec E / AuthUser.role da OpenAPI). */
+export type Role = 'operator' | 'mechanic' | 'leader' | 'admin';
+
+export interface AuthBranch {
+  id: number;
+  code: string;
+  name: string;
+}
+
+export interface AuthUser {
+  id: number;
+  name: string;
+  /** Minúsculo, `[a-z0-9]{3,30}` (C.1, v1.7). */
+  username: string;
+  email: string;
+  role: Role;
+  /** null = todas as filiais (somente admin). */
+  branch: AuthBranch | null;
+}
+
+/** POST /auth/login → data. */
+export interface LoginData {
+  token: string;
+  token_type: 'Bearer';
+  /** ISO-8601 UTC. */
+  expires_at: string;
+  user: AuthUser;
+}
+
+/** GET /auth/me → data. */
+export interface MeData {
+  user: AuthUser;
+  employee: Record<string, unknown> | null;
+  /** Permissões do perfil (config/rbac.php); `auth.*` é implícito e não aparece. */
+  permissions: string[];
+}
+
+/** POST /auth/login (v1.8): só username; o backend faz trim + minúsculas. */
+export interface LoginCredentials {
+  username: string;
+  password: string;
+}
+
+/** POST /auth/reset-password (v1.7). */
+export interface ResetPasswordPayload {
+  email: string;
+  token: string;
+  password: string;
+  password_confirmation: string;
+}

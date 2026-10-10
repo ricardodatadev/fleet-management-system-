@@ -1,8 +1,60 @@
+# Maestri (local agent tooling/specs)
 .maestri/
+
+# Secrets / environment
 .env
+.env.*
+!.env.example
+!.env.testing
+
+# Dependencies
 node_modules/
 vendor/
+
+# Build output / coverage
 dist/
+build/
 coverage/
+.phpunit.cache/
+.phpunit.result.cache
+.pest/
+.vite/
+*.tsbuildinfo
+
+# Python
 __pycache__/
+*.py[cod]
 .venv/
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+
+# Laravel
+backend/storage/*.key
+# logs, sessões e views compiladas: só o conteúdo é ignorado; o .gitignore de cada pasta é versionado
+# para a pasta existir num clone limpo (o bind mount do dev esconde as pastas que a imagem cria).
+backend/storage/logs/*
+!backend/storage/logs/.gitignore
+backend/storage/framework/cache/data/
+backend/storage/framework/sessions/*
+!backend/storage/framework/sessions/.gitignore
+backend/storage/framework/views/*
+!backend/storage/framework/views/.gitignore
+backend/bootstrap/cache/*.php
+backend/.phpunit.cache/
+backend/public/storage
+backend/public/hot
+.php-cs-fixer.cache
+.phpstan.cache
+
+# Docker local overrides
+docker-compose.local.yml
+
+# Logs / OS / editors
+*.log
+npm-debug.log*
+.DS_Store
+Thumbs.db
+.idea/
+.vscode/
+*.swp

@@ -1,0 +1,92 @@
+# Dev somente: portas em 127.0.0.1. Carregado automaticamente pelo `docker compose`.
+# Para a configuração base/produção: docker compose -f docker-compose.yml ...
+x-laravel-dev: &laravel-dev
+  # Código via bind mount; vendor vem da imagem (volume nomeado, preserva o vendor da imagem).
+  # Roda com o uid do host para escrever em storage/ e bootstrap/cache do bind mount
+  # (exporte HOST_UID=$(id -u) HOST_GID=$(id -g) ou use o default 1000).
+  user: "${HOST_UID:-1000}:${HOST_GID:-1000}"
+  volumes:
+    - ./backend:/var/www/html
+    - app_vendor:/var/www/html/vendor
+    - ./docker/laravel/php-dev.ini:/usr/local/etc/php/conf.d/zzz-dev.ini:ro
+    # docs/ do repositório (composer openapi grava docs/api/openapi.json aqui)
+    - ./docs:/var/www/docs
+  # E-mail de dev vai para o Mailpit (UI em http://127.0.0.1:${MAILPIT_UI_PORT:-8025}); produção usa MAIL_*.
+  environment:
+    MAIL_MAILER: smtp
+    MAIL_HOST: mailpit
+    MAIL_PORT: 1025
+    MAIL_SCHEME: smtp
+    MAIL_FROM_ADDRESS: ${MAIL_FROM_ADDRESS:-no-reply@example.com}
+    APP_FRONTEND_URL: ${APP_FRONTEND_URL:-}
+
+services:
+  app:
+    <<: *laravel-dev
+    # alvo dev da imagem: app + pcov (cobertura); worker e scheduler usam a mesma imagem
+    build:
+      context: .
+      dockerfile: docker/laravel/Dockerfile
+      target: dev
+  worker:
+    <<: *laravel-dev
+  scheduler:
+    <<: *laravel-dev
+  db:
+    ports:
+      - "127.0.0.1:${DB_PORT:-5432}:5432"
+    volumes:
+      # Banco de testes (<db>_test) só em dev; nunca em produção. Volume existente: `make test-db`.
+      - ./docker/postgres/create-test-db.sh:/docker-entrypoint-initdb.d/02-create-test-db.sh:ro
+  redis:
+    ports:
+      - "127.0.0.1:6379:6379"
+  python:
+    ports:
+      - "127.0.0.1:8000:8000"
+  node:
+    ports:
+      - "127.0.0.1:${NODE_PORT:-3000}:${NODE_PORT:-3000}"
+  # Captura de e-mail em dev (SMTP interno :1025, sem autenticação); só existe no override.
+  mailpit:
+    image: axllent/mailpit:v1.31.4
+    restart: unless-stopped
+    environment:
+      MP_SMTP_AUTH_ACCEPT_ANY: 1
+      MP_SMTP_AUTH_ALLOW_INSECURE: 1
+    ports:
+      - "127.0.0.1:${MAILPIT_UI_PORT:-8025}:8025"
+    networks:
+      - internal
+    healthcheck:
+      test: ["CMD", "/mailpit", "readyz"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 5s
+  # Vite com HMR (http://localhost:${FRONTEND_PORT:-5173}); /api é proxied para o nginx.
+  frontend:
+    image: node:24.21.0-alpine
+    working_dir: /app
+    user: "${HOST_UID:-1000}:${HOST_GID:-1000}"
+    command: sh -c "npm ci && npm run dev"
+    environment:
+      HOME: /tmp
+      VITE_API_PROXY_TARGET: http://nginx
+      # Marca: vazio cai nos defaults do src/config/brand.ts (o vite.config mapeia APP_* → VITE_APP_*).
+      APP_NAME: ${APP_NAME:-}
+      APP_FULL_NAME: ${APP_FULL_NAME:-}
+      APP_SLUG: ${APP_SLUG:-}
+    volumes:
+      - ./frontend:/app
+    ports:
+      - "127.0.0.1:${FRONTEND_PORT:-5173}:5173"
+    networks:
+      - internal
+    depends_on:
+      - nginx
+
+volumes:
+  # Atenção: após mudar composer.json/composer.lock, rebuild + `docker compose down` e
+  # `docker volume rm <projeto>_app_vendor` (ou `make vendor-reset`) para o vendor novo da imagem substituir o antigo.
+  app_vendor:

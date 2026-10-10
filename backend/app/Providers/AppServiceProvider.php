@@ -1,0 +1,95 @@
+<?php
+
+namespace App\Providers;
+
+use App\Http\Requests\Auth\LoginRequest;
+use App\Models\AuditLog;
+use App\Models\Branch;
+use App\Models\CostCenter;
+use App\Models\Employee;
+use App\Models\Equipment;
+use App\Models\EquipmentFamily;
+use App\Models\User;
+use App\Policies\AuditLogPolicy;
+use App\Policies\BranchPolicy;
+use App\Policies\CostCenterPolicy;
+use App\Policies\EmployeePolicy;
+use App\Policies\EquipmentFamilyPolicy;
+use App\Policies\EquipmentPolicy;
+use App\Policies\UserPolicy;
+use App\Support\Audit\AuditContext;
+use App\Support\Rbac\Rbac;
+use Illuminate\Cache\RateLimiting\Limit;
+use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Gate;
+use Illuminate\Support\Facades\Queue;
+use Illuminate\Support\Facades\RateLimiter;
+use Illuminate\Support\ServiceProvider;
+use Illuminate\Validation\Rules\Password;
+use Laravel\Sanctum\PersonalAccessToken;
+use Laravel\Sanctum\Sanctum;
+
+class AppServiceProvider extends ServiceProvider
+{
+    /**
+     * Register any application services.
+     */
+    public function register(): void
+    {
+        //
+    }
+
+    /**
+     * Bootstrap any application services.
+     */
+    public function boot(): void
+    {
+        // Origem 'queue' no audit trail enquanto um job é processado.
+        Queue::before(fn () => AuditContext::$inQueueJob = true);
+        Queue::after(fn () => AuditContext::$inQueueJob = false);
+        Queue::failing(fn () => AuditContext::$inQueueJob = false);
+
+        // 120 req/min por usuário (ou IP quando anônimo).
+        RateLimiter::for('api', fn (Request $request) => Limit::perMinute(120)->by($request->user()?->getAuthIdentifier() ?: $request->ip()));
+
+        // Login: 5/min por (username normalizado + IP) e 20/min por IP (D.2 v1.7). Conta toda tentativa, inclusive as bem-sucedidas.
+        RateLimiter::for('login', function (Request $request) {
+            $username = LoginRequest::normalize($request->input('username'));
+
+            return [
+                Limit::perMinute(5)->by('login:username-ip:'.$username.'|'.$request->ip()),
+                Limit::perMinute(20)->by('login:ip:'.$request->ip()),
+            ];
+        });
+
+        // Redefinição de senha (D.2 v1.7): pedido 3/min por (e-mail + IP) e 10/min por IP; troca 5/min por IP.
+        RateLimiter::for('forgot-password', function (Request $request) {
+            $email = LoginRequest::normalize($request->input('email'));
+
+            return [
+                Limit::perMinute(3)->by('forgot:email-ip:'.$email.'|'.$request->ip()),
+                Limit::perMinute(10)->by('forgot:ip:'.$request->ip()),
+            ];
+        });
+        RateLimiter::for('reset-password', fn (Request $request) => Limit::perMinute(5)->by('reset:ip:'.$request->ip()));
+
+        // Política de senha (spec D.2): mín. 10 caracteres, maiúscula, minúscula e número.
+        Password::defaults(fn () => Password::min(10)->mixedCase()->numbers());
+
+        // RBAC (spec E): Gates por permissão + auth.session; policies dos models existentes
+        // (cada cadastro F1-11..16 registra a sua aqui).
+        Rbac::register();
+        Gate::policy(User::class, UserPolicy::class);
+        Gate::policy(Branch::class, BranchPolicy::class);
+        Gate::policy(CostCenter::class, CostCenterPolicy::class);
+        Gate::policy(EquipmentFamily::class, EquipmentFamilyPolicy::class);
+        Gate::policy(Employee::class, EmployeePolicy::class);
+        Gate::policy(Equipment::class, EquipmentPolicy::class);
+        Gate::policy(AuditLog::class, AuditLogPolicy::class);
+
+        // Token de usuário inativo ou soft-deleted (tokenable null) não autentica.
+        Sanctum::authenticateAccessTokensUsing(
+            fn (PersonalAccessToken $token, bool $isValid) => $isValid && $token->tokenable instanceof User && $token->tokenable->is_active,
+        );
+    }
+}

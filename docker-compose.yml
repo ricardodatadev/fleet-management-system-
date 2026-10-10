@@ -1,0 +1,239 @@
+# Projeto, imagens e prefixos derivam do slug (fonte única: APP_NAME/APP_FULL_NAME/APP_SLUG no .env).
+# Os defaults abaixo são o fallback da infra quando o .env não os define (ver docs/renaming.md).
+name: ${APP_SLUG:-gof}
+
+x-brand-env: &brand-env
+  APP_NAME: ${APP_NAME:-GOF}
+  APP_FULL_NAME: ${APP_FULL_NAME:-Gestão Operacional de Frotas}
+  APP_SLUG: ${APP_SLUG:-gof}
+
+x-laravel-env: &laravel-env
+  <<: *brand-env
+  APP_ENV: ${APP_ENV:-local}
+  APP_KEY: ${APP_KEY:-}
+  APP_DEBUG: ${APP_DEBUG:-false}
+  APP_URL: ${APP_URL:-http://localhost}
+  APP_TIMEZONE: UTC
+  APP_LOCALE: pt_BR
+  APP_FALLBACK_LOCALE: pt_BR
+  APP_FAKER_LOCALE: pt_BR
+  LOG_CHANNEL: stderr
+  DB_CONNECTION: pgsql
+  DB_HOST: ${DB_HOST:-db}
+  DB_PORT: 5432
+  DB_DATABASE: ${POSTGRES_DB:?defina POSTGRES_DB no .env}
+  DB_USERNAME: ${POSTGRES_USER:?defina POSTGRES_USER no .env}
+  DB_PASSWORD: ${POSTGRES_PASSWORD:?defina POSTGRES_PASSWORD no .env}
+  REDIS_CLIENT: phpredis
+  REDIS_HOST: ${REDIS_HOST:-redis}
+  REDIS_PORT: 6379
+  REDIS_PASSWORD: ${REDIS_PASSWORD:?defina REDIS_PASSWORD no .env}
+  CACHE_STORE: redis
+  SESSION_DRIVER: redis
+  QUEUE_CONNECTION: redis
+  SANCTUM_EXPIRATION: ${SANCTUM_EXPIRATION:-720}
+  L5_SWAGGER_ENABLED: ${L5_SWAGGER_ENABLED:-false}
+  CORS_ALLOWED_ORIGINS: ${CORS_ALLOWED_ORIGINS:-}
+  PYTHON_SERVICE_URL: ${PYTHON_SERVICE_URL:-http://python:8000}
+  LARAVEL_INTERNAL_URL: ${LARAVEL_INTERNAL_URL:-http://nginx}
+  # Seeders (F1-17): sem padrão de senha; vazio → o db:seed falha com mensagem clara.
+  SEED_ADMIN_USERNAME: ${SEED_ADMIN_USERNAME:-}
+  SEED_ADMIN_EMAIL: ${SEED_ADMIN_EMAIL:-}
+  SEED_ADMIN_PASSWORD: ${SEED_ADMIN_PASSWORD:-}
+  SEED_ADMIN_NAME: ${SEED_ADMIN_NAME:-}
+  SEED_DEMO_PASSWORD: ${SEED_DEMO_PASSWORD:-}
+
+services:
+  db:
+    image: pgvector/pgvector:0.8.1-pg16
+    restart: unless-stopped
+    environment:
+      POSTGRES_DB: ${POSTGRES_DB:?defina POSTGRES_DB no .env}
+      POSTGRES_USER: ${POSTGRES_USER:?defina POSTGRES_USER no .env}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?defina POSTGRES_PASSWORD no .env}
+      TZ: UTC
+      PGTZ: UTC
+    volumes:
+      - db_data:/var/lib/postgresql/data
+      - ./docker/postgres/init-pgvector.sql:/docker-entrypoint-initdb.d/01-init-pgvector.sql:ro
+    networks:
+      - internal
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U $${POSTGRES_USER} -d $${POSTGRES_DB}"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 20s
+
+  redis:
+    image: redis:7.4.6-alpine
+    restart: unless-stopped
+    # A senha vai para um arquivo de config (não aparece na linha de comando do processo).
+    command:
+      - sh
+      - -c
+      - umask 077 && printf 'requirepass "%s"\n' "$$REDIS_PASSWORD" > /tmp/redis.conf && exec redis-server /tmp/redis.conf --appendonly yes
+    environment:
+      REDIS_PASSWORD: ${REDIS_PASSWORD:?defina REDIS_PASSWORD no .env}
+      REDISCLI_AUTH: ${REDIS_PASSWORD}
+    volumes:
+      - redis_data:/data
+    networks:
+      - internal
+    healthcheck:
+      test: ["CMD-SHELL", "redis-cli ping | grep -q PONG"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 10s
+
+  app:
+    build:
+      context: .
+      dockerfile: docker/laravel/Dockerfile
+      target: app
+    image: ${APP_SLUG:-gof}/app:local
+    restart: unless-stopped
+    environment: *laravel-env
+    networks:
+      - internal
+    depends_on:
+      db:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD-SHELL", "SCRIPT_NAME=/ping SCRIPT_FILENAME=/ping REQUEST_METHOD=GET cgi-fcgi -bind -connect 127.0.0.1:9000 | grep -q pong"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 15s
+
+  worker:
+    image: ${APP_SLUG:-gof}/app:local
+    # A imagem é construída pelo serviço app; nunca tentar o registro (num clone limpo ela ainda não existe
+    # quando o compose resolve as imagens, e o pull de <slug>/app:local seria negado).
+    pull_policy: never
+    restart: unless-stopped
+    command: ["php", "artisan", "horizon"]
+    environment: *laravel-env
+    networks:
+      - internal
+    depends_on:
+      app:
+        condition: service_healthy
+      db:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    stop_signal: SIGTERM
+    stop_grace_period: 30s
+    healthcheck:
+      test: ["CMD-SHELL", "php artisan horizon:status | grep -qi running"]
+      interval: 15s
+      timeout: 10s
+      retries: 5
+      start_period: 30s
+
+  # Agendador do Laravel (F1-19): tarefas de routes/console.php (prune de tokens, batimento). O worker
+  # continua só com o Horizon. Mesma imagem e ambiente do app, sem porta, usuário não-root da imagem.
+  scheduler:
+    image: ${APP_SLUG:-gof}/app:local
+    pull_policy: never  # imagem construída pelo serviço app (ver worker)
+    restart: unless-stopped
+    command: ["php", "artisan", "schedule:work"]
+    environment: *laravel-env
+    networks:
+      - internal
+    depends_on:
+      app:
+        condition: service_healthy
+      db:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    stop_signal: SIGTERM
+    stop_grace_period: 30s
+    # Saudável se o batimento (tarefa everyMinute) tiver menos de 150 s.
+    healthcheck:
+      test: ["CMD-SHELL", "f=storage/framework/schedule-heartbeat; test -f $$f && test $$(( $$(date +%s) - $$(stat -c %Y $$f) )) -lt 150"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+      start_period: 90s
+
+  python:
+    build:
+      context: ./services/python-ai
+      target: prod
+    image: ${APP_SLUG:-gof}/python-ai:local
+    restart: unless-stopped
+    environment:
+      <<: *brand-env
+      SERVICE_VERSION: ${PYTHON_SERVICE_VERSION:-0.1.0}
+    networks:
+      - internal
+    healthcheck:
+      test: ["CMD", "python", "-c", "import urllib.request,sys; sys.exit(0 if urllib.request.urlopen('http://127.0.0.1:8000/health', timeout=3).status == 200 else 1)"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 10s
+
+  node:
+    build:
+      context: ./services/node-realtime
+      target: prod
+    image: ${APP_SLUG:-gof}/node-realtime:local
+    restart: unless-stopped
+    environment:
+      <<: *brand-env
+      NODE_PORT: ${NODE_PORT:-3000}
+      REDIS_HOST: ${REDIS_HOST:-redis}
+      REDIS_PORT: 6379
+      REDIS_PASSWORD: ${REDIS_PASSWORD:?defina REDIS_PASSWORD no .env}
+      LARAVEL_INTERNAL_URL: ${LARAVEL_INTERNAL_URL:-http://nginx}
+    networks:
+      - internal
+    depends_on:
+      redis:
+        condition: service_healthy
+    stop_grace_period: 15s
+    healthcheck:
+      test: ["CMD", "node", "-e", "fetch('http://127.0.0.1:'+(process.env.NODE_PORT||3000)+'/health').then(r=>process.exit(r.ok?0:1)).catch(()=>process.exit(1))"]
+      interval: 10s
+      timeout: 5s
+      retries: 3
+      start_period: 10s
+
+  nginx:
+    build:
+      context: .
+      dockerfile: docker/nginx/Dockerfile
+      # A SPA é compilada nesta imagem: o vite.config mapeia APP_* → VITE_APP_* no build.
+      args: *brand-env
+    image: ${APP_SLUG:-gof}/nginx:local
+    restart: unless-stopped
+    environment:
+      L5_SWAGGER_ENABLED: ${L5_SWAGGER_ENABLED:-false}
+    ports:
+      - "${WEB_HTTP_PORT:-80}:80"
+    networks:
+      - internal
+    depends_on:
+      app:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD-SHELL", "wget -qO- http://127.0.0.1/healthz | grep -q ok"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 10s
+
+# Sem `name:`: rede e volumes herdam o prefixo do projeto (<slug>_internal, <slug>_db_data...).
+networks:
+  internal:
+
+volumes:
+  db_data:
+  redis_data:

@@ -1,0 +1,13 @@
+.git
+.maestri
+.env
+.env.*
+**/node_modules
+**/vendor
+**/dist
+**/coverage
+backend/storage/logs/*
+backend/storage/framework/*/*
+backend/bootstrap/cache/*.php
+backend/.env
+!backend/.env.testing

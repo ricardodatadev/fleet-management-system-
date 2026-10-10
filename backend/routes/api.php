@@ -9,6 +9,7 @@ use App\Http\Controllers\Api\V1\EquipmentController;
 use App\Http\Controllers\Api\V1\EquipmentFamilyController;
 use App\Http\Controllers\Api\V1\HealthController;
 use App\Http\Controllers\Api\V1\MetaController;
+use App\Http\Controllers\Api\V1\SettingController;
 use App\Http\Controllers\Api\V1\UserController;
 use Illuminate\Support\Facades\Route;
 
@@ -56,4 +57,11 @@ Route::middleware('auth:sanctum')->group(function () {
     // Auditoria (F.1): somente leitura. Sem POST/PUT/PATCH/DELETE (→ 405), nem para admin.
     Route::get('audit-logs', [AuditLogController::class, 'index'])->middleware('can:audit.view')->name('api.audit_logs.index');
     Route::get('audit-logs/{audit_log}', [AuditLogController::class, 'show'])->middleware('can:audit.view')->name('api.audit_logs.show');
+
+    // Parâmetros (D.2/F.2): leitura L e A (líder só a própria filial, checado no controller); escrita só A.
+    Route::get('settings/definitions', [SettingController::class, 'definitions'])->middleware('can:settings.view')->name('api.settings.definitions');
+    Route::get('settings/effective', [SettingController::class, 'effective'])->middleware('can:settings.view')->name('api.settings.effective');
+    Route::get('settings', [SettingController::class, 'index'])->middleware('can:settings.view')->name('api.settings.index');
+    Route::put('settings/{key}', [SettingController::class, 'update'])->middleware('can:settings.manage')->where('key', '[a-z0-9_.]+')->name('api.settings.update');
+    Route::delete('settings/{key}', [SettingController::class, 'destroy'])->middleware('can:settings.manage')->where('key', '[a-z0-9_.]+')->name('api.settings.destroy');
 });

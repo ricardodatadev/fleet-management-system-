@@ -7,6 +7,7 @@ use App\Models\CostCenter;
 use App\Models\Employee;
 use App\Models\Equipment;
 use App\Models\EquipmentFamily;
+use App\Models\Setting;
 use App\Models\User;
 use App\Support\Rbac\Rbac;
 use Database\Factories\UserFactory;
@@ -186,6 +187,12 @@ function routeMatrix(): array
         ['PATCH', 'equipments/{equipment}', ['name' => 'Renomeado'], $adminOnly(200)],
         ['DELETE', 'equipments/{equipment}', [], $adminOnly(200)],
         ['POST', 'equipments/{equipment}/restore', [], $adminOnly(200), ['equipment' => 'trashed_equipment']],
+        // F1-16 — parâmetros (settings.view: L, A; manage: A). O líder só lê; o escopo de filial do líder está no SettingsTest.
+        ['GET', 'settings/definitions', [], $leaderAndAdmin],
+        ['GET', 'settings', [], $leaderAndAdmin],
+        ['GET', 'settings/effective', ['key' => 'warranty.alert_mode'], $leaderAndAdmin],
+        ['PUT', 'settings/{key}', ['scope_type' => 'global', 'scope_id' => null, 'value' => 'hard_block'], $adminOnly(200)],
+        ['DELETE', 'settings/{key}', [], $adminOnly(200), ['key' => 'setting_override']],
         // F1-11 — usuários (users.view/users.manage: A) e auditoria (audit.view: A, somente leitura)
         ['GET', 'users', [], $adminOnly(200)],
         ['POST', 'users', ['name' => 'Novo', 'username' => 'novo', 'email' => 'novo@example.com', 'password' => 'NovaSenha2026', 'role' => 'admin'], $adminOnly(201)],
@@ -232,6 +239,11 @@ function routeFixtures(User $user): array
         'trashed_employee' => $trashedEmployee->id,
         'equipment' => Equipment::factory()->create(['branch_id' => $ownBranchId])->id,
         'trashed_equipment' => $trashedEquipment->id,
+        'key' => 'warranty.alert_mode',
+        // override de família existente: a rota de exclusão leva escopo na query
+        'setting_override' => 'warranty.alert_mode?scope_type=family&scope_id='.Setting::query()->create([
+            'key' => 'warranty.alert_mode', 'scope_type' => 'family', 'scope_id' => EquipmentFamily::factory()->create()->id, 'value' => 'hard_block',
+        ])->scope_id,
         'audit_log' => AuditLog::query()->value('id'),
     ];
 }

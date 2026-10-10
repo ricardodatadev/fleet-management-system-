@@ -42,6 +42,7 @@
                                 "employee",
                                 "equipment",
                                 "equipment_family",
+                                "setting",
                                 "user"
                             ]
                         }
@@ -2889,6 +2890,391 @@
                 ]
             }
         },
+        "/settings/definitions": {
+            "get": {
+                "tags": [
+                    "Parâmetros"
+                ],
+                "summary": "Registry dos parâmetros (RN-001..004)",
+                "description": "Permissão: settings.view (L e A). Chave, regra de origem, rótulo, tipo, valores permitidos, default e escopos permitidos.",
+                "operationId": "settingsDefinitions",
+                "responses": {
+                    "200": {
+                        "description": "Definições.",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "allOf": [
+                                        {
+                                            "$ref": "#/components/schemas/Envelope"
+                                        },
+                                        {
+                                            "properties": {
+                                                "data": {
+                                                    "type": "array",
+                                                    "items": {
+                                                        "$ref": "#/components/schemas/SettingDefinition"
+                                                    }
+                                                }
+                                            },
+                                            "type": "object"
+                                        }
+                                    ]
+                                }
+                            }
+                        }
+                    },
+                    "401": {
+                        "$ref": "#/components/responses/Unauthenticated"
+                    },
+                    "403": {
+                        "$ref": "#/components/responses/Forbidden"
+                    },
+                    "429": {
+                        "$ref": "#/components/responses/TooManyRequests"
+                    }
+                },
+                "security": [
+                    {
+                        "bearerAuth": []
+                    }
+                ]
+            }
+        },
+        "/settings": {
+            "get": {
+                "tags": [
+                    "Parâmetros"
+                ],
+                "summary": "Lista os overrides gravados",
+                "description": "Permissão: settings.view (L e A). Filtros `key`, `scope_type` e `scope_id` (este exige `scope_type`). O líder vê os globais, os de família e os da própria filial; `scope_type=branch` com `scope_id` de outra filial → 403. Ordem: key, scope_type, scope_id.",
+                "operationId": "settingsIndex",
+                "parameters": [
+                    {
+                        "$ref": "#/components/parameters/Page"
+                    },
+                    {
+                        "$ref": "#/components/parameters/PerPage"
+                    },
+                    {
+                        "name": "key",
+                        "in": "query",
+                        "schema": {
+                            "type": "string"
+                        }
+                    },
+                    {
+                        "name": "scope_type",
+                        "in": "query",
+                        "schema": {
+                            "type": "string",
+                            "enum": [
+                                "global",
+                                "branch",
+                                "family"
+                            ]
+                        }
+                    },
+                    {
+                        "name": "scope_id",
+                        "in": "query",
+                        "schema": {
+                            "type": "integer"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Lista paginada.",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "allOf": [
+                                        {
+                                            "$ref": "#/components/schemas/Envelope"
+                                        },
+                                        {
+                                            "required": [
+                                                "meta"
+                                            ],
+                                            "properties": {
+                                                "data": {
+                                                    "type": "array",
+                                                    "items": {
+                                                        "$ref": "#/components/schemas/Setting"
+                                                    }
+                                                }
+                                            },
+                                            "type": "object"
+                                        }
+                                    ]
+                                }
+                            }
+                        }
+                    },
+                    "401": {
+                        "$ref": "#/components/responses/Unauthenticated"
+                    },
+                    "403": {
+                        "$ref": "#/components/responses/Forbidden"
+                    },
+                    "422": {
+                        "$ref": "#/components/responses/ValidationError"
+                    },
+                    "429": {
+                        "$ref": "#/components/responses/TooManyRequests"
+                    }
+                },
+                "security": [
+                    {
+                        "bearerAuth": []
+                    }
+                ]
+            }
+        },
+        "/settings/effective": {
+            "get": {
+                "tags": [
+                    "Parâmetros"
+                ],
+                "summary": "Valor efetivo de um parâmetro e a sua origem",
+                "description": "Permissão: settings.view (L e A). Precedência family > branch > global > default do registry, só entre os escopos permitidos da chave. `branch_id`/`family_id` existentes e não excluídos (422). O líder só consulta a própria filial (outra → 403); famílias são livres.",
+                "operationId": "settingsEffective",
+                "parameters": [
+                    {
+                        "name": "key",
+                        "in": "query",
+                        "required": true,
+                        "schema": {
+                            "type": "string",
+                            "example": "warranty.alert_mode"
+                        }
+                    },
+                    {
+                        "name": "branch_id",
+                        "in": "query",
+                        "schema": {
+                            "type": "integer"
+                        }
+                    },
+                    {
+                        "name": "family_id",
+                        "in": "query",
+                        "schema": {
+                            "type": "integer"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Valor efetivo.",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "allOf": [
+                                        {
+                                            "$ref": "#/components/schemas/Envelope"
+                                        },
+                                        {
+                                            "properties": {
+                                                "data": {
+                                                    "$ref": "#/components/schemas/SettingEffective"
+                                                }
+                                            },
+                                            "type": "object"
+                                        }
+                                    ]
+                                }
+                            }
+                        }
+                    },
+                    "401": {
+                        "$ref": "#/components/responses/Unauthenticated"
+                    },
+                    "403": {
+                        "$ref": "#/components/responses/Forbidden"
+                    },
+                    "422": {
+                        "$ref": "#/components/responses/ValidationError"
+                    },
+                    "429": {
+                        "$ref": "#/components/responses/TooManyRequests"
+                    }
+                },
+                "security": [
+                    {
+                        "bearerAuth": []
+                    }
+                ]
+            }
+        },
+        "/settings/{key}": {
+            "put": {
+                "tags": [
+                    "Parâmetros"
+                ],
+                "summary": "Grava o override de um parâmetro (upsert idempotente)",
+                "description": "Permissão: settings.manage (A). Valida contra o registry (422): chave inexistente, escopo não permitido para a chave, `scope_id` ausente/inexistente/excluído (ou presente no global) e valor fora do tipo (enum: um dos valores; bool: true/false). O mesmo valor de novo não muda nada nem gera auditoria; mudança → `setting_changed` com old/new e escopo.",
+                "operationId": "settingsUpdate",
+                "parameters": [
+                    {
+                        "name": "key",
+                        "in": "path",
+                        "required": true,
+                        "schema": {
+                            "type": "string",
+                            "example": "warranty.alert_mode"
+                        }
+                    }
+                ],
+                "requestBody": {
+                    "required": true,
+                    "content": {
+                        "application/json": {
+                            "schema": {
+                                "required": [
+                                    "scope_type",
+                                    "scope_id",
+                                    "value"
+                                ],
+                                "properties": {
+                                    "scope_type": {
+                                        "type": "string",
+                                        "enum": [
+                                            "global",
+                                            "branch",
+                                            "family"
+                                        ]
+                                    },
+                                    "scope_id": {
+                                        "description": "null no global; id da filial ou da família.",
+                                        "type": "integer",
+                                        "nullable": true
+                                    },
+                                    "value": {
+                                        "description": "String do enum ou boolean, conforme a chave.",
+                                        "example": "hard_block"
+                                    }
+                                },
+                                "type": "object"
+                            }
+                        }
+                    }
+                },
+                "responses": {
+                    "200": {
+                        "description": "Gravado.",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "allOf": [
+                                        {
+                                            "$ref": "#/components/schemas/Envelope"
+                                        },
+                                        {
+                                            "properties": {
+                                                "data": {
+                                                    "$ref": "#/components/schemas/Setting"
+                                                }
+                                            },
+                                            "type": "object"
+                                        }
+                                    ]
+                                }
+                            }
+                        }
+                    },
+                    "401": {
+                        "$ref": "#/components/responses/Unauthenticated"
+                    },
+                    "403": {
+                        "$ref": "#/components/responses/Forbidden"
+                    },
+                    "422": {
+                        "$ref": "#/components/responses/ValidationError"
+                    },
+                    "429": {
+                        "$ref": "#/components/responses/TooManyRequests"
+                    }
+                },
+                "security": [
+                    {
+                        "bearerAuth": []
+                    }
+                ]
+            },
+            "delete": {
+                "tags": [
+                    "Parâmetros"
+                ],
+                "summary": "Remove o override de um parâmetro",
+                "description": "Permissão: settings.manage (A). `scope_type` (branch ou family) e `scope_id` na query. O global não pode ser removido (422). Override inexistente → 404. Remoção → `setting_removed` com o valor anterior e o escopo.",
+                "operationId": "settingsDestroy",
+                "parameters": [
+                    {
+                        "name": "key",
+                        "in": "path",
+                        "required": true,
+                        "schema": {
+                            "type": "string",
+                            "example": "warranty.alert_mode"
+                        }
+                    },
+                    {
+                        "name": "scope_type",
+                        "in": "query",
+                        "required": true,
+                        "schema": {
+                            "type": "string",
+                            "enum": [
+                                "global",
+                                "branch",
+                                "family"
+                            ]
+                        }
+                    },
+                    {
+                        "name": "scope_id",
+                        "in": "query",
+                        "schema": {
+                            "type": "integer"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Removido (`data` null).",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/Envelope"
+                                }
+                            }
+                        }
+                    },
+                    "401": {
+                        "$ref": "#/components/responses/Unauthenticated"
+                    },
+                    "403": {
+                        "$ref": "#/components/responses/Forbidden"
+                    },
+                    "404": {
+                        "$ref": "#/components/responses/NotFound"
+                    },
+                    "422": {
+                        "$ref": "#/components/responses/ValidationError"
+                    },
+                    "429": {
+                        "$ref": "#/components/responses/TooManyRequests"
+                    }
+                },
+                "security": [
+                    {
+                        "bearerAuth": []
+                    }
+                ]
+            }
+        },
         "/users": {
             "get": {
                 "tags": [
@@ -3896,6 +4282,136 @@
                 },
                 "type": "object"
             },
+            "SettingDefinition": {
+                "required": [
+                    "key",
+                    "rule",
+                    "label",
+                    "description",
+                    "type",
+                    "values",
+                    "default",
+                    "scopes",
+                    "placeholder"
+                ],
+                "properties": {
+                    "key": {
+                        "type": "string",
+                        "example": "warranty.alert_mode"
+                    },
+                    "rule": {
+                        "description": "Regra de negócio de origem.",
+                        "type": "string",
+                        "example": "RN-004"
+                    },
+                    "label": {
+                        "type": "string",
+                        "example": "Tratamento de peça ou serviço em garantia"
+                    },
+                    "description": {
+                        "type": "string"
+                    },
+                    "type": {
+                        "type": "string",
+                        "enum": [
+                            "enum",
+                            "bool"
+                        ]
+                    },
+                    "values": {
+                        "description": "Valores permitidos (só enum); null em bool.",
+                        "type": "array",
+                        "items": {
+                            "required": [
+                                "value",
+                                "label"
+                            ],
+                            "properties": {
+                                "value": {
+                                    "type": "string",
+                                    "example": "warning"
+                                },
+                                "label": {
+                                    "type": "string",
+                                    "example": "Apenas alertar"
+                                }
+                            },
+                            "type": "object"
+                        },
+                        "nullable": true
+                    },
+                    "default": {
+                        "description": "Valor padrão (string do enum ou boolean).",
+                        "example": "warning"
+                    },
+                    "scopes": {
+                        "type": "array",
+                        "items": {
+                            "type": "string",
+                            "enum": [
+                                "global",
+                                "branch",
+                                "family"
+                            ]
+                        }
+                    },
+                    "placeholder": {
+                        "description": "Chave provisória (D14: RN-002).",
+                        "type": "boolean"
+                    }
+                },
+                "type": "object"
+            },
+            "SettingEffective": {
+                "required": [
+                    "key",
+                    "value",
+                    "source"
+                ],
+                "properties": {
+                    "key": {
+                        "type": "string",
+                        "example": "warranty.alert_mode"
+                    },
+                    "value": {
+                        "description": "Valor efetivo (string do enum ou boolean).",
+                        "example": "hard_block"
+                    },
+                    "source": {
+                        "description": "Override que definiu o valor `{scope_type, scope_id}` ou \"default\" (registry).",
+                        "oneOf": [
+                            {
+                                "type": "string",
+                                "enum": [
+                                    "default"
+                                ]
+                            },
+                            {
+                                "required": [
+                                    "scope_type",
+                                    "scope_id"
+                                ],
+                                "properties": {
+                                    "scope_type": {
+                                        "type": "string",
+                                        "enum": [
+                                            "global",
+                                            "branch",
+                                            "family"
+                                        ]
+                                    },
+                                    "scope_id": {
+                                        "type": "integer",
+                                        "nullable": true
+                                    }
+                                },
+                                "type": "object"
+                            }
+                        ]
+                    }
+                },
+                "type": "object"
+            },
             "UserInput": {
                 "description": "Create: name, username, email, password e role obrigatórios. Update (PUT = PATCH): parcial. `username`: trim + minúsculas e depois letras minúsculas sem acento, números e ponto (não no início, no fim nem repetido), 3 a 30 caracteres; fora disso (acento, espaço, `_`, `-`, `@`, `..`) → 422, sem transliteração; único entre não excluídos. `email` é gravado em minúsculas e é único entre usuários não excluídos. `password`: mín. 10 caracteres, com maiúscula, minúscula e número. `branch_id` é obrigatório quando o perfil (enviado ou atual) não é admin, inclusive ao trocar de admin para outro perfil; filial existente e não excluída (inativa é aceita).",
                 "properties": {
@@ -4876,6 +5392,99 @@
                 },
                 "type": "object"
             },
+            "Setting": {
+                "required": [
+                    "id",
+                    "key",
+                    "scope_type",
+                    "scope_id",
+                    "scope",
+                    "value",
+                    "updated_by",
+                    "created_at",
+                    "updated_at"
+                ],
+                "properties": {
+                    "id": {
+                        "description": "Override gravado de um parâmetro. `scope` é a filial/família do escopo `{id, code, name}` (null no global).",
+                        "type": "integer",
+                        "example": 1
+                    },
+                    "key": {
+                        "type": "string",
+                        "example": "warranty.alert_mode"
+                    },
+                    "scope_type": {
+                        "type": "string",
+                        "enum": [
+                            "global",
+                            "branch",
+                            "family"
+                        ]
+                    },
+                    "scope_id": {
+                        "type": "integer",
+                        "nullable": true
+                    },
+                    "scope": {
+                        "description": "Filial ou família do escopo; null no global.",
+                        "required": [
+                            "id",
+                            "code",
+                            "name"
+                        ],
+                        "properties": {
+                            "id": {
+                                "type": "integer",
+                                "example": 1
+                            },
+                            "code": {
+                                "type": "string",
+                                "example": "FIL-001"
+                            },
+                            "name": {
+                                "type": "string",
+                                "example": "Matriz"
+                            }
+                        },
+                        "type": "object",
+                        "nullable": true
+                    },
+                    "value": {
+                        "description": "Valor do tipo da chave (string do enum ou boolean).",
+                        "example": "hard_block"
+                    },
+                    "updated_by": {
+                        "required": [
+                            "id",
+                            "name"
+                        ],
+                        "properties": {
+                            "id": {
+                                "type": "integer",
+                                "example": 1
+                            },
+                            "name": {
+                                "type": "string",
+                                "example": "Ana Souza"
+                            }
+                        },
+                        "type": "object",
+                        "nullable": true
+                    },
+                    "created_at": {
+                        "type": "string",
+                        "format": "date-time",
+                        "nullable": true
+                    },
+                    "updated_at": {
+                        "type": "string",
+                        "format": "date-time",
+                        "nullable": true
+                    }
+                },
+                "type": "object"
+            },
             "AuthUser": {
                 "required": [
                     "id",
@@ -5300,6 +5909,10 @@
         {
             "name": "Infra",
             "description": "Infra"
+        },
+        {
+            "name": "Parâmetros",
+            "description": "Parâmetros"
         },
         {
             "name": "Usuários",

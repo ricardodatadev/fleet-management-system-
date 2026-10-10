@@ -229,6 +229,11 @@ return [
         'sort' => 'ordenação',
         'with_trashed' => 'incluir excluídos',
         'has_employee' => 'com colaborador vinculado',
+        // parâmetros
+        'key' => 'parâmetro',
+        'scope_type' => 'escopo',
+        'scope_id' => 'filial ou família do escopo',
+        'value' => 'valor',
         'auditable_type' => 'tipo de registro',
         'auditable_id' => 'registro',
         'actor_id' => 'autor',

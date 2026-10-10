@@ -4,6 +4,7 @@ use App\Enums\Role;
 use App\Models\AuditLog;
 use App\Models\Branch;
 use App\Models\CostCenter;
+use App\Models\Setting;
 use App\Support\Audit\Auditable;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\DB;
@@ -136,10 +137,11 @@ it('somente admin: L/M/O → 403 na lista e no detalhe', function (Role $role) {
     api('GET', "audit-logs/{$id}", token: $token)->assertForbidden();
 })->with([Role::Leader, Role::Mechanic, Role::Operator]);
 
-it('alias de auditable_type cobre todos os models com Auditable', function () {
+it('alias de auditable_type cobre todos os models com Auditable e o Setting (auditado pelo SettingsService)', function () {
     $auditable = collect(glob(app_path('Models/*.php')))
         ->map(fn (string $file) => 'App\\Models\\'.basename($file, '.php'))
         ->filter(fn (string $class) => in_array(Auditable::class, class_uses_recursive($class), true))
+        ->push(Setting::class)
         ->sort()->values()->all();
 
     expect(collect(AuditLog::AUDITABLE_TYPES)->values()->sort()->values()->all())->toBe($auditable);

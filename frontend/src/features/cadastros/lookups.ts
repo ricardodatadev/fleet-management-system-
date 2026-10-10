@@ -1,7 +1,7 @@
 import { useQuery } from '@tanstack/react-query';
 import { api } from '@/api';
 import type { SelectOption } from '@/components/ui';
-import type { Branch, CostCenter, EquipmentFamily, MetaEnums, User } from './types';
+import type { Branch, CostCenter, Employee, EquipmentFamily, MetaEnums, User } from './types';
 
 /** Limite de itens dos selects de lookup (D.1: até 200 com `is_active=1`). */
 export const LOOKUP_PER_PAGE = 200;
@@ -76,5 +76,23 @@ export function useFamilyOptions(enabled = true) {
         label: `${family.code} — ${family.name}`,
       })),
     enabled,
+  });
+}
+
+/** Colaboradores ativos de uma filial (responsável pelo equipamento); sem filial, nada a buscar. */
+export function useEmployeeOptions(branchId: string, enabled = true) {
+  return useQuery({
+    queryKey: ['/employees', 'lookup', branchId],
+    queryFn: ({ signal }) =>
+      api.getPage<Employee>('/employees', {
+        query: { per_page: LOOKUP_PER_PAGE, is_active: 1, branch_id: branchId, sort: 'name' },
+        signal,
+      }),
+    select: (page): SelectOption[] =>
+      page.data.map((employee) => ({
+        value: String(employee.id),
+        label: `${employee.name} (${employee.registration})`,
+      })),
+    enabled: enabled && branchId !== '',
   });
 }

@@ -1,31 +1,36 @@
-import { Badge, StatusPill, useToast } from '@/components/ui';
+import { Suspense, lazy, useState } from 'react';
+import { Badge, StatusPill } from '@/components/ui';
 import { useAuth, useCan } from '@/features/auth';
 import { CrudPage } from '@/features/cadastros/crud/CrudPage';
 import type { CrudFilter, CrudResource } from '@/features/cadastros/crud/types';
 import { enumOptions } from '@/features/cadastros/labels';
 import { useBranchOptions, useFamilyOptions, useMetaEnums } from '@/features/cadastros/lookups';
-import { FORM_SOON, STATUS_LABELS } from './labels';
+import { STATUS_LABELS } from './labels';
 import type { Equipment } from './types';
+
+// O formulário (react-hook-form + zod) fica num chunk à parte: só baixa ao abrir Cadastrar/Editar.
+const EquipmentFormModal = lazy(() =>
+  import('./EquipmentFormModal').then((module) => ({ default: module.EquipmentFormModal })),
+);
 
 const ref = (item: { code: string; name: string } | null) => (item ? item.name : '—');
 
 /**
  * Frotas & Equipamentos (G.4-2, F1-25): lista server-side com busca, filial, família e status na
- * URL. Escrita só com `equipments.manage`; criar/editar abrem o formulário da F1-26 (por ora, um
- * aviso). Quem tem filial fixa (não-admin) já recebe só a própria filial da API: o filtro de filial
+ * URL. Escrita só com `equipments.manage`; criar/editar abrem o formulário por abas (F1-26). Quem tem filial fixa (não-admin) já recebe só a própria filial da API: o filtro de filial
  * some para ele.
  */
 export function EquipmentsPage() {
   const auth = useAuth();
   const can = useCan();
-  const { toast } = useToast();
   const enums = useMetaEnums();
   const fixedBranch = auth.status === 'authenticated' ? auth.user.branch : null;
   const canSeeFamilies = can('equipment_families.view');
   const branches = useBranchOptions(fixedBranch === null);
   const families = useFamilyOptions(canSeeFamilies);
 
-  const soon = () => toast({ tone: 'info', title: 'Em breve', description: FORM_SOON });
+  // `undefined` = fechado; `null` = cadastro; registro = edição.
+  const [editing, setEditing] = useState<Equipment | null | undefined>(undefined);
 
   const filters: CrudFilter[] = [];
   if (fixedBranch === null) {
@@ -66,8 +71,8 @@ export function EquipmentsPage() {
     permissions: { view: 'equipments.view', manage: 'equipments.manage' },
     searchPlaceholder: 'Código, nome ou placa',
     describe: (row) => `${row.code} — ${row.name}`,
-    onCreate: soon,
-    onEdit: soon,
+    onCreate: () => setEditing(null),
+    onEdit: (row) => setEditing(row),
     columns: [
       { key: 'code', header: 'Código', sortField: 'code', cell: (row) => row.code },
       { key: 'name', header: 'Nome', sortField: 'name', cell: (row) => row.name },
@@ -95,5 +100,14 @@ export function EquipmentsPage() {
     fields: [],
   };
 
-  return <CrudPage resource={resource} />;
+  return (
+    <>
+      <CrudPage resource={resource} />
+      {editing !== undefined && (
+        <Suspense fallback={null}>
+          <EquipmentFormModal row={editing} onClose={() => setEditing(undefined)} />
+        </Suspense>
+      )}
+    </>
+  );
 }

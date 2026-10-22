@@ -9,6 +9,7 @@ import {
   ResetPasswordPage,
 } from '@/features/auth';
 import { DEFAULT_AUTHENTICATED_PATH } from '@/features/auth';
+import { AuditPage } from '@/features/audit/AuditPage';
 import { BranchesPage } from '@/features/cadastros/BranchesPage';
 import { CostCentersPage } from '@/features/cadastros/CostCentersPage';
 import { EmployeesPage } from '@/features/cadastros/EmployeesPage';
@@ -104,6 +105,14 @@ export const routes: RouteObject[] = [
             element: (
               <RequirePermission perm="users.view">
                 <UsersPage />
+              </RequirePermission>
+            ),
+          },
+          {
+            path: '/admin/auditoria',
+            element: (
+              <RequirePermission perm="audit.view">
+                <AuditPage />
               </RequirePermission>
             ),
           },

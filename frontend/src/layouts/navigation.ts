@@ -70,8 +70,8 @@ const soon = (id: string, label: string, icon: LucideIcon, perm?: string): NavIt
 /**
  * Navegação principal (spec G.3), na ordem da nota de UI.
  * Grupo sem nenhum item visível para o usuário não é renderizado (ex.: ADMINISTRAÇÃO para quem
- * não tem settings/users/audit). Cadastros (F1-30/F1-31) e Usuários estão habilitados; Auditoria
- * segue "Em breve" (F1-32, adiada para a Fase 2).
+ * não tem settings/users/audit). Cadastros (F1-30/F1-31), Usuários e Auditoria (F2-20) estão
+ * habilitados.
  */
 export const NAVIGATION: NavGroupConfig[] = [
   {
@@ -215,7 +215,14 @@ export const NAVIGATION: NavGroupConfig[] = [
         perm: 'users.view',
         enabled: true,
       },
-      { ...soon('auditoria', 'Auditoria', ScrollText, 'audit.view'), to: '/admin/auditoria' },
+      {
+        id: 'auditoria',
+        label: 'Auditoria',
+        icon: ScrollText,
+        to: '/admin/auditoria',
+        perm: 'audit.view',
+        enabled: true,
+      },
     ],
   },
 ];

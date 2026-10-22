@@ -52,7 +52,7 @@ describe('navigation.ts (G.3)', () => {
     expect(shape(NAVIGATION)).toEqual(G3);
   });
 
-  it('habilitados: Equipamentos, cadastros (F1-30/F1-31), Parâmetros e Usuários; Auditoria não', () => {
+  it('habilitados: Equipamentos, cadastros (F1-30/F1-31), Parâmetros, Usuários e Auditoria (F2-20)', () => {
     const enabled = NAVIGATION.flatMap((g) => g.items.filter((i) => i.enabled));
     expect(enabled.map((i) => [i.label, i.to, i.perm])).toEqual([
       ['Frotas & Equipamentos', '/ativos/equipamentos', 'equipments.view'],
@@ -62,6 +62,7 @@ describe('navigation.ts (G.3)', () => {
       ['Famílias/Classes', '/cadastros/familias', 'equipment_families.view'],
       ['Painel de Parâmetros', '/parametros', 'settings.view'],
       ['Usuários', '/admin/usuarios', 'users.view'],
+      ['Auditoria', '/admin/auditoria', 'audit.view'],
     ]);
   });
 

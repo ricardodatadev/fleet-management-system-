@@ -2,7 +2,7 @@
 # Contexto de build: raiz do repo (ver docker-compose.yml). .dockerignore filtra o contexto.
 # PHP 8.4: série estável atual suportada pelo Laravel 13 (8.3–8.5), com suporte mais longo que 8.3; permite migrar ao Pest 5 no futuro.
 
-FROM php:8.4.26-fpm-alpine AS base
+FROM php:8.4.27-fpm-alpine AS base
 
 RUN apk add --no-cache fcgi libpq icu-libs libzip \
     && apk add --no-cache --virtual .build-deps $PHPIZE_DEPS postgresql-dev icu-dev libzip-dev \

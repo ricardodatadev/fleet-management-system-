@@ -40,7 +40,7 @@ Pesquisa de 2026-10-08. Versões do backend confirmadas no packagist/`composer s
 | Componente | Registro atual | Confirmação |
 |---|---|---|
 | Laravel (D1) | **Laravel 13.35.0** (`laravel/framework`; skeleton `laravel/laravel` v13.11.0), confirmado no packagist em 2026-10-08. Exige PHP ^8.3. | **confirmado (F1-03)** |
-| PHP (D1) | **8.4.26** (`php:8.4.26-fpm-alpine`). 8.4 escolhido por ser a série estável atual suportada pelo Laravel 13 (aceita 8.3–8.5), com suporte mais longo que a 8.3; permite migrar ao Pest 5 (exige PHP ^8.4) no futuro. O Pest 4.7 instalado aceita PHP 8.3. | confirmado (F1-03) |
+| PHP (D1) | **8.4.27** (`php:8.4.27-fpm-alpine`). 8.4 escolhido por ser a série estável atual suportada pelo Laravel 13 (aceita 8.3–8.5), com suporte mais longo que a 8.3; permite migrar ao Pest 5 (exige PHP ^8.4) no futuro. O Pest 4.7 instalado aceita PHP 8.3. | confirmado (F1-03) |
 | Composer | 2.10.3 (imagem `composer:2.10.3`, copiado para a imagem do app) | confirmado |
 | Sanctum | 4.3.3 (suporta Laravel 13) | confirmado |
 | Horizon | 5.50.0 (suporta Laravel 13) | confirmado |

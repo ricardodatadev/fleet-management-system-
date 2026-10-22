@@ -1,5 +1,6 @@
 import { render, screen, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
+import { auditLog, mockAuditApi } from '@/test/audit';
 import { mockAuthApi, renderApp, storeSession } from '@/test/auth';
 import { branch, mockCrudApi, mockMetaEnums } from '@/test/crud';
 import { SEED, mockSettingsApi } from '@/test/settings';
@@ -125,6 +126,17 @@ describe('espaçamento >= 8px entre alvos (G.1, F1-29)', () => {
     mockApis();
     await open('/parametros?escopo=filial&id=1', 'Painel de Parâmetros');
     await screen.findAllByText(/Definido nesta filial|Herdado de Global/);
+    expect(findSpacingViolations()).toEqual([]);
+  });
+
+  it('Auditoria (filtros com Limpar, tabela e drawer do evento)', async () => {
+    mockAuditApi([auditLog(1, { metadata: { key: 'downtime.mode' } })]);
+    await open('/admin/auditoria?action=updated', 'Auditoria');
+    await screen.findByText('Centro de custo #7');
+    expect(findSpacingViolations()).toEqual([]);
+    await userEvent.setup().click(screen.getByRole('button', { name: /20\/10\/2026/ }));
+    const dialog = await screen.findByRole('dialog', { name: /Alteração/ });
+    await within(dialog).findByRole('list', { name: 'Alterações' });
     expect(findSpacingViolations()).toEqual([]);
   });
 

@@ -184,6 +184,9 @@ describe('tokens de cor (F1-36)', () => {
     ['text', 'danger-subtle', 4.5],
     ['text', 'warning-subtle', 4.5],
     ['text', 'info-subtle', 4.5],
+    // Diff da Auditoria (F2-20): "nulo"/"vazio" em text-muted sobre os fundos de antes/depois.
+    ['text-muted', 'danger-subtle', 4.5],
+    ['text-muted', 'success-subtle', 4.5],
     // Topbar escura e avatar (iniciais sobre o círculo claro).
     ['on-topbar', 'topbar-bg', 4.5],
     ['on-topbar', 'topbar-hover', 4.5],

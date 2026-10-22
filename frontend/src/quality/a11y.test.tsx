@@ -1,10 +1,14 @@
 import { screen, within } from '@testing-library/react';
 import { axe } from 'jest-axe';
+import { auditLog, mockAuditApi } from '@/test/audit';
 import { mockAuthApi, renderApp, storeSession } from '@/test/auth';
 import { branch, mockCrudApi, mockMetaEnums } from '@/test/crud';
 import { SEED, mockSettingsApi } from '@/test/settings';
 
-/** Gate da F1-29: 0 violações axe nas telas principais (Login, Equipamentos, Parâmetros). */
+/**
+ * Gate da F1-29: 0 violações axe nas telas principais (Login, Equipamentos, Parâmetros), mais a
+ * Auditoria (F2-20).
+ */
 
 function equipment(id: number, code: string) {
   return {
@@ -83,5 +87,23 @@ describe('axe nas telas principais (F1-29)', () => {
     await open('/parametros?escopo=filial&id=1', 'Painel de Parâmetros');
     await screen.findAllByText(/Definido nesta filial|Herdado de Global/);
     expect(await axe(document.body)).toHaveNoViolations();
+  });
+
+  it('Auditoria (lista com filtros e drawer com diff e JSON): 0 violações', async () => {
+    mockAuditApi([
+      auditLog(1, {
+        old_values: { name: 'A', notes: null, value: { mode: 'manual' } },
+        new_values: { name: 'B', notes: '', value: { mode: 'auto' } },
+        metadata: { key: 'downtime.mode' },
+      }),
+    ]);
+    await open('/admin/auditoria?action=updated', 'Auditoria');
+    await screen.findByText('Centro de custo #7');
+    expect(await axe(document.body)).toHaveNoViolations();
+    mockAuthApi('admin');
+    renderApp('/admin/auditoria?id=1');
+    const dialog = await screen.findByRole('dialog', { name: /Alteração/ });
+    await within(dialog).findByRole('list', { name: 'Alterações' });
+    expect(await axe(dialog)).toHaveNoViolations();
   });
 });

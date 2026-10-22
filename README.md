@@ -34,7 +34,7 @@ make smoke                # = bash scripts/smoke.sh: verificação ponta a ponta
 
 Acesse `http://localhost:${WEB_HTTP_PORT}/` (padrão 80; use ex. 8080 se a porta 80 estiver ocupada ou sem privilégio) e entre com o **username** do admin (`SEED_ADMIN_USERNAME`) e a senha `SEED_ADMIN_PASSWORD`. Health do nginx: `/healthz`; da API: `/api/v1/health`. Documentação da API: `/api/documentation` apenas com `L5_SWAGGER_ENABLED=true`.
 
-**Usuários de demonstração** (só com `APP_ENV=local`/`testing`, criados pelo `make seed`), todos com a senha `SEED_DEMO_PASSWORD`: `demo.admin` (administrador, sem filial), `demo.lider` (líder), `demo.mecanico` (mecânico) e `demo.operador` (operador), estes na filial `DEMO-01`.
+**Usuários de demonstração** (só com `APP_ENV=local`/`testing`, criados pelo `make seed`), todos com a senha `SEED_DEMO_PASSWORD`: `demo.admin` (administrador, sem filial), `demo.gestor` (gestor/PCM), `demo.lider` (líder), `demo.mecanico` (mecânico) e `demo.operador` (operador), estes na filial `DEMO-01`.
 
 ### Smoke E2E
 
@@ -76,7 +76,7 @@ O cliente conecta em `/socket.io/` na mesma origem (o nginx faz o upgrade para W
 `make seed` (= `php artisan db:seed --force` no container) é idempotente: rodar de novo não duplica nem altera o que já existe.
 
 - **Todos os ambientes:** os 4 parâmetros globais com o default do registry (um valor já alterado pelo admin é mantido) e o administrador inicial de `SEED_ADMIN_USERNAME`/`SEED_ADMIN_EMAIL`/`SEED_ADMIN_PASSWORD` (+ `SEED_ADMIN_NAME` opcional). Sem alguma delas, o seed falha com a lista do que falta; username pela regra de usuário e senha pela política. Se o username já existir, nada muda (nem a senha).
-- **Só `local`/`testing`:** dados de demonstração com prefixo `DEMO` (2 filiais, 3 centros de custo, 5 famílias, 32 equipamentos, colaboradores) e 1 usuário por perfil (`demo.admin`, `demo.lider`, `demo.mecanico`, `demo.operador`) com a senha `SEED_DEMO_PASSWORD`. Em `production` o DemoSeeder não roda.
+- **Só `local`/`testing`:** dados de demonstração com prefixo `DEMO` (2 filiais, 3 centros de custo, 5 famílias, 32 equipamentos, colaboradores) e 1 usuário por perfil (`demo.admin`, `demo.gestor`, `demo.lider`, `demo.mecanico`, `demo.operador`) com a senha `SEED_DEMO_PASSWORD`. Em `production` o DemoSeeder não roda.
 - Nenhuma senha fica no código: tudo vem do `.env` (o `.env.example` traz `change-me`, que a política recusa de propósito).
 
 ## Autenticação e e-mail
@@ -84,6 +84,10 @@ O cliente conecta em `/socket.io/` na mesma origem (o nginx faz o upgrade para W
 - **Login só por usuário (username) + senha** (`POST /api/v1/auth/login` com `{username, password, device_name}`); o username passa por trim + minúsculas no servidor. O e-mail serve apenas para a recuperação de senha.
 - **Esqueci a senha:** `POST /auth/forgot-password` (sempre 200, sem revelar se o e-mail existe) envia, pela fila, um link `${APP_FRONTEND_URL}/redefinir-senha#token=…&email=…` (o token vai no fragmento, que não chega ao servidor); `POST /auth/reset-password` troca a senha e encerra todas as sessões.
 - **E-mail em dev:** o `docker-compose.override.yml` sobe o Mailpit e aponta `app`/`worker` para ele; os e-mails aparecem em `http://127.0.0.1:${MAILPIT_UI_PORT:-8025}`. Fora do override o padrão é `MAIL_MAILER=log`.
+
+## Perfis e permissões
+
+Cinco perfis (`operator`, `mechanic`, `leader`, `manager` = Gestor/PCM, `admin`), com a matriz em `backend/config/rbac.php` e toda rota protegida por `can:<permissão>`. O escopo de filial vale para quem tem filial; admin e gestor podem ficar sem filial (= todas as filiais). O gestor **com** filial só grava na própria filial: nada global (centro de custo sem filial, famílias, parâmetros globais ou de família) nem de outra filial → 403 "Sem permissão para gravar fora da sua filial". O `permissions` de `GET /auth/me` já sai recortado para o front.
 
 ## Nome do sistema
 

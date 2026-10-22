@@ -72,9 +72,10 @@ it('config/rbac.php: um perfil por valor do enum Role, listas explícitas sem cu
     foreach ($roles as $permissions) {
         expect($permissions)->toBe(array_values(array_unique($permissions)));
         foreach ($permissions as $permission) {
-            expect($permission)->toMatch('/^[a-z_]+\.(view|manage)$/')->not->toStartWith('auth.');
+            expect($permission)->toMatch('/^[a-z_]+(\.[a-z_]+)?\.(view|manage|create|plan|execute|fulfill|close|cancel)$/')->not->toStartWith('auth.');
         }
     }
-    expect($roles['operator'])->toBe(['branches.view', 'equipments.view']);
+    expect($roles['operator'])->toBe(['branches.view', 'equipments.view', 'work_orders.view', 'meter_readings.create']);
+    expect($roles['manager'])->not->toContain('users.view', 'users.manage', 'audit.view', 'branches.manage');
     expect($roles['admin'])->toContain('users.manage', 'audit.view', 'settings.manage');
 });

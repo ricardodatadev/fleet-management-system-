@@ -6,6 +6,7 @@ use App\Enums\Role;
 use App\Models\Contracts\CrudModel;
 use App\Notifications\ResetPasswordNotification;
 use App\Support\Audit\Auditable;
+use App\Support\Rbac\EffectivePermissions;
 use Database\Factories\UserFactory;
 use Illuminate\Database\Eloquent\Attributes\Fillable;
 use Illuminate\Database\Eloquent\Attributes\Hidden;
@@ -94,7 +95,7 @@ class User extends Authenticatable implements CrudModel
     /** @return list<string> */
     public function permissions(): array
     {
-        return $this->role->permissions();
+        return EffectivePermissions::for($this);
     }
 
     public function hasPermission(string $permission): bool
@@ -105,6 +106,15 @@ class User extends Authenticatable implements CrudModel
     public function isAdmin(): bool
     {
         return $this->role === Role::Admin;
+    }
+
+    /**
+     * Sem escopo de filial (D18): admin (com ou sem filial) e gestor sem filial veem todas; gestor com
+     * filial segue o escopo dela, como o líder.
+     */
+    public function seesAllBranches(): bool
+    {
+        return $this->role === Role::Admin || ($this->role === Role::Manager && $this->branch_id === null);
     }
 
     /** @return HasOne<Employee, $this> */

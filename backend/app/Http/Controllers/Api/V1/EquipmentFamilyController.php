@@ -45,7 +45,7 @@ class EquipmentFamilyController extends Controller
         path: '/equipment-families',
         operationId: 'equipmentFamiliesIndex',
         summary: 'Lista famílias de equipamento',
-        description: 'Permissão: equipment_families.view (M, L e A; sem escopo de filial). Busca `q` em code e name. Ordenação: code, name, category, criticality (`-` = desc; padrão code); outro campo → 422.',
+        description: 'Permissão: equipment_families.view (M, L, G e A; sem escopo de filial). Busca `q` em code e name. Ordenação: code, name, category, criticality (`-` = desc; padrão code); outro campo → 422.',
         tags: ['Famílias de equipamento'],
         security: [['bearerAuth' => []]],
         parameters: [
@@ -88,7 +88,7 @@ class EquipmentFamilyController extends Controller
         path: '/equipment-families',
         operationId: 'equipmentFamiliesStore',
         summary: 'Cria família de equipamento',
-        description: 'Permissão: equipment_families.manage. `code` duplicado entre registros ativos → 422; preventive_lead_pct fora de (0, 100] ou tolerância negativa → 422.',
+        description: 'Permissão: equipment_families.manage (A e gestor sem filial; catálogo global: gestor com filial → 403, E.1). `code` duplicado entre registros ativos → 422; preventive_lead_pct fora de (0, 100] ou tolerância negativa → 422.',
         tags: ['Famílias de equipamento'],
         security: [['bearerAuth' => []]],
         requestBody: new OA\RequestBody(required: true, content: new OA\JsonContent(ref: '#/components/schemas/EquipmentFamilyInput')),
@@ -102,6 +102,7 @@ class EquipmentFamilyController extends Controller
     )]
     public function store(EquipmentFamilyRequest $request): JsonResponse
     {
+        Gate::authorize('create', [EquipmentFamily::class, new EquipmentFamily]);
         $family = $this->persist(fn () => EquipmentFamily::query()->create($request->validated()));
 
         return ApiResponse::item(new EquipmentFamilyResource($family->refresh()), __('api.created'), 201);
@@ -134,7 +135,7 @@ class EquipmentFamilyController extends Controller
         path: '/equipment-families/{equipment_family}',
         operationId: 'equipmentFamiliesUpdate',
         summary: 'Atualiza família de equipamento (parcial; PUT = PATCH)',
-        description: 'Permissão: equipment_families.manage. Só os campos enviados são validados e gravados.',
+        description: 'Permissão: equipment_families.manage (A e gestor sem filial; catálogo global: gestor com filial → 403, E.1). Só os campos enviados são validados e gravados.',
         tags: ['Famílias de equipamento'],
         security: [['bearerAuth' => []]],
         parameters: [new OA\Parameter(name: 'equipment_family', in: 'path', required: true, schema: new OA\Schema(type: 'integer'))],
@@ -177,7 +178,7 @@ class EquipmentFamilyController extends Controller
         path: '/equipment-families/{equipment_family}',
         operationId: 'equipmentFamiliesDestroy',
         summary: 'Exclui família de equipamento (soft delete)',
-        description: 'Permissão: equipment_families.manage. 409 (`errors.dependents=["equipments"]`) se houver equipamentos ativos. Exclusão concorrente de família já excluída → 404.',
+        description: 'Permissão: equipment_families.manage (A e gestor sem filial; catálogo global: gestor com filial → 403, E.1). 409 (`errors.dependents=["equipments"]`) se houver equipamentos ativos. Exclusão concorrente de família já excluída → 404.',
         tags: ['Famílias de equipamento'],
         security: [['bearerAuth' => []]],
         parameters: [new OA\Parameter(name: 'equipment_family', in: 'path', required: true, schema: new OA\Schema(type: 'integer'))],
@@ -202,7 +203,7 @@ class EquipmentFamilyController extends Controller
         path: '/equipment-families/{equipment_family}/restore',
         operationId: 'equipmentFamiliesRestore',
         summary: 'Restaura família de equipamento excluída',
-        description: 'Permissão: equipment_families.manage. 409 se não estiver excluída ou se o código já estiver em uso por uma família ativa.',
+        description: 'Permissão: equipment_families.manage (A e gestor sem filial; catálogo global: gestor com filial → 403, E.1). 409 se não estiver excluída ou se o código já estiver em uso por uma família ativa.',
         tags: ['Famílias de equipamento'],
         security: [['bearerAuth' => []]],
         parameters: [new OA\Parameter(name: 'equipment_family', in: 'path', required: true, schema: new OA\Schema(type: 'integer'))],

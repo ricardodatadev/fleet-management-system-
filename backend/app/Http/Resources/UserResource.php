@@ -2,6 +2,7 @@
 
 namespace App\Http\Resources;
 
+use App\Enums\Role;
 use App\Models\User;
 use App\Support\Users\UsernameGenerator;
 use Illuminate\Http\Request;
@@ -18,7 +19,7 @@ use OpenApi\Attributes as OA;
         new OA\Property(property: 'name', type: 'string', example: 'Ana Souza'),
         new OA\Property(property: 'username', description: 'Minúsculas sem acento, números e ponto (não no início, no fim nem repetido), 3 a 30.', type: 'string', pattern: UsernameGenerator::REGEX, minLength: 3, maxLength: 30, example: 'ana.souza'),
         new OA\Property(property: 'email', type: 'string', format: 'email', example: 'ana@example.com'),
-        new OA\Property(property: 'role', type: 'string', enum: ['operator', 'mechanic', 'leader', 'admin']),
+        new OA\Property(property: 'role', type: 'string', enum: Role::VALUES),
         new OA\Property(
             property: 'branch',
             description: 'Filial do usuário; null = todas (somente admin).',

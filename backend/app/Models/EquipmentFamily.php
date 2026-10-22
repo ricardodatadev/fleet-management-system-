@@ -4,6 +4,7 @@ namespace App\Models;
 
 use App\Models\Concerns\HasNormalizedCode;
 use App\Models\Contracts\CrudModel;
+use App\Models\Contracts\GlobalCatalog;
 use App\Support\Audit\Auditable;
 use Database\Factories\EquipmentFamilyFactory;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
@@ -30,7 +31,7 @@ use Illuminate\Support\Carbon;
  * @property Carbon|null $updated_at
  * @property Carbon|null $deleted_at
  */
-class EquipmentFamily extends Model implements CrudModel
+class EquipmentFamily extends Model implements CrudModel, GlobalCatalog
 {
     use Auditable, HasNormalizedCode, SoftDeletes;
 

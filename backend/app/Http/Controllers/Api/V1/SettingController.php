@@ -15,6 +15,7 @@ use Illuminate\Auth\Access\AuthorizationException;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Gate;
 use Illuminate\Support\Facades\Validator;
 use Illuminate\Validation\Rule;
 use Illuminate\Validation\ValidationException;
@@ -71,7 +72,7 @@ class SettingController extends Controller
         path: '/settings/definitions',
         operationId: 'settingsDefinitions',
         summary: 'Registry dos parâmetros (RN-001..004)',
-        description: 'Permissão: settings.view (L e A). Chave, regra de origem, rótulo, tipo, valores permitidos, default e escopos permitidos.',
+        description: 'Permissão: settings.view (L, G e A). Chave, regra de origem, rótulo, tipo, valores permitidos, default e escopos permitidos.',
         tags: ['Parâmetros'],
         security: [['bearerAuth' => []]],
         responses: [
@@ -109,7 +110,7 @@ class SettingController extends Controller
         path: '/settings',
         operationId: 'settingsIndex',
         summary: 'Lista os overrides gravados',
-        description: 'Permissão: settings.view (L e A). Filtros `key`, `scope_type` e `scope_id` (este exige `scope_type`). O líder vê os globais, os de família e os da própria filial; `scope_type=branch` com `scope_id` de outra filial → 403. Ordem: key, scope_type, scope_id.',
+        description: 'Permissão: settings.view (L, G e A). Filtros `key`, `scope_type` e `scope_id` (este exige `scope_type`). O líder e o gestor com filial veem os globais, os de família e os da própria filial; `scope_type=branch` com `scope_id` de outra filial → 403. Ordem: key, scope_type, scope_id.',
         tags: ['Parâmetros'],
         security: [['bearerAuth' => []]],
         parameters: [
@@ -143,8 +144,8 @@ class SettingController extends Controller
 
         $query = Setting::query()->with('updatedBy');
         $user = $this->user($request);
-        if (! $user->isAdmin()) {
-            // líder: globais, famílias e a própria filial
+        if (! $user->seesAllBranches()) {
+            // líder e gestor com filial: globais, famílias e a própria filial
             $query->where(fn (Builder $q) => $q->where('scope_type', '!=', 'branch')->orWhere('scope_id', $user->branch_id));
         }
 
@@ -165,7 +166,7 @@ class SettingController extends Controller
         path: '/settings/effective',
         operationId: 'settingsEffective',
         summary: 'Valor efetivo de um parâmetro e a sua origem',
-        description: 'Permissão: settings.view (L e A). Precedência family > branch > global > default do registry, só entre os escopos permitidos da chave. `branch_id`/`family_id` existentes e não excluídos (422). O líder só consulta a própria filial (outra → 403); famílias são livres.',
+        description: 'Permissão: settings.view (L, G e A). Precedência family > branch > global > default do registry, só entre os escopos permitidos da chave. `branch_id`/`family_id` existentes e não excluídos (422). O líder e o gestor com filial só consultam a própria filial (outra → 403); famílias são livres.',
         tags: ['Parâmetros'],
         security: [['bearerAuth' => []]],
         parameters: [
@@ -205,7 +206,7 @@ class SettingController extends Controller
         path: '/settings/{key}',
         operationId: 'settingsUpdate',
         summary: 'Grava o override de um parâmetro (upsert idempotente)',
-        description: 'Permissão: settings.manage (A). Valida contra o registry (422): chave inexistente, escopo não permitido para a chave, `scope_id` ausente/inexistente/excluído (ou presente no global) e valor fora do tipo (enum: um dos valores; bool: true/false). O mesmo valor de novo não muda nada nem gera auditoria; mudança → `setting_changed` com old/new e escopo.',
+        description: 'Permissão: settings.manage (G e A). Gestor com filial só grava/remove override `branch` da própria filial; `global`, `family` e outra filial → 403 (avaliado antes das validações). Valida contra o registry (422): chave inexistente, escopo não permitido para a chave, `scope_id` ausente/inexistente/excluído (ou presente no global) e valor fora do tipo (enum: um dos valores; bool: true/false). O mesmo valor de novo não muda nada nem gera auditoria; mudança → `setting_changed` com old/new e escopo.',
         tags: ['Parâmetros'],
         security: [['bearerAuth' => []]],
         parameters: [new OA\Parameter(name: 'key', in: 'path', required: true, schema: new OA\Schema(type: 'string', example: 'warranty.alert_mode'))],
@@ -248,7 +249,7 @@ class SettingController extends Controller
         path: '/settings/{key}',
         operationId: 'settingsDestroy',
         summary: 'Remove o override de um parâmetro',
-        description: 'Permissão: settings.manage (A). `scope_type` (branch ou family) e `scope_id` na query. O global não pode ser removido (422). Override inexistente → 404. Remoção → `setting_removed` com o valor anterior e o escopo.',
+        description: 'Permissão: settings.manage (G e A). Gestor com filial só grava/remove override `branch` da própria filial; `global`, `family` e outra filial → 403 (avaliado antes das validações). `scope_type` (branch ou family) e `scope_id` na query. O global não pode ser removido (422). Override inexistente → 404. Remoção → `setting_removed` com o valor anterior e o escopo.',
         tags: ['Parâmetros'],
         security: [['bearerAuth' => []]],
         parameters: [
@@ -272,6 +273,7 @@ class SettingController extends Controller
             'scope_type' => ['required', 'string', Rule::in(Setting::SCOPES)],
             'scope_id' => ['nullable', 'integer'],
         ], ['key.in' => __('api.setting_unknown_key', ['key' => $key])])->validate();
+        Gate::authorize('manageScope', [Setting::class, $input['scope_type'], $input['scope_id'] ?? null]);
 
         if ($input['scope_type'] === 'global') {
             throw ValidationException::withMessages(['scope_type' => __('api.setting_global_not_removable')]);
@@ -286,11 +288,11 @@ class SettingController extends Controller
         return ApiResponse::success(null, __('api.setting_removed'));
     }
 
-    /** Líder (não-admin) só consulta a própria filial (D.2): outra filial → 403. */
+    /** Líder e gestor com filial só consultam a própria filial (D.2, D18): outra filial → 403. */
     private function forbidOtherBranch(Request $request, int $branchId): void
     {
         $user = $this->user($request);
-        if (! $user->isAdmin() && (int) $user->branch_id !== $branchId) {
+        if (! $user->seesAllBranches() && (int) $user->branch_id !== $branchId) {
             throw new AuthorizationException;
         }
     }

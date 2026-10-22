@@ -61,7 +61,7 @@ class EmployeeController extends Controller
         path: '/employees',
         operationId: 'employeesIndex',
         summary: 'Lista colaboradores',
-        description: 'Permissão: employees.view (L e A). Escopo: L vê só a própria filial. Busca `q` em name e registration. Ordenação: name, registration, job_type, hired_at (`-` = desc; padrão name).',
+        description: 'Permissão: employees.view (L, G e A). Escopo: L e gestor com filial veem só a própria filial. Busca `q` em name e registration. Ordenação: name, registration, job_type, hired_at (`-` = desc; padrão name).',
         tags: ['Colaboradores'],
         security: [['bearerAuth' => []]],
         parameters: [
@@ -106,7 +106,7 @@ class EmployeeController extends Controller
         path: '/employees',
         operationId: 'employeesStore',
         summary: 'Cria colaborador',
-        description: 'Permissão: employees.manage. 422: matrícula duplicada entre ativos; filial/centro de custo inexistente ou excluído; centro de custo de outra filial; usuário excluído, já vinculado ou (não-admin) de outra filial; campo fora do job_type.',
+        description: 'Permissão: employees.manage (G e A; gestor com filial só na própria filial: destino em outra → 403 com `errors.branch_id`, antes dos 422 de consistência). 422: matrícula duplicada entre ativos; filial/centro de custo inexistente ou excluído; centro de custo de outra filial; usuário excluído, já vinculado ou (com escopo de filial) de outra filial; campo fora do job_type.',
         tags: ['Colaboradores'],
         security: [['bearerAuth' => []]],
         requestBody: new OA\RequestBody(required: true, content: new OA\JsonContent(ref: '#/components/schemas/EmployeeInput')),
@@ -120,6 +120,7 @@ class EmployeeController extends Controller
     )]
     public function store(EmployeeRequest $request): JsonResponse
     {
+        Gate::authorize('create', [Employee::class, (new Employee)->forceFill(['branch_id' => $request->validated('branch_id')])]);
         $employee = $this->persist(function () use ($request) {
             $this->lockRelated($request->validated(), null);
 
@@ -133,7 +134,7 @@ class EmployeeController extends Controller
         path: '/employees/{employee}',
         operationId: 'employeesShow',
         summary: 'Detalha colaborador',
-        description: 'Permissão: employees.view. Excluído ou de outra filial (L) → 404.',
+        description: 'Permissão: employees.view. Excluído ou de outra filial (L, G com filial) → 404.',
         tags: ['Colaboradores'],
         security: [['bearerAuth' => []]],
         parameters: [new OA\Parameter(name: 'employee', in: 'path', required: true, schema: new OA\Schema(type: 'integer'))],
@@ -156,7 +157,7 @@ class EmployeeController extends Controller
         path: '/employees/{employee}',
         operationId: 'employeesUpdate',
         summary: 'Atualiza colaborador (parcial; PUT = PATCH)',
-        description: 'Permissão: employees.manage. Só os campos enviados são validados e gravados; as regras de filial valem também ao trocar a filial do colaborador.',
+        description: 'Permissão: employees.manage (G e A; gestor com filial só na própria filial: destino em outra → 403 com `errors.branch_id`, antes dos 422 de consistência). Só os campos enviados são validados e gravados; as regras de filial valem também ao trocar a filial do colaborador.',
         tags: ['Colaboradores'],
         security: [['bearerAuth' => []]],
         parameters: [new OA\Parameter(name: 'employee', in: 'path', required: true, schema: new OA\Schema(type: 'integer'))],
@@ -189,7 +190,7 @@ class EmployeeController extends Controller
     )]
     public function update(EmployeeRequest $request, Employee $employee): JsonResponse
     {
-        Gate::authorize('update', $employee);
+        Gate::authorize('update', [$employee, $request->validated()]);
         $this->persist(function () use ($request, $employee) {
             $this->lockRelated($request->validated(), $employee);
             $employee->update($request->validated());
@@ -202,7 +203,7 @@ class EmployeeController extends Controller
         path: '/employees/{employee}',
         operationId: 'employeesDestroy',
         summary: 'Exclui colaborador (soft delete)',
-        description: 'Permissão: employees.manage. 409 (`errors.dependents=["equipments"]`) se for responsável por equipamento ativo. O usuário vinculado fica livre.',
+        description: 'Permissão: employees.manage (G e A; gestor com filial só na própria filial: destino em outra → 403 com `errors.branch_id`, antes dos 422 de consistência). 409 (`errors.dependents=["equipments"]`) se for responsável por equipamento ativo. O usuário vinculado fica livre.',
         tags: ['Colaboradores'],
         security: [['bearerAuth' => []]],
         parameters: [new OA\Parameter(name: 'employee', in: 'path', required: true, schema: new OA\Schema(type: 'integer'))],
@@ -227,7 +228,7 @@ class EmployeeController extends Controller
         path: '/employees/{employee}/restore',
         operationId: 'employeesRestore',
         summary: 'Restaura colaborador excluído',
-        description: 'Permissão: employees.manage. 409 se não estiver excluído, se a matrícula foi reutilizada, se o usuário vinculado está excluído, já vinculado a outro colaborador ou (não-admin) em outra filial, ou se a filial ou o centro de custo vinculado está excluído (ou o centro de custo mudou para outra filial).',
+        description: 'Permissão: employees.manage (G e A; gestor com filial só na própria filial: destino em outra → 403 com `errors.branch_id`, antes dos 422 de consistência). 409 se não estiver excluído, se a matrícula foi reutilizada, se o usuário vinculado está excluído, já vinculado a outro colaborador ou (com escopo de filial) em outra filial, ou se a filial ou o centro de custo vinculado está excluído (ou o centro de custo mudou para outra filial).',
         tags: ['Colaboradores'],
         security: [['bearerAuth' => []]],
         parameters: [new OA\Parameter(name: 'employee', in: 'path', required: true, schema: new OA\Schema(type: 'integer'))],
@@ -298,7 +299,7 @@ class EmployeeController extends Controller
             if ($user === null) {
                 throw ValidationException::withMessages(['user_id' => FieldMessage::for('exists', 'user_id')]);
             }
-            if (! $user->isAdmin() && (int) $user->branch_id !== (int) $branchId) {
+            if (! $user->seesAllBranches() && (int) $user->branch_id !== (int) $branchId) {
                 $field = array_key_exists('user_id', $data) ? 'user_id' : 'branch_id';
                 throw ValidationException::withMessages([$field => __('api.employee_user_branch_mismatch')]);
             }
@@ -326,7 +327,7 @@ class EmployeeController extends Controller
             if ($user === null || $linked) {
                 return __('api.restore_user_unavailable');
             }
-            if (! $user->isAdmin() && (int) $user->branch_id !== (int) $employee->branch_id) {
+            if (! $user->seesAllBranches() && (int) $user->branch_id !== (int) $employee->branch_id) {
                 return __('api.employee_user_branch_mismatch');
             }
         }

@@ -6,6 +6,7 @@ use App\Http\Requests\ApiFormRequest;
 use App\Models\Setting;
 use App\Support\Api\FieldMessage;
 use App\Support\Settings\SettingsService;
+use Illuminate\Support\Facades\Gate;
 use Illuminate\Validation\Rule;
 use Illuminate\Validation\Validator;
 
@@ -16,6 +17,14 @@ use Illuminate\Validation\Validator;
  */
 class SettingRequest extends ApiFormRequest
 {
+    /** Escopo de escrita (SettingPolicy) antes das validações: gestor com filial fora dela → 403. */
+    public function authorize(): bool
+    {
+        Gate::authorize('manageScope', [Setting::class, (string) $this->input('scope_type'), $this->input('scope_id')]);
+
+        return true;
+    }
+
     public function rules(): array
     {
         return [

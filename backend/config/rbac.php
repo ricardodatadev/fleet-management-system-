@@ -1,10 +1,11 @@
 <?php
 
 /*
- * Matriz perfil × permissão (spec E, RN-007 recortada à Fase 1). Fonte única para Gates/Policies (F1-10)
- * e para `permissions` de GET /auth/me.
+ * Matriz perfil × permissão (spec E da Fase 1 + seção E da Fase 2A, RN-007). Fonte única para
+ * Gates/Policies (F1-10) e para `permissions` de GET /auth/me, recortada pelo escopo de filial em
+ * App\Support\Rbac\EffectivePermissions (gestor com filial sem o *.manage dos catálogos globais, E.1).
  *
- * - Lista explícita por perfil, sem curingas, na ordem da tabela E.
+ * - Lista explícita por perfil, sem curingas, na ordem da tabela E (Fase 1, depois Fase 2A).
  * - auth.* (login/me/logout/password) é implícito a qualquer autenticado e não entra na lista.
  * - restore e with_trashed estão contidos em *.manage.
  * - O escopo de filial é regra de policy (F1-10), não permissão.
@@ -14,11 +15,17 @@ return [
         'operator' => [
             'branches.view',
             'equipments.view',
+            'work_orders.view',
+            'meter_readings.create',
         ],
         'mechanic' => [
             'branches.view',
             'equipment_families.view',
             'equipments.view',
+            'work_orders.view',
+            'work_orders.execute',
+            'meter_readings.create',
+            'service_categories.view',
         ],
         'leader' => [
             'branches.view',
@@ -27,6 +34,42 @@ return [
             'equipments.view',
             'employees.view',
             'settings.view',
+            'work_orders.view',
+            'work_orders.create',
+            'work_orders.plan',
+            'work_orders.execute',
+            'work_orders.labor.manage',
+            'work_orders.parts.fulfill',
+            'work_orders.close',
+            'work_orders.costs.view',
+            'meter_readings.create',
+            'service_categories.view',
+        ],
+        'manager' => [
+            'branches.view',
+            'cost_centers.view',
+            'cost_centers.manage',
+            'equipment_families.view',
+            'equipment_families.manage',
+            'equipments.view',
+            'equipments.manage',
+            'employees.view',
+            'employees.manage',
+            'settings.view',
+            'settings.manage',
+            'work_orders.view',
+            'work_orders.create',
+            'work_orders.plan',
+            'work_orders.execute',
+            'work_orders.labor.manage',
+            'work_orders.parts.fulfill',
+            'work_orders.close',
+            'work_orders.cancel',
+            'work_orders.costs.view',
+            'work_orders.costs.manage',
+            'meter_readings.create',
+            'service_categories.view',
+            'service_categories.manage',
         ],
         'admin' => [
             'branches.view',
@@ -44,6 +87,19 @@ return [
             'settings.view',
             'settings.manage',
             'audit.view',
+            'work_orders.view',
+            'work_orders.create',
+            'work_orders.plan',
+            'work_orders.execute',
+            'work_orders.labor.manage',
+            'work_orders.parts.fulfill',
+            'work_orders.close',
+            'work_orders.cancel',
+            'work_orders.costs.view',
+            'work_orders.costs.manage',
+            'meter_readings.create',
+            'service_categories.view',
+            'service_categories.manage',
         ],
     ],
 ];

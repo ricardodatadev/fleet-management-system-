@@ -32,7 +32,7 @@ use OpenApi\Attributes as OA;
         new OA\Property(property: 'username', type: 'string', pattern: UsernameGenerator::REGEX, minLength: 3, maxLength: 30, example: 'ana.souza'),
         new OA\Property(property: 'email', type: 'string', format: 'email', maxLength: 190, example: 'ana@example.com'),
         new OA\Property(property: 'password', type: 'string', format: 'password', minLength: 10, maxLength: 255, writeOnly: true),
-        new OA\Property(property: 'role', type: 'string', enum: ['operator', 'mechanic', 'leader', 'admin']),
+        new OA\Property(property: 'role', type: 'string', enum: Role::VALUES),
         new OA\Property(property: 'branch_id', type: 'integer', nullable: true, example: 1),
         new OA\Property(property: 'is_active', type: 'boolean', default: true),
     ],
@@ -68,7 +68,7 @@ class UserController extends Controller
             new OA\Parameter(ref: '#/components/parameters/PerPage'),
             new OA\Parameter(ref: '#/components/parameters/Search'),
             new OA\Parameter(name: 'sort', in: 'query', schema: new OA\Schema(type: 'string', example: '-last_login_at,name')),
-            new OA\Parameter(name: 'role', in: 'query', schema: new OA\Schema(type: 'string', enum: ['operator', 'mechanic', 'leader', 'admin'])),
+            new OA\Parameter(name: 'role', in: 'query', schema: new OA\Schema(type: 'string', enum: Role::VALUES)),
             new OA\Parameter(name: 'branch_id', in: 'query', schema: new OA\Schema(type: 'integer')),
             new OA\Parameter(name: 'has_employee', in: 'query', description: '1 = com colaborador vinculado (não excluído); 0 = sem. Outro valor → 422.', schema: new OA\Schema(type: 'integer', enum: [0, 1])),
             new OA\Parameter(ref: '#/components/parameters/IsActive'),
@@ -107,7 +107,7 @@ class UserController extends Controller
         path: '/users',
         operationId: 'usersStore',
         summary: 'Cria usuário',
-        description: 'Permissão: users.manage. E-mail duplicado entre usuários ativos → 422; perfil não-admin sem `branch_id` → 422; filial inexistente ou excluída → 422.',
+        description: 'Permissão: users.manage. E-mail duplicado entre usuários ativos → 422; perfil sem `branch_id` → 422 (só admin e gestor podem ficar sem filial, D18); filial inexistente ou excluída → 422.',
         tags: ['Usuários'],
         security: [['bearerAuth' => []]],
         requestBody: new OA\RequestBody(required: true, content: new OA\JsonContent(ref: '#/components/schemas/UserInput')),
@@ -157,7 +157,7 @@ class UserController extends Controller
         path: '/users/{user}',
         operationId: 'usersUpdate',
         summary: 'Atualiza usuário (parcial; PUT = PATCH)',
-        description: 'Permissão: users.manage. Só os campos enviados são validados e gravados. Usuário vinculado a colaborador: não-admin precisa ficar na filial do colaborador (422 ao mudar branch_id ou rebaixar de admin). Revoga todos os tokens do usuário ao trocar a senha de outro usuário ou ao desativá-lo (na própria senha, revoga os demais tokens). 409: alterar o próprio perfil, desativar a si mesmo, rebaixar ou desativar o último admin ativo.',
+        description: 'Permissão: users.manage. Só os campos enviados são validados e gravados. Usuário vinculado a colaborador: usuário com filial (exceto admin; gestor só quando tem filial) precisa ficar na filial do colaborador (422 ao mudar branch_id ou rebaixar de admin). Revoga todos os tokens do usuário ao trocar a senha de outro usuário ou ao desativá-lo (na própria senha, revoga os demais tokens). 409: alterar o próprio perfil, desativar a si mesmo, rebaixar ou desativar o último admin ativo.',
         tags: ['Usuários'],
         security: [['bearerAuth' => []]],
         parameters: [new OA\Parameter(name: 'user', in: 'path', required: true, schema: new OA\Schema(type: 'integer'))],
@@ -303,7 +303,7 @@ class UserController extends Controller
     }
 
     /**
-     * Colaborador vinculado (D.2 v1.5): usuário não-admin precisa ficar na filial do colaborador, ao mudar
+     * Colaborador vinculado (D.2 v1.5): usuário usuário com filial (exceto admin; gestor só quando tem filial) precisa ficar na filial do colaborador, ao mudar
      * o branch_id ou ao rebaixar de admin (422). A linha do usuário é travada antes da checagem: quem
      * grava colaborador trava o usuário com FOR SHARE.
      *
@@ -311,12 +311,14 @@ class UserController extends Controller
      */
     private function guardEmployeeBranch(User $user, array $data, Role $newRole): void
     {
-        if ($newRole === Role::Admin || (! array_key_exists('branch_id', $data) && $newRole === $user->role)) {
+        $branchId = array_key_exists('branch_id', $data) ? $data['branch_id'] : $user->branch_id;
+        // admin e gestor sem filial (todas as filiais, D18) ficam livres do vínculo de filial
+        if ($newRole === Role::Admin || ($newRole === Role::Manager && $branchId === null)
+            || (! array_key_exists('branch_id', $data) && $newRole === $user->role)) {
             return;
         }
         User::query()->whereKey($user->getKey())->lockForUpdate()->first(['id']);
         $employee = $user->employee()->first(['id', 'branch_id']);
-        $branchId = array_key_exists('branch_id', $data) ? $data['branch_id'] : $user->branch_id;
 
         if ($employee !== null && (int) $employee->branch_id !== (int) $branchId) {
             throw ValidationException::withMessages(['branch_id' => __('api.user_employee_branch_mismatch')]);

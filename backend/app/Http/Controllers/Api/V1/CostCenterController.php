@@ -44,7 +44,7 @@ class CostCenterController extends Controller
         path: '/cost-centers',
         operationId: 'costCentersIndex',
         summary: 'Lista centros de custo',
-        description: 'Permissão: cost_centers.view (L e A). Escopo: não-admin vê os da própria filial + os sem filial. Ordenação: code, name, is_active, created_at, updated_at (`-` = desc; padrão code).',
+        description: 'Permissão: cost_centers.view (L, G e A). Escopo: L e gestor com filial veem os da própria filial + os sem filial. Ordenação: code, name, is_active, created_at, updated_at (`-` = desc; padrão code).',
         tags: ['Centros de custo'],
         security: [['bearerAuth' => []]],
         parameters: [
@@ -82,7 +82,7 @@ class CostCenterController extends Controller
         path: '/cost-centers',
         operationId: 'costCentersStore',
         summary: 'Cria centro de custo',
-        description: 'Permissão: cost_centers.manage. `code` duplicado entre registros ativos → 422; filial inexistente ou excluída → 422.',
+        description: 'Permissão: cost_centers.manage (G e A; gestor com filial só nos da própria filial: criar ou mover para sem filial ou outra filial e gravar num sem filial → 403, E.1). `code` duplicado entre registros ativos → 422; filial inexistente ou excluída → 422.',
         tags: ['Centros de custo'],
         security: [['bearerAuth' => []]],
         requestBody: new OA\RequestBody(required: true, content: new OA\JsonContent(ref: '#/components/schemas/CostCenterInput')),
@@ -96,6 +96,7 @@ class CostCenterController extends Controller
     )]
     public function store(CostCenterRequest $request): JsonResponse
     {
+        Gate::authorize('create', [CostCenter::class, (new CostCenter)->forceFill(['branch_id' => $request->validated('branch_id')])]);
         $costCenter = $this->persist(function () use ($request) {
             $this->lockBranch($request->validated('branch_id'));
 
@@ -132,7 +133,7 @@ class CostCenterController extends Controller
         path: '/cost-centers/{cost_center}',
         operationId: 'costCentersUpdate',
         summary: 'Atualiza centro de custo (parcial; PUT = PATCH)',
-        description: 'Permissão: cost_centers.manage. Só os campos enviados são validados e gravados. Trocar a filial com colaboradores ou equipamentos de outra filial vinculados → 422.',
+        description: 'Permissão: cost_centers.manage (G e A; gestor com filial só nos da própria filial: criar ou mover para sem filial ou outra filial e gravar num sem filial → 403, E.1). Só os campos enviados são validados e gravados. Trocar a filial com colaboradores ou equipamentos de outra filial vinculados → 422.',
         tags: ['Centros de custo'],
         security: [['bearerAuth' => []]],
         parameters: [new OA\Parameter(name: 'cost_center', in: 'path', required: true, schema: new OA\Schema(type: 'integer'))],
@@ -165,7 +166,7 @@ class CostCenterController extends Controller
     )]
     public function update(CostCenterRequest $request, CostCenter $costCenter): JsonResponse
     {
-        Gate::authorize('update', $costCenter);
+        Gate::authorize('update', [$costCenter, $request->validated()]);
         $this->persist(function () use ($request, $costCenter) {
             if ($request->has('branch_id')) {
                 $branchId = $request->validated('branch_id');
@@ -191,7 +192,7 @@ class CostCenterController extends Controller
         path: '/cost-centers/{cost_center}',
         operationId: 'costCentersDestroy',
         summary: 'Exclui centro de custo (soft delete)',
-        description: 'Permissão: cost_centers.manage. 409 (`errors.dependents` com `employees` e/ou `equipments`) se houver colaboradores ou equipamentos ativos vinculados.',
+        description: 'Permissão: cost_centers.manage (G e A; gestor com filial só nos da própria filial: criar ou mover para sem filial ou outra filial e gravar num sem filial → 403, E.1). 409 (`errors.dependents` com `employees` e/ou `equipments`) se houver colaboradores ou equipamentos ativos vinculados.',
         tags: ['Centros de custo'],
         security: [['bearerAuth' => []]],
         parameters: [new OA\Parameter(name: 'cost_center', in: 'path', required: true, schema: new OA\Schema(type: 'integer'))],
@@ -216,7 +217,7 @@ class CostCenterController extends Controller
         path: '/cost-centers/{cost_center}/restore',
         operationId: 'costCentersRestore',
         summary: 'Restaura centro de custo excluído',
-        description: 'Permissão: cost_centers.manage. 409 se não estiver excluído, se o código já estiver em uso por um centro de custo ativo ou se a filial vinculada estiver excluída.',
+        description: 'Permissão: cost_centers.manage (G e A; gestor com filial só nos da própria filial: criar ou mover para sem filial ou outra filial e gravar num sem filial → 403, E.1). 409 se não estiver excluído, se o código já estiver em uso por um centro de custo ativo ou se a filial vinculada estiver excluída.',
         tags: ['Centros de custo'],
         security: [['bearerAuth' => []]],
         parameters: [new OA\Parameter(name: 'cost_center', in: 'path', required: true, schema: new OA\Schema(type: 'integer'))],

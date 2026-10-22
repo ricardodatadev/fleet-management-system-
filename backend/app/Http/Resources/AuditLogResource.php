@@ -2,6 +2,7 @@
 
 namespace App\Http\Resources;
 
+use App\Enums\Role;
 use App\Models\AuditLog;
 use Illuminate\Http\Request;
 use OpenApi\Attributes as OA;
@@ -28,7 +29,7 @@ use OpenApi\Attributes as OA;
             properties: [
                 new OA\Property(property: 'id', type: 'integer', example: 1),
                 new OA\Property(property: 'name', type: 'string', nullable: true, example: 'Ana Souza'),
-                new OA\Property(property: 'role', type: 'string', nullable: true, enum: ['operator', 'mechanic', 'leader', 'admin']),
+                new OA\Property(property: 'role', type: 'string', nullable: true, enum: Role::VALUES),
             ],
         ),
         new OA\Property(property: 'action', type: 'string', enum: ['created', 'updated', 'deleted', 'restored', 'login_succeeded', 'login_failed', 'logout', 'password_changed', 'password_reset_requested', 'password_reset', 'setting_changed', 'setting_removed']),

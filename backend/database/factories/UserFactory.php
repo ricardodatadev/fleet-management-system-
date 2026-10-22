@@ -45,6 +45,12 @@ class UserFactory extends Factory
         return $this->state(fn () => ['role' => Role::Admin, 'branch_id' => null]);
     }
 
+    /** Gestor/PCM sem filial (enxerga todas, D18). Com filial: `role(Role::Manager)`. */
+    public function manager(): static
+    {
+        return $this->state(fn () => ['role' => Role::Manager, 'branch_id' => null]);
+    }
+
     public function inactive(): static
     {
         return $this->state(fn () => ['is_active' => false]);

@@ -4,6 +4,7 @@ use App\Exceptions\DomainConflictException;
 use App\Http\Middleware\AuthorizePermission;
 use App\Http\Middleware\ForceJsonResponse;
 use App\Http\Middleware\RequestId;
+use App\Policies\ResourcePolicy;
 use App\Support\Api\ApiResponse;
 use Illuminate\Auth\Access\AuthorizationException;
 use Illuminate\Auth\AuthenticationException;
@@ -71,6 +72,12 @@ return Application::configure(basePath: dirname(__DIR__))
         $exceptions->render(function (HttpExceptionInterface $e, Request $request) use ($isApi) {
             if (! $isApi($request)) {
                 return null;
+            }
+            // Escrita fora da filial (Fase 2A, E.1): o framework já trocou a AuthorizationException por um 403
+            // HTTP; o código da negação da policy dá a mensagem própria e errors.branch_id quando a causa é o destino.
+            $denial = $e->getPrevious() instanceof AuthorizationException ? $e->getPrevious()->response()?->code() : null;
+            if (in_array($denial, [ResourcePolicy::DENY_SCOPE, ResourcePolicy::DENY_TARGET], true)) {
+                return ApiResponse::error(__('api.branch_write_denied'), 403, $denial === ResourcePolicy::DENY_TARGET ? ['branch_id' => [__('api.branch_write_denied')]] : null);
             }
             $code = $e->getStatusCode();
             $message = Lang::has("api.$code") ? __("api.$code") : __('api.generic');

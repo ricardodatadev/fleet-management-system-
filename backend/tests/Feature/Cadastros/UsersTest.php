@@ -291,5 +291,5 @@ it('User NUNCA usa BranchScoped nem o BranchScope (alerta da F1-10)', function (
 });
 
 it('/meta/enums devolve roles (valores do enum Role)', function () {
-    api('GET', 'meta/enums', token: $this->token)->assertOk()->assertJsonPath('data.enums.roles', ['operator', 'mechanic', 'leader', 'admin']);
+    api('GET', 'meta/enums', token: $this->token)->assertOk()->assertJsonPath('data.enums.roles', ['operator', 'mechanic', 'leader', 'manager', 'admin']);
 });

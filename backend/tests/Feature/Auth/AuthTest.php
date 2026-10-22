@@ -197,7 +197,11 @@ it('me retorna user, employee null e as permissions do perfil (config/rbac.php)'
     expect($res->json('data.user.id'))->toBe($user->id)->and($res->json('data.user.role'))->toBe($role->value);
     expect($res->json('data.user.branch'))->toBe($role === Role::Admin ? null : ['id' => $user->branch->id, 'code' => $user->branch->code, 'name' => $user->branch->name]);
     expect($res->json('data'))->toHaveKey('employee')->and($res->json('data.employee'))->toBeNull();
-    expect($res->json('data.permissions'))->toBe(config("rbac.roles.{$role->value}"))->not->toBeEmpty();
+    // gestor com filial (o factory dá filial): sem o manage dos catálogos globais (E.1)
+    $expected = $role === Role::Manager
+        ? array_values(array_diff(config('rbac.roles.manager'), ['equipment_families.manage', 'service_categories.manage']))
+        : config("rbac.roles.{$role->value}");
+    expect($res->json('data.permissions'))->toBe($expected)->not->toBeEmpty();
 })->with(Role::cases());
 
 it('troca de senha: aplica a nova, mantém o token atual, revoga os demais e audita', function () {

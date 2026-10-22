@@ -5,6 +5,8 @@ return [
     'created' => 'Registro criado com sucesso.',
     '401' => 'Não autenticado.',
     '403' => 'Acesso negado.',
+    // Fase 2A, E.1: gestor com filial gravando em registro global ou de outra filial
+    'branch_write_denied' => 'Sem permissão para gravar fora da sua filial.',
     '404' => 'Recurso não encontrado.',
     '405' => 'Método não permitido.',
     '409' => 'Conflito com o estado atual do recurso.',

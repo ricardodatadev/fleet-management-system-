@@ -113,8 +113,8 @@ it('DemoSeeder: 2 filiais, 3 centros de custo, 5 famílias, ≥ 30 equipamentos,
         ->and(Employee::query()->withoutGlobalScope(BranchScope::class)->where('registration', 'like', 'DEMO-%')->count())->toBeGreaterThanOrEqual(6);
 
     $users = User::query()->where('username', 'like', 'demo.%')->get()->keyBy('username');
-    expect($users->keys()->sort()->values()->all())->toBe(['demo.admin', 'demo.lider', 'demo.mecanico', 'demo.operador'])
-        ->and($users->map(fn ($u) => $u->role->value)->unique()->count())->toBe(4);
+    expect($users->keys()->sort()->values()->all())->toBe(['demo.admin', 'demo.gestor', 'demo.lider', 'demo.mecanico', 'demo.operador'])
+        ->and($users->map(fn ($u) => $u->role->value)->unique()->count())->toBe(5);
     foreach ($users as $username => $user) {
         expect($username)->toMatch(UsernameGenerator::PATTERN);
     }
@@ -195,7 +195,7 @@ it('login por username com cada perfil demo; me.permissions diferente por perfil
         $permissions[$username] = api('GET', 'auth/me', token: $token)->assertOk()->json('data.permissions');
     }
 
-    expect(collect($permissions)->map(fn ($p) => json_encode($p))->unique()->count())->toBe(4);
+    expect(collect($permissions)->map(fn ($p) => json_encode($p))->unique()->count())->toBe(5);
     expect($permissions['demo.admin'])->toBe(config('rbac.roles.admin'))
         ->and($permissions['demo.operador'])->toBe(config('rbac.roles.operator'));
 });

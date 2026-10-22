@@ -27,7 +27,7 @@ class UserRequest extends ResourceRequest
             'email' => [...$this->requiredOnCreate(), 'string', 'email', 'max:190', Rule::unique('users', 'email')->whereNull('deleted_at')->ignore($this->target()?->getKey())],
             'password' => [...$this->requiredOnCreate(), 'string', 'max:255', Password::defaults()],
             'role' => [...$this->requiredOnCreate(), Rule::enum(Role::class)],
-            // filial existente e não excluída (inativa é aceita); null só para admin (ver after())
+            // filial existente e não excluída (inativa é aceita); null só para admin e gestor (D18; ver after())
             'branch_id' => ['sometimes', 'nullable', 'integer', Rule::exists('branches', 'id')->whereNull('deleted_at')],
             'is_active' => ['sometimes', 'boolean'],
         ];
@@ -44,7 +44,7 @@ class UserRequest extends ResourceRequest
             $role = $this->has('role') ? Role::tryFrom((string) $this->input('role')) : $target?->role;
             $branchId = $this->has('branch_id') ? $this->input('branch_id') : $target?->branch_id;
 
-            if ($role !== null && $role !== Role::Admin && $branchId === null) {
+            if ($role !== null && ! $role->allowsNullBranch() && $branchId === null) {
                 $validator->errors()->add('branch_id', FieldMessage::for('required', 'branch_id'));
             }
         }];

@@ -28,9 +28,10 @@ class DemoSeeder extends Seeder
 
     public const EQUIPMENTS = 32;
 
-    /** Usuários demo (um por perfil) e o colaborador vinculado a cada um (o admin não tem). */
+    /** Usuários demo (um por perfil) e o colaborador vinculado a cada um (o admin e o gestor não têm). */
     public const USERS = [
         'demo.admin' => ['role' => Role::Admin, 'name' => 'Ana Admin (demo)', 'job_type' => null],
+        'demo.gestor' => ['role' => Role::Manager, 'name' => 'Gabriela Gestora (demo)', 'job_type' => null],
         'demo.lider' => ['role' => Role::Leader, 'name' => 'Lucas Líder (demo)', 'job_type' => 'leader'],
         'demo.mecanico' => ['role' => Role::Mechanic, 'name' => 'Marcos Mecânico (demo)', 'job_type' => 'mechanic'],
         'demo.operador' => ['role' => Role::Operator, 'name' => 'Otávio Operador (demo)', 'job_type' => 'driver'],
@@ -120,6 +121,7 @@ class DemoSeeder extends Seeder
             $user = User::withTrashed()->where('username', $username)->first()
                 ?? User::query()->create([
                     'name' => $u['name'], 'username' => $username, 'email' => "{$username}@example.com", 'password' => $password,
+                    // o gestor demo fica na Matriz (gestor com filial); o admin, sem filial
                     'role' => $u['role'], 'branch_id' => $u['role'] === Role::Admin ? null : $main->id, 'is_active' => true,
                 ]);
             if ($u['job_type'] !== null) {

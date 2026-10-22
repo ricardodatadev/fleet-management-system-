@@ -10,8 +10,9 @@ use Illuminate\Database\Eloquent\Scope;
 use Illuminate\Support\Facades\Auth;
 
 /**
- * Escopo de filial (spec D.2 "Escopo de filial"): usuário autenticado não-admin só enxerga registros
- * da própria filial. Admin (com ou sem filial) e contextos sem usuário (console, fila) não são filtrados.
+ * Escopo de filial (spec D.2 "Escopo de filial"): usuário autenticado só enxerga registros da própria
+ * filial. Admin (com ou sem filial), gestor sem filial (D18) e contextos sem usuário (console, fila) não
+ * são filtrados.
  * Regras de validação `exists` usam o query builder e não passam por aqui.
  */
 class BranchScope implements Scope
@@ -19,7 +20,7 @@ class BranchScope implements Scope
     public function apply(Builder $builder, Model $model): void
     {
         $user = Auth::user();
-        if (! $user instanceof User || $user->isAdmin()) {
+        if (! $user instanceof User || $user->seesAllBranches()) {
             return;
         }
 
@@ -38,7 +39,7 @@ class BranchScope implements Scope
     public static function allows(User $user, Model $model): bool
     {
         // Só models com o trait BranchScoped (é ele que define branchScopeIncludesNull) têm escopo.
-        if ($user->isAdmin() || ! in_array(BranchScoped::class, class_uses_recursive($model), true) || ! method_exists($model, 'branchScopeIncludesNull')) {
+        if ($user->seesAllBranches() || ! in_array(BranchScoped::class, class_uses_recursive($model), true) || ! method_exists($model, 'branchScopeIncludesNull')) {
             return true;
         }
         $branchId = $model->getAttribute('branch_id');

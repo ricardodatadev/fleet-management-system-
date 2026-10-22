@@ -37,7 +37,7 @@ class MetaController extends Controller
                             required: ['branch_types', 'roles', 'equipment_categories', 'criticalities', 'job_types', 'cnh_categories', 'equipment_statuses'],
                             properties: [
                                 new OA\Property(property: 'branch_types', type: 'array', items: new OA\Items(type: 'string', enum: Branch::TYPES)),
-                                new OA\Property(property: 'roles', type: 'array', items: new OA\Items(type: 'string', enum: ['operator', 'mechanic', 'leader', 'admin'])),
+                                new OA\Property(property: 'roles', type: 'array', items: new OA\Items(type: 'string', enum: Role::VALUES)),
                                 new OA\Property(property: 'equipment_categories', type: 'array', items: new OA\Items(type: 'string', enum: EquipmentFamily::CATEGORIES)),
                                 new OA\Property(property: 'criticalities', type: 'array', items: new OA\Items(type: 'string', enum: EquipmentFamily::CRITICALITIES)),
                                 new OA\Property(property: 'job_types', type: 'array', items: new OA\Items(type: 'string', enum: Employee::JOB_TYPES)),

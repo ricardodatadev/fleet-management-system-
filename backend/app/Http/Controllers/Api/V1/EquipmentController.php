@@ -67,7 +67,7 @@ class EquipmentController extends Controller
         path: '/equipments',
         operationId: 'equipmentsIndex',
         summary: 'Lista equipamentos',
-        description: 'Permissão: equipments.view (todos os perfis). Escopo: não-admin vê só a própria filial. Busca `q` em code, name e plate. Ordenação: code, name, plate, status, year, acquisition_date (`-` = desc; padrão code).',
+        description: 'Permissão: equipments.view (todos os perfis). Escopo: quem tem filial (O, M, L e gestor com filial) vê só a própria filial. Busca `q` em code, name e plate. Ordenação: code, name, plate, status, year, acquisition_date (`-` = desc; padrão code).',
         tags: ['Equipamentos'],
         security: [['bearerAuth' => []]],
         parameters: [
@@ -114,7 +114,7 @@ class EquipmentController extends Controller
         path: '/equipments',
         operationId: 'equipmentsStore',
         summary: 'Cria equipamento',
-        description: 'Permissão: equipments.manage. 422: code ou placa duplicados entre ativos; placa fora do formato; família, filial, centro de custo ou responsável inexistente ou excluído; centro de custo de outra filial; responsável de outra filial; ano fora de 1950..ano atual + 1.',
+        description: 'Permissão: equipments.manage (G e A; gestor com filial só na própria filial: destino em outra → 403 com `errors.branch_id`, antes dos 422 de consistência). 422: code ou placa duplicados entre ativos; placa fora do formato; família, filial, centro de custo ou responsável inexistente ou excluído; centro de custo de outra filial; responsável de outra filial; ano fora de 1950..ano atual + 1.',
         tags: ['Equipamentos'],
         security: [['bearerAuth' => []]],
         requestBody: new OA\RequestBody(required: true, content: new OA\JsonContent(ref: '#/components/schemas/EquipmentInput')),
@@ -128,6 +128,7 @@ class EquipmentController extends Controller
     )]
     public function store(EquipmentRequest $request): JsonResponse
     {
+        Gate::authorize('create', [Equipment::class, (new Equipment)->forceFill(['branch_id' => $request->validated('branch_id')])]);
         $equipment = $this->persist(function () use ($request) {
             $this->lockRelated($request->validated(), null);
 
@@ -141,7 +142,7 @@ class EquipmentController extends Controller
         path: '/equipments/{equipment}',
         operationId: 'equipmentsShow',
         summary: 'Detalha equipamento',
-        description: 'Permissão: equipments.view. Excluído ou de outra filial (não-admin) → 404.',
+        description: 'Permissão: equipments.view. Excluído ou de outra filial (perfil com escopo de filial) → 404.',
         tags: ['Equipamentos'],
         security: [['bearerAuth' => []]],
         parameters: [new OA\Parameter(name: 'equipment', in: 'path', required: true, schema: new OA\Schema(type: 'integer'))],
@@ -164,7 +165,7 @@ class EquipmentController extends Controller
         path: '/equipments/{equipment}',
         operationId: 'equipmentsUpdate',
         summary: 'Atualiza equipamento (parcial; PUT = PATCH)',
-        description: 'Permissão: equipments.manage. Só os campos enviados são validados e gravados; as regras de filial valem também ao trocar a filial do equipamento.',
+        description: 'Permissão: equipments.manage (G e A; gestor com filial só na própria filial: destino em outra → 403 com `errors.branch_id`, antes dos 422 de consistência). Só os campos enviados são validados e gravados; as regras de filial valem também ao trocar a filial do equipamento.',
         tags: ['Equipamentos'],
         security: [['bearerAuth' => []]],
         parameters: [new OA\Parameter(name: 'equipment', in: 'path', required: true, schema: new OA\Schema(type: 'integer'))],
@@ -197,7 +198,7 @@ class EquipmentController extends Controller
     )]
     public function update(EquipmentRequest $request, Equipment $equipment): JsonResponse
     {
-        Gate::authorize('update', $equipment);
+        Gate::authorize('update', [$equipment, $request->validated()]);
         $this->persist(function () use ($request, $equipment) {
             $this->lockRelated($request->validated(), $equipment);
             $equipment->update($request->validated());
@@ -210,7 +211,7 @@ class EquipmentController extends Controller
         path: '/equipments/{equipment}',
         operationId: 'equipmentsDestroy',
         summary: 'Exclui equipamento (soft delete)',
-        description: 'Permissão: equipments.manage. Exclusão concorrente de equipamento já excluído → 404.',
+        description: 'Permissão: equipments.manage (G e A; gestor com filial só na própria filial: destino em outra → 403 com `errors.branch_id`, antes dos 422 de consistência). Exclusão concorrente de equipamento já excluído → 404.',
         tags: ['Equipamentos'],
         security: [['bearerAuth' => []]],
         parameters: [new OA\Parameter(name: 'equipment', in: 'path', required: true, schema: new OA\Schema(type: 'integer'))],
@@ -234,7 +235,7 @@ class EquipmentController extends Controller
         path: '/equipments/{equipment}/restore',
         operationId: 'equipmentsRestore',
         summary: 'Restaura equipamento excluído',
-        description: 'Permissão: equipments.manage. 409 se não estiver excluído, se o code ou a placa foram reutilizados, se a filial, a família ou o centro de custo vinculado está excluído (ou o centro de custo mudou para outra filial), ou se o responsável está excluído ou em outra filial.',
+        description: 'Permissão: equipments.manage (G e A; gestor com filial só na própria filial: destino em outra → 403 com `errors.branch_id`, antes dos 422 de consistência). 409 se não estiver excluído, se o code ou a placa foram reutilizados, se a filial, a família ou o centro de custo vinculado está excluído (ou o centro de custo mudou para outra filial), ou se o responsável está excluído ou em outra filial.',
         tags: ['Equipamentos'],
         security: [['bearerAuth' => []]],
         parameters: [new OA\Parameter(name: 'equipment', in: 'path', required: true, schema: new OA\Schema(type: 'integer'))],

@@ -9,10 +9,13 @@ use App\Models\Equipment;
 use App\Models\EquipmentFamily;
 use App\Models\Setting;
 use App\Models\User;
+use App\Policies\ResourcePolicy;
 use App\Support\Rbac\EffectivePermissions;
 use Illuminate\Database\QueryException;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Gate;
+use Illuminate\Support\Facades\Route;
 
 uses(RefreshDatabase::class);
 
@@ -281,6 +284,27 @@ describe('settings.* do gestor com filial (seção E, ajuste 7)', function () {
         api('PUT', 'settings/warranty.alert_mode', ['scope_type' => 'branch', 'scope_id' => $this->other->id, 'value' => 'hard_block'], $token)->assertOk();
         api('DELETE', "settings/warranty.alert_mode?scope_type=branch&scope_id={$this->other->id}", token: $token)->assertOk();
     })->with(unscopedWriters());
+});
+
+describe('ResourcePolicy::create sem rascunho', function () {
+    it('nega (branch_scope) a quem tem escopo de filial e libera a quem não tem', function (string $class) {
+        $scoped = Gate::forUser($this->manager)->inspect('create', $class);
+        expect($scoped->denied())->toBeTrue()->and($scoped->code())->toBe(ResourcePolicy::DENY_SCOPE);
+
+        expect(Gate::forUser(User::factory()->manager()->create())->allows('create', $class))->toBeTrue()
+            ->and(Gate::forUser(User::factory()->admin()->create())->allows('create', $class))->toBeTrue();
+        // com o rascunho na própria filial, o mesmo gestor passa (o controller sempre passa o destino)
+        if ($class !== CostCenter::class) {
+            expect(Gate::forUser($this->manager)->allows('create', [$class, (new $class)->forceFill(['branch_id' => $this->own->id])]))->toBeTrue();
+        }
+    })->with([Equipment::class, Employee::class, CostCenter::class]);
+
+    it('controller que esquece o rascunho responde 403 no envelope (rota de teste)', function () {
+        Route::middleware(['api', 'auth:sanctum'])->post('api/v1/_t/sem-rascunho', fn () => Gate::authorize('create', Equipment::class) ? 'criado' : 'x');
+
+        assertBranchDenied(api('POST', '_t/sem-rascunho', token: $this->token), onBranchId: false);
+        api('POST', '_t/sem-rascunho', token: bearer(User::factory()->manager()->create()))->assertOk();
+    });
 });
 
 describe('EffectivePermissions', function () {

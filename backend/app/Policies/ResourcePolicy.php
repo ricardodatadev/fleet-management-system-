@@ -39,14 +39,20 @@ abstract class ResourcePolicy
         return $this->viewAny($user) && BranchScope::allows($user, $model);
     }
 
-    /** $draft: registro a criar com o `branch_id` de destino (os controllers sempre passam). */
+    /**
+     * $draft: registro a criar com o `branch_id` de destino. Sem rascunho não dá para saber o escopo: quem
+     * tem escopo de filial é negado (defesa contra um controller que esqueça de passar o destino).
+     */
     public function create(User $user, ?Model $draft = null): Response|bool
     {
         if (! $this->manage($user)) {
             return false;
         }
+        if ($draft === null) {
+            return $user->seesAllBranches() ? Response::allow() : Response::deny(__('api.branch_write_denied'), self::DENY_SCOPE);
+        }
 
-        return $draft === null ? true : $this->scope($user, $draft, true);
+        return $this->scope($user, $draft, true);
     }
 
     /** @param  array<string, mixed>  $changes  dados validados da requisição (só o `branch_id` importa) */
